@@ -1,0 +1,62 @@
+/* Preserve original layout; SVG additions occupy the original icon/text line. */
+.buttonIcon {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+  flex: none;
+  vertical-align: -3px;
+}
+.btn.gold .buttonIcon,
+.btn.plain .buttonIcon {
+  fill: currentColor;
+}
+.food .serveIcon {
+  position: absolute;
+  left: 7px;
+  top: 7px;
+  width: 13px;
+  height: 13px;
+  color: var(--c);
+  margin: 0;
+}
+.tabs .buttonIcon {
+  width: 16px;
+  height: 16px;
+  margin-right: 4px;
+}
+.sw .buttonIcon {
+  position: absolute;
+  width: 15px;
+  height: 15px;
+  right: 5px;
+  top: 8px;
+  color: #8a5a3c;
+}
+.sw.on .buttonIcon {
+  left: 5px;
+  color: white;
+}
+.node .buttonIcon {
+  position: static;
+  width: 17px;
+  height: 17px;
+  fill: currentColor;
+  margin: 0;
+}
+.node .levelNumber {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.btnRow .btn {
+  padding-left: 10px;
+  padding-right: 10px;
+}
+.btnRow .btn svg {
+  width: 18px;
+  height: 18px;
+  margin-right: 3px;
+}
+[hidden] {
+  display: none !important;
+}
