@@ -276,7 +276,7 @@ describe("save", () => {
     expect(save.d).toEqual(save.defaults());
     expect(save.d).toMatchObject({
       coins: 3000,
-      schema: 2,
+      schema: 3,
       boosters: { freeze: 1, auto: 1, calm: 1 },
       staff: [],
       haptics: true,
@@ -298,7 +298,7 @@ describe("save", () => {
     );
     save.load();
     expect(save.d).toMatchObject({
-      schema: 2,
+      schema: 3,
       coins: 24975,
       unlocked: 31,
       up: { fast: 3, patience: 0, time: 0, tips: 0 },

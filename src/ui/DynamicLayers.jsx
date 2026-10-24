@@ -53,7 +53,16 @@ export function Star({ on, className = "" }) {
   );
 }
 
-export function LevelMap({ chapters, foods, save, start, locked, endless }) {
+export function LevelMap({
+  chapters,
+  foods,
+  save,
+  start,
+  locked,
+  endless,
+  places,
+  openPlace,
+}) {
   const STEP = 96;
   return (
     <>
@@ -70,10 +79,17 @@ export function LevelMap({ chapters, foods, save, start, locked, endless }) {
           { length: 10 },
           (_, i) => save.stars[first + i] || 0,
         ).reduce((a, b) => a + b, 0);
+        const place = places[ci],
+          closed = !save.branches.includes(place.id),
+          reached = save.unlocked >= first;
         return (
           <React.Fragment key={ch.name}>
             <div
-              className={"chap" + (save.unlocked < first ? " locked" : "")}
+              className={
+                "chap" +
+                (!reached || closed ? " locked" : "") +
+                (closed && reached ? " toOpen" : "")
+              }
               style={{
                 background: `linear-gradient(135deg,${ch.color},color-mix(in srgb,${ch.color} 70%,#000))`,
               }}
@@ -89,6 +105,21 @@ export function LevelMap({ chapters, foods, save, start, locked, endless }) {
                   <i style={{ width: (got / 30) * 100 + "%" }} />
                 </span>
               </div>
+              {closed && ci > 0 ? (
+                <div className="chapOpen">
+                  {reached ? (
+                    <button className="btn gold" onClick={() => openPlace(ci)}>
+                      <i className="note" />
+                      Open for {fmtNaira(place.cost)}
+                    </button>
+                  ) : (
+                    <span>
+                      Beat level {first - 1}, then open for{" "}
+                      {fmtNaira(place.cost)}
+                    </span>
+                  )}
+                </div>
+              ) : null}
               <div className="foods">
                 {ch.foods.map((f) => (
                   <img key={f} alt={foods[f].name} src={foods[f].img} />
@@ -123,7 +154,7 @@ export function LevelMap({ chapters, foods, save, start, locked, endless }) {
               {xs.map((x, i) => {
                 const n = first + i,
                   stars = save.stars[n] || 0,
-                  isLocked = n > save.unlocked;
+                  isLocked = n > save.unlocked || closed;
                 return (
                   <button
                     key={n}
@@ -135,7 +166,13 @@ export function LevelMap({ chapters, foods, save, start, locked, endless }) {
                       (n === save.unlocked ? " current" : "")
                     }
                     style={{ left: x + "%", top: i * STEP + 50 }}
-                    onClick={() => (isLocked ? locked() : start(n))}
+                    onClick={() =>
+                      isLocked
+                        ? closed && reached
+                          ? openPlace(ci)
+                          : locked()
+                        : start(n)
+                    }
                   >
                     {isLocked ? (
                       <Icon name="lock" />
@@ -762,6 +799,7 @@ export function Grow({
   check,
   open,
   visit,
+  playAt,
   earned,
 }) {
   return (
@@ -783,14 +821,20 @@ export function Grow({
         </p>
       ) : (
         <p className="hintText">
-          You run a Food Empire. Every branch is open to you.
+          You run a Food Empire. Keep the bills paid and reputation high.
         </p>
       )}
-      <div className="sectionLabel">Branches</div>
+      <div className="sectionLabel">Your restaurants</div>
+      <p className="hintText">
+        Each chapter is a new restaurant. Beat the chapter before it, then pay
+        to open it. Opened restaurants earn money after every shift; visit or
+        replay them any time.
+      </p>
       {places.map((p) => {
         const owned = save.branches.includes(p.id),
           c = check(p),
-          here = save.place === p.id;
+          here = save.place === p.id,
+          reached = save.unlocked >= p.firstLevel;
         return (
           <div className={"card place" + (owned ? " owned" : "")} key={p.id}>
             {art["place:" + p.id] ? (
@@ -800,7 +844,7 @@ export function Grow({
                 className="ic"
                 style={{ "--bg": owned ? "#C9F2EE" : "#EADBC4" }}
               >
-                {owned ? "🏪" : "🔒"}
+                {owned ? "🏪" : reached ? "🔑" : "🔒"}
               </div>
             )}
             <div>
@@ -808,30 +852,39 @@ export function Grow({
                 {p.name} <small>· {p.area}</small>
               </h4>
               <p>
+                Levels {p.firstLevel}–{p.firstLevel + 9}
                 {p.income
-                  ? `Earns ${fmtNaira(p.income)} after every shift`
-                  : "Where it all started"}
-                {!owned && p.tier > tier
-                  ? ` · Needs ${tiers[p.tier].name}`
-                  : ""}
+                  ? ` · earns ${fmtNaira(p.income)} per shift once open`
+                  : " · where it all started"}
               </p>
             </div>
             {owned ? (
-              <button
-                className={"btn " + (here ? "plain" : "teal")}
-                disabled={here}
-                onClick={() => visit(p)}
-              >
-                <Icon name="map" />
-                {here ? "Here" : "Visit"}
-              </button>
-            ) : (
+              <div className="staffBtns">
+                <button className="btn green" onClick={() => playAt(p)}>
+                  <Icon name="play" />
+                  Play
+                </button>
+                <button
+                  className={"btn " + (here ? "plain" : "teal")}
+                  disabled={here}
+                  onClick={() => visit(p)}
+                >
+                  <Icon name="map" />
+                  {here ? "Here" : "Visit"}
+                </button>
+              </div>
+            ) : reached ? (
               <button
                 className={"btn " + (c.ok ? "green" : "plain")}
                 onClick={(e) => open(p, e.currentTarget.closest(".card"), e)}
               >
                 <i className="note" />
                 {fmtNaira(p.cost)}
+              </button>
+            ) : (
+              <button className="btn plain" disabled>
+                <Icon name="lock" />
+                Level {p.firstLevel - 1}
               </button>
             )}
           </div>

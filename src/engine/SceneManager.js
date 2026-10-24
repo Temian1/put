@@ -34,6 +34,8 @@ import {
   canOpen,
   openBranch,
   branchIncome,
+  levelOpen,
+  placeOfLevel,
 } from "../game/growth.js";
 import {
   makeOnlineOrder,
@@ -2227,6 +2229,17 @@ export function mountGame(canvas, host, bridge) {
         sb.add(mesh(cyl(0.05, 0.05, 0.4, 6), M("#4A1F0C"), x, 1, -0.1)),
       );
     env.add(sb);
+    // Lit signboard: a row of warm bulbs and a glow over the sign.
+    if (equipLevel(Save.d, "sign")) {
+      const bulb = new T3.MeshBasicMaterial({ color: 0xfff1a8 });
+      for (let i = 0; i < 13; i++)
+        [-0.88, 0.88].forEach((y) =>
+          sb.add(mesh(sph(0.06, 8, 6), bulb, -2.6 + i * 0.433, y, 0.12, false)),
+        );
+      const glow = new T3.PointLight(0xffd27a, 0.9, 7);
+      glow.position.set(0, 0, 1.2);
+      sb.add(glow);
+    }
     // owned decor
     if (Save.d.decor.includes("plants")) {
       plant(env, -3.95, 0.55, 0.9);
@@ -2549,6 +2562,19 @@ export function mountGame(canvas, host, bridge) {
   // As the business grows the street fills up: more stalls and buildings.
   function buildGrowth(g, ci) {
     const tier = tierOf(Save.d);
+    // Owned vehicles park at the roadside: okadas on the right, the bus on the left.
+    for (let i = 0; i < equipLevel(Save.d, "bike"); i++) {
+      const b = new T3.Group();
+      okada(b);
+      b.position.set(4.7 + i * 0.95, 0, -2.75);
+      b.rotation.y = -0.35;
+      g.add(b);
+    }
+    if (equipLevel(Save.d, "bus")) {
+      const bus = danfo(g);
+      bus.position.set(-6.2, 0, -2.85);
+      bus.rotation.y = 0.15;
+    }
     const cols = ["#FF7A1A", "#12A99F", "#FF5A5F", "#2FA34F", "#6B2D8C"];
     for (let i = 0; i < tier; i++) {
       [-1, 1].forEach((side) => {
@@ -2821,6 +2847,9 @@ export function mountGame(canvas, host, bridge) {
       const s = buildStation(id);
       s.position.set((i - (n - 1) / 2) * spacing, 0.86, 2.12);
       s.scale.setScalar(sc);
+      // Bigger pots are visibly taller.
+      const big = equipLevel(Save.d, "bigpots");
+      if (big && FOODS[id].station === "pot") s.scale.y = sc * (1 + 0.14 * big);
       stationGroup.add(s);
       stations[id] = s;
       s.userData.bounce = 0;
@@ -3373,8 +3402,8 @@ export function mountGame(canvas, host, bridge) {
     cleaner: [{ x: -2.35, z: 3.35 }],
     errand: [{ x: 2.45, z: 3.35 }],
     rider: [
-      { x: 3.75, z: -2.95 },
-      { x: -3.75, z: -2.95 },
+      { x: 3.95, z: -3.05 },
+      { x: 3.35, z: -3.3 },
     ],
   };
   const roleCount = {};
@@ -3412,18 +3441,7 @@ export function mountGame(canvas, host, bridge) {
       this.root.position.copy(this.home);
       world.add(this.root);
       setFace(this.P, "happy");
-      // Riders wait beside their parked okada.
-      if (spec.role === "rider") {
-        this.bike = new T3.Group();
-        okada(this.bike);
-        this.bike.position.set(
-          this.home.x + (this.home.x > 0 ? -0.9 : 0.9),
-          0,
-          this.home.z - 0.2,
-        );
-        this.bike.visible = false;
-        world.add(this.bike);
-      }
+      // Riders wait at the roadside by the parked okadas (built with the scene).
     }
     // Routes. The bench spans x ±3.7 at z 2.3; the front counter is at z 0.55.
     toBench(x) {
@@ -5261,7 +5279,7 @@ export function mountGame(canvas, host, bridge) {
       if (pay.bill) neg("Staff salaries", pay.paid);
       if (branches)
         rows.push({
-          label: "Branch income",
+          label: "Other restaurants' income",
           value: "+" + fmtNaira(branches),
           cls: "pos",
         });
@@ -5883,11 +5901,58 @@ export function mountGame(canvas, host, bridge) {
       save: Save.d,
       start: (n) => {
         Sound.play("click");
-        Game.start(levelCfg(n));
+        startLevel(n);
       },
       locked: () => UI.toast("Finish the level before to unlock this one"),
       endless: () => Game.start(endlessCfg()),
+      places: PLACES,
+      openPlace: (ci) => promptOpen(PLACES[ci]),
     });
+  }
+  // Levels in a restaurant you have not paid to open cannot be played.
+  function startLevel(n) {
+    if (levelOpen(Save.d, n)) Game.start(levelCfg(n));
+    else promptOpen(placeOfLevel(n));
+  }
+  let openTarget = null;
+  function promptOpen(pl) {
+    openTarget = pl;
+    const short = pl.cost - Save.d.coins;
+    $("#openName").textContent = pl.name;
+    $("#openArea").textContent =
+      `${pl.area} · Levels ${pl.firstLevel}–${pl.firstLevel + 9}`;
+    $("#openSub").textContent =
+      short > 0
+        ? `You need ${fmtNaira(short)} more to pay rent, fit out the kitchen and get permits. Replay your old restaurants, stock up smart and keep costs low.`
+        : `Pay to rent, fit out and get permits. Once open it earns ${fmtNaira(pl.income)} after every shift, even when you play elsewhere.`;
+    $("#openCost").textContent = fmtNaira(pl.cost);
+    $("#openHave").textContent = fmtNaira(Save.d.coins);
+    const art = ART["place:" + pl.id];
+    $("#openArt").hidden = !art;
+    if (art) $("#openArt").src = art;
+    $("#openGo").classList.toggle("plain", short > 0);
+    $("#openGo").classList.toggle("green", short <= 0);
+    UI.open("ovOpen");
+  }
+  function openRestaurant(pl) {
+    const c = canOpen(Save.d, pl);
+    if (!c.ok) {
+      Sound.play("wrong");
+      UI.toast(
+        c.why === "Not enough money"
+          ? `You need ${fmtNaira(pl.cost - Save.d.coins)} more`
+          : c.why,
+      );
+      return false;
+    }
+    openBranch(Save.d, pl);
+    Save.d.place = pl.id;
+    Save.save();
+    Sound.play("buy");
+    confetti(120);
+    UI.toast(`${pl.name} is open! Welcome to ${pl.area}`);
+    UI.coins();
+    return true;
   }
   function openMap() {
     buildMap();
@@ -6043,10 +6108,15 @@ export function mountGame(canvas, host, bridge) {
   // The menu shows home (grown with your chapter) or the branch you are visiting.
   function menuEnv() {
     const pl = PLACES.find((x) => x.id === Save.d.place);
-    if (!pl || pl.id === "ojuelegba" || !Save.d.branches.includes(pl.id)) {
+    if (pl && Save.d.branches.includes(pl.id))
+      buildEnv(
+        pl.ci,
+        pl.sign || [pl.name.toUpperCase(), "Mama Put • " + pl.area],
+      );
+    else {
       const ch = CHAPTERS[chapterOf(Math.min(MAX_LEVEL, Save.d.unlocked))];
       buildEnv(ch.theme ?? CHAPTERS.indexOf(ch), ch.sign);
-    } else buildEnv(pl.ci, [pl.name.toUpperCase(), "Mama Put • " + pl.area]);
+    }
   }
   function buy(cost, fn, card, e) {
     if (Save.d.coins < cost) {
@@ -6188,24 +6258,20 @@ export function mountGame(canvas, host, bridge) {
       places: PLACES,
       art: ART,
       check: (pl) => canOpen(Save.d, pl),
-      open: (pl, card, e) => {
-        const c = canOpen(Save.d, pl);
-        if (!c.ok) {
-          Sound.play("wrong");
-          UI.toast(
-            c.why === "Not enough money"
-              ? `You need ${fmtNaira(pl.cost - Save.d.coins)} more`
-              : c.why + " first",
-          );
-          return;
-        }
-        openBranch(Save.d, pl);
-        Save.save();
-        Sound.play("buy");
+      open: (pl, card) => {
+        if (!openRestaurant(pl)) return;
         card?.classList.add("bought");
-        void e;
-        UI.toast(`${pl.name} branch is open!`);
+        showMenuEnvRefresh();
         buildGrow();
+      },
+      // Jump to that restaurant's chapter on the map.
+      playAt: (pl) => {
+        UI.close("ovGrow");
+        openMap();
+        requestAnimationFrame(() => {
+          const cards = host.querySelectorAll("#mapInner .chap");
+          cards[pl.chapter]?.scrollIntoView({ block: "start" });
+        });
       },
       visit: (pl) => {
         Save.d.place = pl.id;
@@ -6504,7 +6570,20 @@ export function mountGame(canvas, host, bridge) {
       Game.clear();
       showMenu();
       UI.toast("Endless Rush unlocked!");
-    } else Game.start(levelCfg(n));
+    } else if (levelOpen(Save.d, n)) Game.start(levelCfg(n));
+    else {
+      Game.clear();
+      openMap();
+      promptOpen(placeOfLevel(n));
+    }
+  });
+  on("#openLater", () => UI.close("ovOpen"));
+  on("#openGo", () => {
+    const pl = openTarget;
+    if (!pl || !openRestaurant(pl)) return;
+    UI.close("ovOpen");
+    if (Game.state === "map") buildMap();
+    setTimeout(() => startLevel(pl.firstLevel), 600);
   });
   on("#winRetry", () => {
     UI.close("ovWin");

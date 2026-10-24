@@ -1,7 +1,8 @@
 import { COIN_TO_NAIRA } from "../game/currency.js";
 import { emptyStats } from "../game/missions.js";
+import { LEGACY_PLACES, PLACES } from "../game/data.js";
 
-export const SAVE_SCHEMA = 2;
+export const SAVE_SCHEMA = 3;
 
 export function createSave(storage = globalThis.localStorage) {
   const Save = {
@@ -27,8 +28,8 @@ export function createSave(storage = globalThis.localStorage) {
         market: { shift: 0, index: 1, out: [], news: "" },
         debt: 0,
         lastPlayed: "",
-        branches: ["ojuelegba"],
-        place: "ojuelegba",
+        branches: ["ch0"],
+        place: "ch0",
         boosters: { freeze: 1, auto: 1, calm: 1 },
         sound: true,
         music: true,
@@ -75,6 +76,18 @@ export function migrate(d, defaults) {
       Object.entries(d.best || {}).map(([k, v]) => [k, v * COIN_TO_NAIRA]),
     );
   }
+  // Before schema 3, chapters opened for free: keep every restaurant a player
+  // already reached and translate the old branch ids.
+  if (d && (d.schema || 1) < 3) {
+    const reached = PLACES.filter(
+      (p) => (out.unlocked || 1) >= p.firstLevel,
+    ).map((p) => p.id);
+    const old = (Array.isArray(d.branches) ? d.branches : []).map(
+      (b) => LEGACY_PLACES[b] || b,
+    );
+    out.branches = [...new Set(["ch0", ...reached, ...old])];
+    out.place = LEGACY_PLACES[out.place] || out.place;
+  }
   out.schema = SAVE_SCHEMA;
   const fresh = createDefaultsShape();
   out.up = Object.assign(fresh.up, out.up || {});
@@ -88,11 +101,9 @@ export function migrate(d, defaults) {
   if (!out.market || typeof out.market.index !== "number")
     out.market = { shift: 0, index: 1, out: [], news: "" };
   if (typeof out.debt !== "number") out.debt = 0;
-  if (!Array.isArray(out.branches) || !out.branches.includes("ojuelegba"))
-    out.branches = [
-      "ojuelegba",
-      ...(Array.isArray(out.branches) ? out.branches : []),
-    ];
+  if (!Array.isArray(out.branches)) out.branches = [];
+  if (!out.branches.includes("ch0")) out.branches.unshift("ch0");
+  if (!PLACES.some((p) => p.id === out.place)) out.place = "ch0";
   for (const k of [
     "staff",
     "staffOff",

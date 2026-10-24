@@ -639,63 +639,40 @@ const TIERS = [
   { name: "Catering Business", earn: 4000000, rep: 64 },
   { name: "Food Empire", earn: 12000000, rep: 72 },
 ];
-// Branches in other places. Owned branches pay income after every shift.
-const PLACES = [
-  {
-    id: "ojuelegba",
-    name: "Ojuelegba",
-    area: "Surulere, Lagos",
-    ci: 0,
-    tier: 0,
-    cost: 0,
-    income: 0,
-  },
-  {
-    id: "yaba",
-    name: "Yaba Junction",
-    area: "Yaba, Lagos",
-    ci: 1,
-    tier: 1,
-    cost: 150000,
-    income: 1500,
-  },
-  {
-    id: "mushin",
-    name: "Mushin Amala Spot",
-    area: "Mushin, Lagos",
-    ci: 2,
-    tier: 2,
-    cost: 400000,
-    income: 3500,
-  },
-  {
-    id: "ikeja",
-    name: "Ikeja GRA Catering",
-    area: "Ikeja, Lagos",
-    ci: 3,
-    tier: 3,
-    cost: 1200000,
-    income: 8000,
-  },
-  {
-    id: "lekki",
-    name: "Lekki Phase 1",
-    area: "Lekki, Lagos",
-    ci: 4,
-    tier: 4,
-    cost: 3000000,
-    income: 15000,
-  },
-  {
-    id: "abuja",
-    name: "Wuse Market",
-    area: "Wuse, Abuja",
-    ci: 4,
-    tier: 4,
-    cost: 6000000,
-    income: 30000,
-  },
+// Every chapter is a restaurant. Beating the chapter before it lets you open
+// it, but only by paying the opening cost (rent, fitting out, permits).
+// Restaurants you have opened keep earning after every shift and can be
+// visited or replayed at any time.
+const OPENING = [
+  { area: "Ojuelegba, Surulere", cost: 0, income: 0 },
+  { area: "Yaba, Lagos", cost: 50000, income: 1500 },
+  { area: "Mushin, Lagos", cost: 120000, income: 3000 },
+  { area: "Ikeja GRA, Lagos", cost: 250000, income: 5000 },
+  { area: "Victoria Island, Lagos", cost: 450000, income: 7500 },
+  { area: "Allen Avenue, Ikeja", cost: 700000, income: 10000 },
+  { area: "GRA, Port Harcourt", cost: 1000000, income: 13000 },
+  { area: "Wuse II, Abuja", cost: 1400000, income: 17000 },
+  { area: "Lekki Phase 1, Lagos", cost: 1900000, income: 22000 },
+  { area: "Ikoyi, Lagos", cost: 2500000, income: 28000 },
 ];
+const PLACES = CHAPTERS.map((ch, i) => ({
+  id: "ch" + i,
+  chapter: i,
+  name: ch.name,
+  ci: ch.theme ?? i,
+  sign: ch.sign || null,
+  firstLevel: i * 10 + 1,
+  ...OPENING[i],
+}));
+// Branch ids used before restaurants were tied to chapters.
+const LEGACY_PLACES = {
+  ojuelegba: "ch0",
+  yaba: "ch1",
+  mushin: "ch2",
+  ikeja: "ch3",
+  lekki: "ch4",
+  abuja: "ch7",
+};
 const BOOSTERS = [
   {
     id: "freeze",
@@ -1189,6 +1166,7 @@ export {
   EVENT_LEVELS,
   TIERS,
   PLACES,
+  LEGACY_PLACES,
   chapterOf,
   levelCfg,
   DAILY_MODS,

@@ -501,3 +501,43 @@ svg.star.on {
   padding: 5px;
   border-radius: 50%;
 }
+
+/* ---------- opening a new restaurant ---------- */
+.chap.toOpen {
+  filter: none;
+  outline: 3px dashed rgba(255, 255, 255, 0.85);
+  outline-offset: -8px;
+}
+.chapOpen {
+  position: relative;
+  z-index: 1;
+  margin-top: 8px;
+  font-weight: 800;
+  font-size: 13px;
+}
+.chapOpen .btn {
+  font-size: 16px;
+  padding: 8px 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.chapOpen .note {
+  width: 26px;
+  height: 15px;
+}
+.openPanel {
+  text-align: center;
+}
+.openArt {
+  width: 140px;
+  height: 140px;
+  object-fit: contain;
+  margin: 4px auto;
+  display: block;
+}
+.openName {
+  margin: 4px 0 0;
+  font: 400 26px/1.1 var(--display);
+  color: var(--ink);
+}

@@ -222,7 +222,7 @@ test("old coin saves are converted to naira", async ({ page }) => {
   });
   await expect(page.locator("#menuCoins")).toHaveText("₦10,000");
   const save = await page.evaluate(() => window.__mp.Save.d);
-  expect(save).toMatchObject({ schema: 2, unlocked: 7, coins: 10000 });
+  expect(save).toMatchObject({ schema: 3, unlocked: 7, coins: 10000 });
 });
 
 test("backup code restores progress on another device", async ({

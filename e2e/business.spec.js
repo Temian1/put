@@ -297,23 +297,61 @@ test("sack staff from the shop", async ({ page }) => {
   expect((await saved(page)).staff).toEqual([]);
 });
 
-test("grow: open a branch in another place and visit it", async ({ page }) => {
+test("grow: open the next restaurant, then visit the old one", async ({
+  page,
+}) => {
   await boot(
     page,
-    fresh({ coins: 200000, stats: { earn: 300000 }, reputation: 52 }),
+    fresh({
+      schema: 3,
+      coins: 200000,
+      unlocked: 11,
+      stats: { earn: 300000 },
+      reputation: 52,
+    }),
   );
   await expect(page.locator("#menuRep")).toHaveText("52");
   await page.locator("#btnGrow").click({ force: true });
   await expect(page.locator("#ovGrow")).toHaveClass(/show/);
   await expect(page.locator("#growList")).toContainText("Busy Buka");
-  const yaba = page.locator("#growList .card", { hasText: "Yaba Junction" });
-  await yaba.locator(".btn").click();
-  await expect(yaba.locator(".btn")).toHaveText(/Visit/);
-  await yaba.locator(".btn").click();
+  const junction = page.locator("#growList .card", {
+    hasText: "Junction Food Spot",
+  });
+  await junction.locator(".btn").click();
+  // Opening moves you to the new restaurant.
+  await expect(junction.locator(".btn", { hasText: "Here" })).toBeVisible();
+  let d = await saved(page);
+  expect(d).toMatchObject({ coins: 150000, place: "ch1" });
+  expect(d.branches).toContain("ch1");
+  // Go back and visit the first buka.
+  const first = page.locator("#growList .card", { hasText: "Roadside Buka" });
+  await first.locator(".btn", { hasText: "Visit" }).click();
   await expect(page.locator("#ovGrow")).not.toHaveClass(/show/);
+  d = await saved(page);
+  expect(d.place).toBe("ch0");
+});
+
+test("level 11 stays locked until the owner pays to open the restaurant", async ({
+  page,
+}) => {
+  await boot(page, fresh({ schema: 3, coins: 30000, unlocked: 11 }));
+  await page.locator("#btnPlay").click({ force: true });
+  await expect(page.locator(".chapOpen .btn").first()).toContainText("₦50,000");
+  await page.locator(".chapOpen .btn").first().click();
+  await expect(page.locator("#ovOpen")).toHaveClass(/show/);
+  await expect(page.locator("#openSub")).toContainText("₦20,000 more");
+  await page.locator("#openGo").click({ force: true });
+  expect(await page.evaluate(() => window.__mp.Save.d.branches)).toEqual([
+    "ch0",
+  ]);
+  await page.evaluate(() => (window.__mp.Save.d.coins = 60000));
+  await page.locator("#openGo").click({ force: true });
+  await page.waitForFunction(() => window.__mp.Game.cfg?.n === 11, null, {
+    timeout: 10_000,
+  });
   const d = await saved(page);
-  expect(d).toMatchObject({ place: "yaba", coins: 50000 });
-  expect(d.branches).toContain("yaba");
+  expect(d.branches).toContain("ch1");
+  expect(d.coins).toBe(10000);
 });
 
 test("zoom in and out from the rail", async ({ page }) => {

@@ -27,6 +27,8 @@ import {
   canOpen,
   openBranch,
   branchIncome,
+  levelOpen,
+  nextToOpen,
 } from "../src/game/growth.js";
 import {
   makeOnlineOrder,
@@ -130,29 +132,58 @@ describe("reputation and growth", () => {
     expect(tierOf(fresh({ stats: { earn: 1300000 }, reputation: 40 }))).toBe(0);
     expect(TIERS).toHaveLength(5);
   });
-  it("opens branches in other places once the business is big enough", () => {
-    const yaba = PLACES.find((p) => p.id === "yaba");
-    const small = fresh({ coins: 1e6 });
-    expect(canOpen(small, yaba)).toMatchObject({ ok: false });
-    const d = fresh({ coins: 200000, stats: { earn: 300000 }, reputation: 50 });
-    expect(canOpen(d, yaba).ok).toBe(true);
+  it("each new restaurant needs the chapter beaten and the opening money", () => {
+    const yaba = PLACES.find((p) => p.id === "ch1");
+    expect(yaba).toMatchObject({ name: "Junction Food Spot", firstLevel: 11 });
+    // Not reached yet: even a rich owner must beat level 10 first.
+    expect(canOpen(fresh({ coins: 1e7 }), yaba)).toMatchObject({ ok: false });
+    // Reached but broke: level 11 stays shut.
+    const broke = fresh({ coins: 1000, unlocked: 11 });
+    expect(canOpen(broke, yaba)).toEqual({
+      ok: false,
+      why: "Not enough money",
+    });
+    expect(levelOpen(broke, 11)).toBe(false);
+    expect(levelOpen(broke, 10)).toBe(true);
+    expect(nextToOpen(broke)).toBe(yaba);
+    const d = fresh({ coins: 200000, unlocked: 11 });
     expect(openBranch(d, yaba)).toBe(true);
     expect(d.coins).toBe(200000 - yaba.cost);
+    expect(levelOpen(d, 11)).toBe(true);
     expect(branchIncome(d)).toBe(yaba.income);
     expect(openBranch(d, yaba)).toBe(false);
+    expect(PLACES).toHaveLength(10);
+    for (let i = 1; i < PLACES.length; i++)
+      expect(PLACES[i].cost).toBeGreaterThan(PLACES[i - 1].cost);
+  });
+  it("older saves keep restaurants already reached and paid for", () => {
+    const s = createSave({
+      getItem: () =>
+        JSON.stringify({
+          schema: 2,
+          unlocked: 23,
+          branches: ["ojuelegba", "lekki"],
+          place: "lekki",
+        }),
+      setItem() {},
+    });
+    s.load();
+    expect(s.d.branches.sort()).toEqual(["ch0", "ch1", "ch2", "ch4"]);
+    expect(s.d.place).toBe("ch4");
+    expect(s.d.schema).toBe(3);
   });
   it("saves keep reputation and merge branches", () => {
     const d = fresh();
     expect(d).toMatchObject({
       reputation: 50,
-      branches: ["ojuelegba"],
+      branches: ["ch0"],
       unpaid: {},
     });
     const m = mergeSaves(
-      { ...d, branches: ["ojuelegba", "yaba"], updatedAt: 1 },
-      { ...d, branches: ["ojuelegba", "mushin"], updatedAt: 2 },
+      { ...d, branches: ["ch0", "ch1"], updatedAt: 1 },
+      { ...d, branches: ["ch0", "ch2"], updatedAt: 2 },
     );
-    expect(m.branches.sort()).toEqual(["mushin", "ojuelegba", "yaba"]);
+    expect(m.branches.sort()).toEqual(["ch0", "ch1", "ch2"]);
   });
 });
 

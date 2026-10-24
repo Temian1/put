@@ -434,6 +434,38 @@ export const GameLayout = memo(function GameLayout({
           </div>
         </div>
       </Surface>
+      <Surface className="overlay scroll" id="ovOpen" tag="div">
+        <div className="panel openPanel">
+          <div className="ribbon">{"New Restaurant!"}</div>
+          <img className="openArt" id="openArt" alt="" hidden />
+          <h3 className="openName" id="openName"></h3>
+          <p className="sub small" id="openArea"></p>
+          <p className="sub" id="openSub"></p>
+          <div className="stats">
+            <div className="stat">
+              <span>{"Opening cost"}</span>
+              <b>
+                <i className="note"></i>
+                <span id="openCost">{"₦0"}</span>
+              </b>
+            </div>
+            <div className="stat">
+              <span>{"You have"}</span>
+              <b id="openHave">{"₦0"}</b>
+            </div>
+          </div>
+          <div className="btnRow">
+            <button className="btn plain" id="openLater">
+              <Icon name="close" />
+              <span className="buttonLabel">{"Later"}</span>
+            </button>
+            <button className="btn green grow pulse" id="openGo">
+              <Icon name="shop" />
+              <span className="buttonLabel">{"Open it"}</span>
+            </button>
+          </div>
+        </div>
+      </Surface>
       <Surface className="overlay" id="ovMarket" tag="div">
         <div className="panel">
           <div className="shopHead">

@@ -1,4 +1,4 @@
-import { TIERS, PLACES } from "./data.js";
+import { TIERS, PLACES, chapterOf } from "./data.js";
 
 // Reputation (0–100) is how the street rates your buka. Good, fast service
 // raises it; lost customers, finished pots and late deliveries lower it.
@@ -28,20 +28,28 @@ export function tierOf(d) {
   TIERS.forEach((tier, i) => {
     if (earn >= tier.earn && rep >= tier.rep) t = i;
   });
-  // A business never shrinks below the size its branches prove.
-  const owned = PLACES.filter((p) => d.branches?.includes(p.id));
-  return Math.max(t, ...owned.map((p) => p.tier));
+  return t;
 }
 
 export const nextTier = (d) => TIERS[tierOf(d) + 1] || null;
 
+// A restaurant can be opened once the chapter before it is beaten
+// (its first level is unlocked) and the owner has the opening money.
 export function canOpen(d, place) {
   if (d.branches.includes(place.id)) return { ok: false, why: "owned" };
-  if (tierOf(d) < place.tier)
-    return { ok: false, why: `Grow to ${TIERS[place.tier].name}` };
+  if (d.unlocked < place.firstLevel)
+    return { ok: false, why: `Beat level ${place.firstLevel - 1} first` };
   if (d.coins < place.cost) return { ok: false, why: "Not enough money" };
   return { ok: true };
 }
+
+export const placeOfLevel = (n) => PLACES[chapterOf(n)];
+export const levelOpen = (d, n) => d.branches.includes(placeOfLevel(n).id);
+// The newest restaurant you could open next, if any.
+export const nextToOpen = (d) =>
+  PLACES.find(
+    (p) => !d.branches.includes(p.id) && d.unlocked >= p.firstLevel,
+  ) || null;
 
 export function openBranch(d, place) {
   if (!canOpen(d, place).ok) return false;
