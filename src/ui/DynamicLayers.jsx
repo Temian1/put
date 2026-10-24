@@ -38,6 +38,21 @@ export function FoodButtons({ foods, data, tap }) {
   });
 }
 
+const STAR_PATH =
+  "M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5-4.8-4.6 6.6-.9z";
+// Outlined star that reads on any background; `on` fills it gold.
+export function Star({ on, className = "" }) {
+  return (
+    <svg
+      className={"star " + (on ? "on " : "") + className}
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      <path d={STAR_PATH} />
+    </svg>
+  );
+}
+
 export function LevelMap({ chapters, foods, save, start, locked, endless }) {
   const STEP = 96;
   return (
@@ -51,6 +66,10 @@ export function LevelMap({ chapters, foods, save, start, locked, endless }) {
         const d = xs
           .map((x, i) => `${i ? " L " : "M "}${x} ${i * STEP + 50}`)
           .join("");
+        const got = Array.from(
+          { length: 10 },
+          (_, i) => save.stars[first + i] || 0,
+        ).reduce((a, b) => a + b, 0);
         return (
           <React.Fragment key={ch.name}>
             <div
@@ -63,6 +82,13 @@ export function LevelMap({ chapters, foods, save, start, locked, endless }) {
                 Chapter {ci + 1} · Levels {first}–{first + 9}
               </small>
               <h3>{ch.name}</h3>
+              <div className="chapStars">
+                <Star on />
+                <b>{got}</b>/30
+                <span className="chapBar">
+                  <i style={{ width: (got / 30) * 100 + "%" }} />
+                </span>
+              </div>
               <div className="foods">
                 {ch.foods.map((f) => (
                   <img key={f} alt={foods[f].name} src={foods[f].img} />
@@ -120,13 +146,20 @@ export function LevelMap({ chapters, foods, save, start, locked, endless }) {
                       </span>
                     )}
                     {!isLocked ? (
-                      <span className="st">
+                      <span className="st" aria-label={`${stars} of 3 stars`}>
                         {[0, 1, 2].map((k) => (
-                          <i
-                            key={k}
-                            className={"mini-star" + (k < stars ? " on" : "")}
-                          />
+                          <Star key={k} on={k < stars} className="mini" />
                         ))}
+                      </span>
+                    ) : null}
+                    {i === 9 ? (
+                      <span className="crown" aria-hidden="true">
+                        👑
+                      </span>
+                    ) : null}
+                    {n === save.unlocked ? (
+                      <span className="here" aria-hidden="true">
+                        PLAY
                       </span>
                     ) : null}
                   </button>
@@ -260,6 +293,9 @@ export function Shop({
   unpaidLimit,
   art = {},
   buyBooster,
+  equipment = [],
+  equipLevel,
+  buyEquip,
 }) {
   const buy = (fn, item) => (e) =>
     fn(item, e.currentTarget.closest(".card"), e);
@@ -312,6 +348,49 @@ export function Shop({
             unpaidLimit={unpaidLimit}
           />
         ))}
+      </>
+    );
+  if (tab === "buka")
+    return (
+      <>
+        <div className="sectionLabel">Grow your buka</div>
+        <p className="hintText">
+          Everything you buy appears in your buka. Most items cost upkeep (gas,
+          light, repairs) after every shift.
+        </p>
+        {equipment.map((it) => {
+          const lv = equipLevel(it.id),
+            max = lv >= it.costs.length;
+          return (
+            <div className="card" key={it.id}>
+              <div className="ic" style={{ "--bg": "#FFE3B0" }}>
+                {it.icon}
+              </div>
+              <div>
+                <h4>
+                  {it.name}
+                  {it.costs.length > 1 ? (
+                    <small>
+                      {" "}
+                      · {lv}/{it.costs.length}
+                    </small>
+                  ) : null}
+                </h4>
+                <p>{it.desc}</p>
+                {it.upkeep ? (
+                  <p className="wage">Upkeep {fmtNaira(it.upkeep)} per shift</p>
+                ) : null}
+              </div>
+              <BuyButton
+                cost={it.costs[lv]}
+                owned={max}
+                label={it.costs.length > 1 ? "Max" : "Owned"}
+                coins={save.coins}
+                onClick={buy(buyEquip, it)}
+              />
+            </div>
+          );
+        })}
       </>
     );
   if (tab === "boost")
@@ -490,7 +569,15 @@ export function Missions({
   });
 }
 
-export function Bubble({ customer, cols, foods, moods, select, rootRef }) {
+export function Bubble({
+  customer,
+  cols,
+  foods,
+  moods,
+  select,
+  rootRef,
+  onHaggle,
+}) {
   const mood = customer.mood && moods[customer.mood];
   return (
     <div
@@ -521,16 +608,54 @@ export function Bubble({ customer, cols, foods, moods, select, rootRef }) {
         <div className="pat">
           <b />
         </div>
+        {customer.haggle ? (
+          <div className="haggle">
+            <span className="hq">
+              {fmtNaira(customer.haggle.full)} too much!{" "}
+              {fmtNaira(customer.haggle.offer)}?
+            </span>
+            <span className="hbtns">
+              <button
+                className="hb ok"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  onHaggle("accept");
+                }}
+              >
+                {fmtNaira(customer.haggle.offer)}
+              </button>
+              <button
+                className="hb mid"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  onHaggle("meet");
+                }}
+              >
+                Meet halfway
+              </button>
+              <button
+                className="hb no"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  onHaggle("refuse");
+                }}
+              >
+                No
+              </button>
+            </span>
+          </div>
+        ) : null}
       </div>
     </div>
   );
 }
 
-export function DirtyChip({ clear, rootRef }) {
+export function DirtyChip({ clear, rootRef, small }) {
   return (
     <button
       ref={rootRef}
-      className="dirtyChip"
+      className={"dirtyChip" + (small ? " small" : "")}
+      aria-label="Clear table"
       onPointerDown={(e) => {
         e.stopPropagation();
         e.preventDefault();
@@ -538,7 +663,7 @@ export function DirtyChip({ clear, rootRef }) {
       }}
     >
       <Icon name="wash" />
-      Clear
+      {small ? null : "Clear"}
     </button>
   );
 }
@@ -724,4 +849,103 @@ export function Ledger({ rows }) {
       <b>{r.value}</b>
     </div>
   ));
+}
+
+// Ranked list for the leaderboard. The player's row is highlighted.
+export function Board({ rows, unit, fmt }) {
+  return (
+    <>
+      <p className="hintText">
+        Rival bukas across Nigeria. Climb by selling more, earning stars and
+        beating Endless scores.
+      </p>
+      {rows.map((r) => (
+        <div
+          key={r.name}
+          className={
+            "boardRow" + (r.you ? " you" : "") + (r.rank <= 3 ? " top" : "")
+          }
+        >
+          <span className="rank">
+            {r.rank <= 3 ? ["🥇", "🥈", "🥉"][r.rank - 1] : r.rank}
+          </span>
+          <span className="who">
+            <b>{r.name}</b>
+            <small>{r.where}</small>
+          </span>
+          <span className="val">
+            {unit === "stars" ? (
+              <>
+                <Star on className="mini" /> {r.value}
+              </>
+            ) : (
+              fmt(r.value)
+            )}
+          </span>
+        </div>
+      ))}
+    </>
+  );
+}
+
+// Market stalls: stock up before prices rise. Perishables spoil without a freezer.
+export function Market({ items, news, index, cap, fridge, buy }) {
+  return (
+    <>
+      <div className="marketNews">
+        <b>
+          Prices today: {Math.round((index - 1) * 1000) / 10 >= 0 ? "+" : ""}
+          {Math.round((index - 1) * 1000) / 10}%
+        </b>
+        <span>{news || "Normal market day."}</span>
+      </div>
+      <p className="hintText">
+        Every pot or pan you cook uses one unit from your store. With none in
+        store you buy on the spot for 40% more. Store holds {cap} of each.
+        {fridge
+          ? ""
+          : " Without a deep freezer, perishables lose a quarter after every shift."}
+      </p>
+      {items.map((it) => (
+        <div className={"card market" + (it.out ? " out" : "")} key={it.id}>
+          <div
+            className="ic"
+            style={{ "--bg": it.out ? "#EADBC4" : "#D3F5DA" }}
+          >
+            {it.icon}
+          </div>
+          <div>
+            <h4>
+              {it.name}{" "}
+              <small>
+                · in store {it.have}/{cap}
+              </small>
+            </h4>
+            <p>
+              {it.out
+                ? "Sold out at the market today"
+                : `${fmtNaira(it.price)} per ${it.unit}${it.perish ? " · spoils" : ""}`}
+            </p>
+            <p className="uses">For: {it.uses}</p>
+          </div>
+          <div className="staffBtns">
+            <button
+              className={"btn " + (it.out ? "plain" : "green")}
+              disabled={it.out || it.have >= cap}
+              onClick={(e) => buy(it.id, 1, e)}
+            >
+              +1
+            </button>
+            <button
+              className={"btn " + (it.out ? "plain" : "teal")}
+              disabled={it.out || it.have >= cap}
+              onClick={(e) => buy(it.id, 5, e)}
+            >
+              +5
+            </button>
+          </div>
+        </div>
+      ))}
+    </>
+  );
 }

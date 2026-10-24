@@ -11,6 +11,8 @@ import {
   Orders,
   Grow,
   Ledger,
+  Board,
+  Market,
 } from "./DynamicLayers.jsx";
 
 // Flush only structural changes when the imperative engine immediately needs DOM refs.
@@ -59,6 +61,10 @@ export function createUiBridge(store, host) {
       slot("orders", host.querySelector("#orders"), <Orders {...props} />),
     grow: (props) =>
       slot("grow", host.querySelector("#growList"), <Grow {...props} />),
+    market: (props) =>
+      slot("market", host.querySelector("#marketList"), <Market {...props} />),
+    board: (props) =>
+      slot("board", host.querySelector("#boardList"), <Board {...props} />),
     ledger: (id, rows) =>
       slot(
         "ledger-" + id,
@@ -88,7 +94,7 @@ export function createUiBridge(store, host) {
         );
       slot("caption", host.querySelector("#hudLvl"), content);
     },
-    bubble(customer, cols, foods, moods, select) {
+    bubble(customer, cols, foods, moods, select, onHaggle) {
       let root;
       slot(
         "bubble-" + customer.id,
@@ -99,6 +105,7 @@ export function createUiBridge(store, host) {
           foods={foods}
           moods={moods}
           select={select}
+          onHaggle={onHaggle}
           rootRef={(el) => {
             root = el;
           }}
@@ -106,13 +113,14 @@ export function createUiBridge(store, host) {
       );
       return root;
     },
-    chip(id, clear) {
+    chip(id, clear, small) {
       let root;
       slot(
         id,
         host.querySelector("#world"),
         <DirtyChip
           clear={clear}
+          small={small}
           rootRef={(el) => {
             root = el;
           }}

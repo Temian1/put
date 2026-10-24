@@ -80,7 +80,7 @@ test("plate assembly: toppings wait for the main", async ({ page }) => {
   expect(stillWaiting).toBe(true);
 });
 
-test("cooking stages: raw → frying → ready → burnt → cleared", async ({
+test("cooking stages: raw → frying → ready, and fried food never burns", async ({
   page,
 }) => {
   await boot(page, fresh());
@@ -92,14 +92,14 @@ test("cooking stages: raw → frying → ready → burnt → cleared", async ({
   await expect(dodo).toHaveAttribute("data-stage", "cooking");
   await expect(dodo).toHaveAttribute("data-stage", "ready", { timeout: 6000 });
   await expect(dodo.locator(".stock")).toHaveText("x4");
-  // Leave it on the fire until it burns.
+  // A finished batch stays in stock however long it waits.
   await page.evaluate(() => {
     window.__mp.Game.spawnT = 999;
-    window.__mp.Game.cookers.plantain.t = 8.9;
+    window.__mp.Game.cookers.plantain.t = 600;
   });
-  await expect(dodo).toHaveAttribute("data-stage", "burnt", { timeout: 4000 });
-  await dodo.dispatchEvent("pointerdown");
-  await expect(dodo).toHaveAttribute("data-stage", "raw");
+  await page.waitForTimeout(1500);
+  await expect(dodo).toHaveAttribute("data-stage", "ready");
+  await expect(dodo.locator(".stock")).toHaveText("x4");
 });
 
 test("dishwashing: dirty tables block lanes until cleared and washed", async ({
@@ -108,6 +108,12 @@ test("dishwashing: dirty tables block lanes until cleared and washed", async ({
   await boot(page, fresh());
   await startLevel(page, 11);
   await waitPlaying(page);
+  // Every chair taken, so the served customer eats at the counter.
+  await page.evaluate(() =>
+    window.__mp.Game.tables.forEach((t) =>
+      t.seats.forEach((st) => (st.taken = {})),
+    ),
+  );
   await expect(page.locator("#btnWash")).toBeVisible();
   await page.waitForFunction(() =>
     window.__mp.Game.customers.some((c) => c.state === "wait"),

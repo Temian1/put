@@ -38,6 +38,21 @@ The previous top 10, plus the requested economy and staff changes:
 | Growth and places | Five business tiers, six branches with per-shift income, visiting changes the menu scene. |
 | Art prompts | docs/ART_PROMPTS.md with keys the game loads from public/ui/manifest.json. |
 
+## Delivered in the empire update
+
+| Item | What shipped |
+| --- | --- |
+| Visible, moving staff | Back kitchen with sink, freezer, shelves and handwash; workers walk to jobs and act on arrival; riders wait by parked okadas. |
+| Equipment | 11 buyable items with upkeep, all shown in 3D. |
+| Seating | Up to 6 tables/12 seats; steering (path following, arrival, separation); dirty-table clearing. |
+| Vehicles | Delivery okadas gate free rider trips; catering bus for events; road traffic in every scene. |
+| Market | 8 ingredient groups, store capacity, per-shift inflation and shocks, sell-outs, spoilage. |
+| Haggling | Accept, meet halfway or refuse, with walk-outs. |
+| Taxes and bills | LGA levy, VAT 7.5% from Popular Joint, rent and light, upkeep, debt. |
+| Hygiene | Live hygiene score and health inspections with fines. |
+| Decline | Absence decay, debt penalty, reputation-scaled branch income, business level can drop. |
+| 100 levels | Five new chapters with their own signboards, more dishes and bigger crowds. |
+
 ## Next candidates
 
 1. Self-host fonts and add an install prompt (1–2 days).

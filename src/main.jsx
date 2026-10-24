@@ -4,6 +4,7 @@ import App from "./App.jsx";
 import "./styles/original.css";
 import "./styles/react.css";
 import "./styles/business.css";
+import "./styles/polish.css";
 
 createRoot(document.getElementById("root")).render(<App />);
 

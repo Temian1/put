@@ -33,7 +33,7 @@ Playwright needs a browser once: `npx playwright install chromium`. To use an in
 - Mechanics unlock gradually and a pointing hand teaches each one the first time:
   - **Levels 1–2:** tap what customers want.
   - **Level 3 (plate assembly):** dish the main first; meat, dodo and soup go on top ("Jollof first!"). Every swallow comes with a soup. Tapping a topping too early is a hint, not a mistake.
-  - **Level 4 (cooking stages):** dodo, chicken and fish must be fried. Tap to start frying; a ready batch holds several portions and burns if left too long. Tap a burnt pan to throw it away.
+  - **Level 4 (cooking stages):** dodo, chicken and fish must be fried. Tap to start frying; the finished batch goes straight into stock (e.g. 4 portions of dodo) and stays there until served.
   - **Level 6 (food finishes):** every pot, basin and cooler holds a batch (e.g. 8 plates of rice) that runs out. A finished food shows **Finished!**; tap it to cook a new batch, which costs ingredients (30% of menu price). Customers waiting only on finished food complain, lose patience faster and hurt your reputation.
   - **Level 11 (dishwashing):** served customers leave dirty plates. Tap **Clear** (or the tray) to move a plate to the sink; the lane stays closed until you do. The sink holds four plates. Tap the blue sink button on the left rail (or press **W**) to wash.
   - **Level 15 (online orders):** orders pop up with a notification and appear as cards above the food buttons, with a deadline. Tap a card to select it, tap foods to pack them, then **Pack & send**. Packs cost ₦150 each. A hired dispatch rider delivers free; with none free, an outside rider is called for ₦1,000. Late orders are cancelled and cost reputation.
@@ -41,13 +41,42 @@ Playwright needs a browser once: `npx playwright install chromium`. To use an in
 - **Boosters** (one of each to start, more in the shop): *Freeze Time* stops the clock and patience for 8 s, *Auto-Serve* completes the most urgent order, *Patience Boost* refills everyone waiting.
 - **Customers** all have Nigerian names (Chief, Alhaji and Odogwu titles included). Schoolkids, okada riders, danfo conductors, Alhaji and the **Odogwu** (buys something small, then says "Keep the change!" and tips ₦2,000–₦5,000) join the regulars, VIPs and wedding guests. Some show a mood (😌 calm, 🤤 hungry, 💸 generous, 😤 grumpy).
 - **Reputation (★ 0–100, menu top bar):** fast, correct service raises it; lost customers, wrong food, complaints and late deliveries lower it. Higher reputation brings customers more often and bigger tips; low reputation means fewer customers.
-- **Staff** (Menu → Staff, or Shop → Staff): Chidi and Tunde serve and pack orders, Aunty Bisi clears and washes, Iya Basira cooks when pots finish, Emeka and Musa are dispatch riders, Ngozi runs market errands (restocks drinks, ingredients 20% cheaper). Salaries are paid after every shift from that shift's cash, then savings. A worker unpaid three shifts in a row quits. Put staff off duty, or **Sack** them, to save money.
+- **Staff** (Menu → Staff, or Shop → Staff): Chidi and Tunde serve and pack orders, Aunty Bisi clears and washes, Iya Basira cooks when pots or pans finish, Emeka and Musa are dispatch riders, Ngozi runs market errands (restocks drinks, ingredients 20% cheaper). Salaries are paid after every shift from that shift's cash, then savings. A worker unpaid three shifts in a row quits. Put staff off duty, or **Sack** them, to save money.
 - **End of shift:** the summary lists sales, ingredients, takeaway packs, outside riders, salaries, branch income and the change in reputation. A failed shift still keeps the sales made and still pays its bills.
 - **Grow** (menu): your business grows from Roadside Buka to Food Empire with lifetime sales and reputation. Bigger businesses can open branches in other places (Yaba, Mushin, Ikeja GRA, Lekki, Wuse in Abuja). Each branch pays income after every shift and can be visited, which changes the menu scene to that place.
 - **Left rail in levels:** zoom in/out (also mouse wheel or two-finger pinch), boosters and the sink.
 - **Missions:** three new daily missions with naira rewards, plus lifetime achievements. The menu badge shows how many are ready to claim.
 - Upgrades, outfits, decor, daily login reward, daily challenge (₦6,000 win bonus) and Endless Rush (after level 50) remain.
+- **Menu header:** reputation ★ and your cash; the green arrow on the cash pill opens Upgrades and the shop.
+- **Leaderboard** (menu): rank against rival bukas across Nigeria by lifetime sales, stars and Endless best. Rivals are simulated in the game; a global online board would need a server.
 - **Escape** pauses. The game pauses when its tab is hidden. Settings has sound, music, vibration and graphics toggles.
+
+## Running a food empire
+
+The game runs for **100 levels in 10 chapters**. After the Mama Put Empire (levels 41–50) come Ikeja City Restaurant, Port Harcourt Branch, Abuja Food Court, Catering Company and Food Empire HQ, with up to nine dishes and 37 customers a shift. A bigger business also brings 2 more customers per business level to every shift.
+
+- **Visible staff:** hired workers live in the back kitchen, the floor between the pots and the food buttons. They walk to the job and do it on arrival:
+  - Cooks and servers step up to the pots.
+  - The cleaner walks round the bench to clear counters and tables, then washes at the sink.
+  - Ngozi walks off to the market and comes back with stock.
+  - Riders wait beside their okadas at the roadside and ride off with deliveries.
+- **Buka equipment (Shop → Buka):** plastic tables and chairs, deep freezer, gas burners, bigger pots, double sink, handwash station, uniforms, store shelves, lit signboard, delivery okadas and a catering bus. Everything appears in the scene and most items have upkeep.
+  - Each okada lets one hired rider deliver free.
+  - Without a bus, every event delivery hires one for ₦8,000.
+- **Seating:** served customers take a free chair, sit, eat, then leave a plate on the table to be cleared (tap the round chip, or the cleaner does it). Movement uses path following with arrival and separation steering, so customers slow into their seat and step around each other.
+- **Market (menu):** buy ingredients (rice, beans, swallow, pepper and leaves, meat and fish, chicken, plantain, drinks) for your store.
+  - Every cooked batch uses one unit. With none in store you pay 40% more on the spot, or 60% more when the market is sold out.
+  - Prices rise a little every shift, with occasional shocks (fuel price, exchange rate, floods).
+  - Perishables lose a quarter each shift without a deep freezer.
+- **Haggling (from level 8):** some customers argue the bill: "₦1,400 too much! ₦900?". Accept, meet halfway (they may insist) or refuse (they may pay full price grumbling, or walk out). Waiting too long counts as refusing.
+- **Hygiene and health inspectors (from level 20):** the rail shows hygiene (0–100). Dirty plates, a full sink and customers stuck waiting lower it; a cleaner, a handwash station, uniforms and a freezer raise it. Inspectors from the environmental health office visit some shifts:
+  - **Pass:** reputation goes up.
+  - **Warning:** no fine, but you're told to clean up.
+  - **Fine:** you pay a hygiene fine.
+  - **Very dirty:** a bigger fine and the loss of a life.
+- **Bills and taxes:** every shift pays the LGA levy, rent and NEPA light, and equipment upkeep. From Popular Joint up you also pay 7.5% VAT on sales. Bills you can't pay become debt, repaid first from later shifts. Every shift in debt costs reputation and brings fewer customers.
+- **Decline:** reputation falls if the buka stays closed (up to 15 points for long absences), and branch income shrinks with low reputation. Business level is set by reputation and lifetime sales, so a struggling business drops back down the levels.
+- **Growth is slow on purpose:** business levels need ₦250k, ₦1.2m, ₦4m and ₦12m in lifetime sales. Branches cost ₦150k–₦6m, an okada ₦450k+ and the bus ₦2.5m. The street fills with more stalls, buildings, people and traffic as you grow.
 
 ## Offline and install
 
@@ -79,6 +108,10 @@ src/
     deliveries.js            Online and event orders, packing, dispatch riders
     staff.js                 Payroll, unpaid strikes, quitting and sacking
     growth.js                Reputation, business tiers and branches
+    leaderboard.js           Rankings against rival bukas
+    equipment.js             Buka equipment, effects and upkeep
+    market.js                Ingredients, store, inflation, sell-outs, spoilage
+    business.js              Taxes, rent, hygiene, inspections, haggling, debt
     customers.js             Customer kind/mood selection and traits
     missions.js              Daily missions, achievements and lifetime stats
     scoring.js               Bill, combo/fast/VIP bonuses, tips and wages

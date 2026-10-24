@@ -1,0 +1,503 @@
+/* Visual polish: header, HUD stars, map, leaderboard and overlay backdrop. */
+
+/* ---------- shared outlined star ---------- */
+svg.star {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  fill: #d9c7ae;
+  stroke: var(--ink);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  paint-order: stroke fill;
+}
+svg.star.on {
+  fill: var(--gold);
+  filter: drop-shadow(0 1px 0 #b07800);
+}
+
+/* ---------- menu header: reputation + money with the upgrades button ---------- */
+.topRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.repPill {
+  gap: 5px;
+  padding: 0 12px 0 8px;
+  font-size: 18px;
+  line-height: 1;
+}
+.repStar {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  fill: var(--gold);
+  stroke: #7a4a00;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  display: block;
+}
+.cashGroup {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.cashGroup .pill {
+  padding-right: 34px;
+}
+.plusBtn {
+  position: absolute;
+  right: -4px;
+  top: 50%;
+  width: 36px;
+  height: 36px;
+  margin-top: -18px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: linear-gradient(180deg, #5bd27a, var(--green));
+  box-shadow:
+    0 3px 0 var(--green-d),
+    0 4px 10px rgba(0, 0, 0, 0.3);
+}
+.plusBtn:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--green-d);
+}
+.plusBtn .buttonIcon {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke-width: 2.6;
+  vertical-align: 0;
+}
+
+/* ---------- in-level star meter: room for the last star before the score ---------- */
+.starMeter .sbar {
+  margin-right: 14px;
+}
+.starMeter .sbar i {
+  top: 50%;
+  margin-top: -11px;
+}
+.starMeter .score {
+  margin-left: 4px;
+}
+
+/* ---------- map ---------- */
+#scrMap {
+  background:
+    radial-gradient(
+      circle at 15% 8%,
+      rgba(255, 255, 255, 0.6),
+      transparent 32%
+    ),
+    radial-gradient(
+      circle at 90% 35%,
+      rgba(255, 214, 140, 0.65),
+      transparent 38%
+    ),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cpath d='M24 4l8 20-8 20-8-20z' fill='%23ffffff' fill-opacity='.12'/%3E%3Ccircle cx='4' cy='4' r='3' fill='%23c24e0b' fill-opacity='.10'/%3E%3Ccircle cx='44' cy='44' r='3' fill='%23c24e0b' fill-opacity='.10'/%3E%3C/svg%3E")
+      0 0 / 48px 48px,
+    linear-gradient(180deg, #ffe7bd 0%, #ffc983 40%, #f7a24e 100%);
+}
+/* Lagos skyline along the bottom of the map */
+#scrMap::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 120px;
+  pointer-events: none;
+  opacity: 0.32;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='120' viewBox='0 0 320 120'%3E%3Cpath d='M0 120V78h22V60h18v18h14V40h26v38h12V66h20V30h8V18h6v12h8v48h16V56h24v22h10V44h30v34h14V62h22v16h20V50h26v28h24v42z' fill='%234a1f0c'/%3E%3C/svg%3E")
+    bottom / 320px 120px repeat-x;
+}
+.mapHead {
+  position: relative;
+  z-index: 1;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 244, 222, 0.95),
+    rgba(255, 244, 222, 0.75)
+  );
+  border-bottom: 4px solid #fff;
+  box-shadow: 0 6px 16px rgba(74, 31, 12, 0.18);
+  max-width: none;
+  box-sizing: border-box;
+  padding-bottom: 10px;
+}
+.mapHead::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -10px;
+  height: 6px;
+  background: var(--ankara);
+  opacity: 0.9;
+}
+.mapTitle {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.mapHead h2 {
+  font-size: clamp(18px, 5.6vw, 26px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.1;
+}
+.mapStars {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font: 400 15px/1 var(--display);
+  color: var(--ink);
+}
+.mapStars svg {
+  width: 18px;
+  height: 18px;
+  fill: var(--gold);
+  stroke: var(--ink);
+  stroke-width: 2;
+  paint-order: stroke fill;
+}
+.mapHead .pill {
+  flex: none;
+}
+.mapScroll {
+  position: relative;
+  z-index: 1;
+}
+.chap {
+  box-shadow:
+    0 8px 0 rgba(74, 31, 12, 0.18),
+    0 14px 24px rgba(74, 31, 12, 0.18);
+}
+.chapStars {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  font-weight: 800;
+  font-size: 14px;
+}
+.chapStars b {
+  font: 400 18px/1 var(--display);
+}
+.chapStars svg.star {
+  width: 18px;
+  height: 18px;
+  stroke: rgba(0, 0, 0, 0.45);
+}
+.chapBar {
+  flex: 1;
+  height: 8px;
+  margin-left: 6px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.22);
+  overflow: hidden;
+}
+.chapBar i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #fff2a0, var(--gold));
+}
+/* The path drawing is the only full-size svg; icons inside nodes are not. */
+.path .node svg {
+  position: static;
+  inset: auto;
+  overflow: visible;
+}
+/* Level node stars sit on a dark badge so they read on any background. */
+.node .st {
+  bottom: -18px;
+  gap: 0;
+  padding: 2px 5px;
+  border-radius: 999px;
+  background: rgba(59, 23, 7, 0.88);
+  border: 2px solid #fff;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.25);
+}
+.node .st svg.star.mini {
+  width: 17px;
+  height: 17px;
+  fill: rgba(255, 255, 255, 0.22);
+  stroke: rgba(255, 255, 255, 0.55);
+  stroke-width: 1.6;
+}
+.node .st svg.star.mini.on {
+  fill: var(--gold);
+  stroke: #fff6c8;
+}
+.node .st svg.star.mini:nth-child(2) {
+  transform: translateY(-3px) scale(1.12);
+}
+.node .crown {
+  position: absolute;
+  top: -22px;
+  left: 50%;
+  transform: translateX(-50%) rotate(-8deg);
+  font-size: 24px;
+  text-shadow: none;
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.3));
+}
+.node .here {
+  position: absolute;
+  top: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 3px 10px 4px;
+  border-radius: 10px;
+  background: var(--green);
+  border: 2px solid #fff;
+  font: 400 14px/1 var(--display);
+  color: #fff;
+  box-shadow: 0 3px 0 var(--green-d);
+  animation: bob 1.6s ease-in-out infinite;
+}
+.node.boss .here {
+  top: -50px;
+}
+.node .here::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -8px;
+  margin-left: -6px;
+  border: 6px solid transparent;
+  border-top-color: #fff;
+  border-bottom: 0;
+}
+
+/* ---------- leaderboard ---------- */
+.tabs.three {
+  grid-template-columns: repeat(3, 1fr);
+}
+#ovBoard .panel {
+  width: min(100%, 460px);
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 16px;
+}
+.boardRow {
+  display: grid;
+  grid-template-columns: 38px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  border-radius: 16px;
+  padding: 8px 12px;
+  box-shadow: 0 3px 0 #ebd5b2;
+}
+.boardRow .rank {
+  font: 400 20px/1 var(--display);
+  color: var(--ink-soft);
+  text-align: center;
+}
+.boardRow .who {
+  min-width: 0;
+  display: grid;
+}
+.boardRow .who b {
+  font: 400 16px/1.1 var(--display);
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.boardRow .who small {
+  font-weight: 800;
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+.boardRow .val {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font: 400 16px/1 var(--display);
+  color: var(--ink);
+  white-space: nowrap;
+}
+.boardRow .val svg.star {
+  width: 16px;
+  height: 16px;
+}
+.boardRow.top {
+  background: linear-gradient(90deg, #fff7d6, #fff);
+}
+.boardRow.you {
+  background: linear-gradient(90deg, #c9f2ee, #fff);
+  box-shadow:
+    0 3px 0 #9ed8d2,
+    inset 0 0 0 3px var(--teal);
+}
+.boardRow.you .who b {
+  color: var(--teal-d);
+}
+
+/* ---------- overlays: softer, blurred backdrop and textured panels ---------- */
+.overlay {
+  background: radial-gradient(
+    circle at 50% 40%,
+    rgba(40, 14, 2, 0.4),
+    rgba(40, 14, 2, 0.72)
+  );
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+.panel {
+  background:
+    radial-gradient(
+      circle at 100% 0,
+      rgba(255, 197, 49, 0.18),
+      transparent 40%
+    ),
+    radial-gradient(
+      circle at 0 100%,
+      rgba(18, 169, 159, 0.12),
+      transparent 45%
+    ),
+    var(--cream);
+}
+@media (prefers-reduced-motion: reduce) {
+  .node .here {
+    animation: none;
+  }
+}
+
+/* ---------- haggling on the order bubble ---------- */
+.bubble .haggle {
+  margin-top: 5px;
+  display: grid;
+  gap: 4px;
+  max-width: 170px;
+}
+.bubble .hq {
+  font: 800 11px/1.2 var(--body);
+  color: var(--coral-d);
+  text-align: center;
+}
+.bubble .hbtns {
+  display: flex;
+  gap: 3px;
+}
+.bubble .hb {
+  flex: 1;
+  border: 0;
+  border-radius: 8px;
+  padding: 4px 2px;
+  font: 400 11px/1.1 var(--display);
+  color: #fff;
+  white-space: nowrap;
+}
+.bubble .hb.ok {
+  background: var(--green);
+  box-shadow: 0 2px 0 var(--green-d);
+}
+.bubble .hb.mid {
+  background: var(--gold);
+  color: var(--ink);
+  box-shadow: 0 2px 0 var(--gold-d);
+}
+.bubble .hb.no {
+  background: var(--coral);
+  box-shadow: 0 2px 0 var(--coral-d);
+}
+
+/* ---------- hygiene badge on the rail ---------- */
+.boost.hyg {
+  background: linear-gradient(180deg, #8fd3ff, #4a9fd8);
+  box-shadow: 0 4px 0 #2a6f9e;
+  cursor: default;
+}
+.boost.hyg b {
+  background: #fff;
+  min-width: 26px;
+}
+.boost.hyg.ok b {
+  background: #7df09a;
+}
+.boost.hyg.bad {
+  background: linear-gradient(180deg, #ff8a8d, var(--coral));
+  box-shadow: 0 4px 0 var(--coral-d);
+  animation: pulse 0.8s infinite;
+}
+
+/* ---------- market ---------- */
+#ovMarket .panel {
+  width: min(100%, 480px);
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 16px;
+}
+.marketNews {
+  display: grid;
+  gap: 2px;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+.marketNews b {
+  font: 400 16px/1.1 var(--display);
+  color: var(--gold);
+}
+.card.market .uses {
+  margin: 0;
+  font-size: 11px;
+}
+.card.market.out {
+  opacity: 0.7;
+}
+.stat.news {
+  display: grid;
+  gap: 2px;
+}
+.stat.news b {
+  font: 800 12px/1.25 var(--body);
+  color: var(--ink-soft);
+}
+
+/* ---------- 4 buttons in a menu row, 5 shop tabs ---------- */
+.menuBtns .row.four {
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+.menuBtns .row.four .btn {
+  font-size: 13px;
+  padding: 9px 2px;
+  flex-direction: column;
+  gap: 2px;
+}
+.menuBtns .row.four .btn svg {
+  margin: 0;
+}
+#ovShop .tabs {
+  grid-template-columns: repeat(5, 1fr);
+}
+#ovShop .tabs button {
+  font-size: 12px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .boost.hyg.bad {
+    animation: none;
+  }
+}
+.dirtyChip.small {
+  padding: 5px;
+  border-radius: 50%;
+}

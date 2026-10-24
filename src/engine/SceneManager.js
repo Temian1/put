@@ -21,6 +21,7 @@ import {
   EVENTS,
   TIERS,
   PLACES,
+  MAX_LEVEL,
 } from "../game/data.js";
 import { payroll, removeStaff, UNPAID_LIMIT } from "../game/staff.js";
 import {
@@ -96,6 +97,34 @@ import {
   achievementProgress,
 } from "../game/missions.js";
 import { fmtNaira, fmtNairaShort, roundNaira } from "../game/currency.js";
+import { ranking } from "../game/leaderboard.js";
+import {
+  EQUIPMENT,
+  effects,
+  upkeep as upkeepCost,
+  buyEquipment,
+  level as equipLevel,
+  BUS_HIRE,
+} from "../game/equipment.js";
+import {
+  INGREDIENTS,
+  FOOD_GROUP,
+  price as marketPrice,
+  isOut,
+  buy as marketBuy,
+  ingredientsForBatch,
+  advanceMarket,
+} from "../game/market.js";
+import {
+  RENT,
+  taxes,
+  hygieneScore,
+  inspect,
+  makeOffer,
+  haggle as haggleOutcome,
+  absenceDecay,
+  settleDebt,
+} from "../game/business.js";
 import { Lifetime } from "./Lifetime.js";
 
 // Procedural geometry, scene choreography and timing are retained from the reference.
@@ -1856,8 +1885,17 @@ export function mountGame(canvas, host, bridge) {
   }
 
   function buildEnv(ci, sign) {
+    // Equipment and business size change the buka, so they are part of the key.
     const decorKey =
-      ci + "|" + (sign || "") + "|" + Save.d.decor.slice().sort().join();
+      ci +
+      "|" +
+      (sign || "") +
+      "|" +
+      Save.d.decor.slice().sort().join() +
+      "|" +
+      JSON.stringify(Save.d.equip) +
+      "|" +
+      tierOf(Save.d);
     if (env && envKey === decorKey) return;
     envKey = decorKey;
     if (env) {
@@ -2222,8 +2260,320 @@ export function mountGame(canvas, host, bridge) {
       env.add(tr);
       trays.push(tr);
     }
+    const eff = effects(Save.d);
+    buildBackKitchen(env, eff);
+    buildDining(env, eff, ci);
+    buildTraffic(env, ci);
+    buildGrowth(env, ci);
   }
   const trays = [];
+
+  /* ---- back kitchen: the floor on the camera side of the bench ---- */
+  const KITCHEN_Z = 3.4,
+    BENCH_END = 4.15,
+    SINK_POS = { x: -3.0, z: 3.5 },
+    FRIDGE_POS = { x: 3.15, z: 3.45 },
+    MARKET_EXIT = { x: 8, z: 3.3 },
+    INSPECT_POS = { x: 0, z: -1.25 };
+  function buildBackKitchen(g, eff) {
+    const fl = mesh(
+      G("bkfloor", () => new T3.PlaneGeometry(8.4, 1.5)),
+      M("#E9E4DA", { roughness: 0.8 }),
+      0,
+      0.011,
+      3.55,
+      false,
+    );
+    fl.rotation.x = -Math.PI / 2;
+    g.add(fl);
+    // sink cabinet (one basin, two with the double sink)
+    const wide = eff.sinkCap > 4;
+    const sk = new T3.Group();
+    sk.position.set(SINK_POS.x + (wide ? 0.25 : 0), 0, SINK_POS.z + 0.35);
+    sk.add(
+      mesh(
+        rbox(wide ? 1.5 : 0.95, 0.82, 0.62, 0.05),
+        M("#9FB3C8", { metalness: 0.4, roughness: 0.35 }),
+        0,
+        0.41,
+        0,
+      ),
+    );
+    [wide ? -0.36 : 0, ...(wide ? [0.36] : [])].forEach((x) => {
+      sk.add(
+        mesh(
+          rbox(0.6, 0.06, 0.44, 0.03),
+          M("#5E7184", { metalness: 0.6 }),
+          x,
+          0.82,
+          0,
+        ),
+      );
+      const tap = mesh(
+        cyl(0.025, 0.025, 0.32, 6),
+        M("#C0C8D0", { metalness: 0.8 }),
+        x,
+        1.0,
+        -0.22,
+      );
+      sk.add(tap);
+    });
+    g.add(sk);
+    if (eff.fridge) {
+      const fr = new T3.Group();
+      fr.position.set(FRIDGE_POS.x, 0, FRIDGE_POS.z + 0.3);
+      fr.add(
+        mesh(
+          rbox(0.85, 1.5, 0.7, 0.08),
+          M("#F4F7FA", { roughness: 0.3 }),
+          0,
+          0.75,
+          0,
+        ),
+      );
+      fr.add(
+        mesh(
+          rbox(0.06, 0.5, 0.05, 0.02),
+          M("#9E9E9E", { metalness: 0.7 }),
+          0.32,
+          1.0,
+          -0.37,
+        ),
+      );
+      fr.add(mesh(box(0.8, 0.02, 0.02), M("#CFD8DC"), 0, 1.05, -0.36, false));
+      g.add(fr);
+    }
+    // Open shelves so the stocked sacks are visible.
+    const shelves = equipLevel(Save.d, "store");
+    for (let i = 0; i < shelves; i++) {
+      const sh = new T3.Group();
+      sh.position.set(2.2 - i * 1.0, 0, 4.15);
+      const wood = M("#8B5A2B", { roughness: 0.8 });
+      [-0.44, 0.44].forEach((x) =>
+        sh.add(mesh(box(0.06, 0.95, 0.36), wood, x, 0.475, 0)),
+      );
+      [0.3, 0.68].forEach((y) => {
+        sh.add(mesh(box(0.94, 0.05, 0.38), wood, 0, y, 0));
+        for (let k = 0; k < 3; k++) {
+          const sack = mesh(
+            sph(0.15, 10, 8),
+            M(["#EDE2C8", "#C9A15A", "#D7CCC8"][(k + i) % 3], { roughness: 1 }),
+            -0.28 + k * 0.28,
+            y + 0.13,
+            0,
+          );
+          sack.scale.set(1, 0.85, 0.8);
+          sh.add(sack);
+        }
+      });
+      g.add(sh);
+    }
+    if (equipLevel(Save.d, "handwash")) {
+      const hw = new T3.Group();
+      hw.position.set(-1.85, 0, 3.85);
+      hw.add(
+        mesh(
+          cyl(0.26, 0.26, 0.7, 14),
+          M("#1E78C8", { roughness: 0.4 }),
+          0,
+          0.55,
+          0,
+        ),
+      );
+      hw.add(mesh(cyl(0.18, 0.22, 0.2, 10), M("#455A64"), 0, 0.1, 0));
+      hw.add(
+        mesh(
+          cyl(0.02, 0.02, 0.18, 6),
+          M("#C0C8D0", { metalness: 0.8 }),
+          0,
+          0.45,
+          -0.28,
+        ),
+      );
+      hw.add(mesh(cyl(0.18, 0.15, 0.4, 10), M("#2FA34F"), 0.55, 0.2, 0.05));
+      g.add(hw);
+    }
+    for (let i = 0; i < equipLevel(Save.d, "burner"); i++) {
+      const gas = mesh(
+        cyl(0.16, 0.16, 0.55, 12),
+        M(i ? "#1E5AA8" : "#C62828", { roughness: 0.35 }),
+        -0.6 + i * 1.2,
+        0.28,
+        2.95,
+      );
+      g.add(gas);
+      g.add(
+        mesh(
+          sph(0.16, 10, 6),
+          M(i ? "#1E5AA8" : "#C62828"),
+          -0.6 + i * 1.2,
+          0.56,
+          2.95,
+        ),
+      );
+    }
+  }
+
+  /* ---- dining: plastic tables and chairs on the customer side ---- */
+  const DINING_SLOTS = [
+    [-1.05, -1.62],
+    [1.05, -1.62],
+    [-3.15, -1.62],
+    [3.15, -1.62],
+    [-3.15, -0.2],
+    [3.15, -0.2],
+  ];
+  const diningTables = [];
+  function buildDining(g, eff, ci) {
+    diningTables.length = 0;
+    const plastic =
+      ci === 4 || ci === 3 ? ["#FFFFFF", "#FFFFFF"] : ["#E53935", "#FFFFFF"];
+    for (let i = 0; i < Math.min(eff.tables, DINING_SLOTS.length); i++) {
+      const [x, z] = DINING_SLOTS[i];
+      const t = new T3.Group();
+      t.position.set(x, 0, z);
+      t.add(
+        mesh(
+          rbox(0.74, 0.05, 0.74, 0.03),
+          M(plastic[0], { roughness: 0.4 }),
+          0,
+          0.72,
+          0,
+        ),
+      );
+      [
+        [-0.3, -0.3],
+        [0.3, -0.3],
+        [-0.3, 0.3],
+        [0.3, 0.3],
+      ].forEach(([a, b]) =>
+        t.add(mesh(cyl(0.025, 0.025, 0.7, 6), M(plastic[0]), a, 0.36, b)),
+      );
+      const seats = [-1, 1].map((side) => {
+        const c = chair(
+          plastic[1] === "#FFFFFF" && i % 2 ? "#12A99F" : plastic[1],
+        );
+        c.position.set(side * 0.58, 0, 0);
+        c.rotation.y = (side * Math.PI) / 2;
+        c.scale.setScalar(0.92);
+        t.add(c);
+        return {
+          x: x + side * 0.58,
+          z,
+          face: -side * (Math.PI / 2),
+          taken: null,
+        };
+      });
+      g.add(t);
+      diningTables.push({ g: t, x, z, seats, plates: [], chip: null });
+    }
+  }
+
+  /* ---- traffic: cars, kekes, danfos and okadas on every street ---- */
+  const TRAFFIC_LANES = {
+    0: [-3.35],
+    1: [-4.6, -3.4],
+    2: [-9.2, -8.0],
+    3: [-3.5],
+    4: [-3.75],
+  };
+  function car(g, color) {
+    const k = new T3.Group();
+    k.add(
+      mesh(
+        rbox(1.7, 0.42, 0.82, 0.12),
+        M(color, { roughness: 0.3, metalness: 0.2 }),
+        0,
+        0.42,
+        0,
+      ),
+    );
+    k.add(
+      mesh(
+        rbox(0.95, 0.36, 0.76, 0.1),
+        M("#263238", { roughness: 0.15 }),
+        -0.08,
+        0.8,
+        0,
+      ),
+    );
+    [
+      [-0.55, -0.4],
+      [0.55, -0.4],
+      [-0.55, 0.4],
+      [0.55, 0.4],
+    ].forEach(([x, z]) =>
+      k.add(mesh(tor(0.14, 0.06, 8, 12), M("#1E1E1E"), x, 0.2, z)),
+    );
+    g.add(k);
+    return k;
+  }
+  function buildTraffic(g, ci) {
+    const lanes = TRAFFIC_LANES[ci] || [-3.5];
+    if (ci === 0 || ci === 3 || ci === 4) {
+      const road = mesh(
+        G("road3", () => new T3.PlaneGeometry(60, 1.7)),
+        M("#4A4E57", { roughness: 0.95 }),
+        0,
+        0.015,
+        lanes[0],
+        false,
+      );
+      road.rotation.x = -Math.PI / 2;
+      g.add(road);
+    }
+    const n = Math.min(6, 2 + tierOf(Save.d));
+    const makers = [
+      (h) =>
+        car(h, pick(["#1E88E5", "#E53935", "#F5F5F5", "#212121", "#FFC531"])),
+      keke,
+      danfo,
+      (h) => car(h, pick(["#9E9E9E", "#2FA34F", "#6B2D8C"])),
+      okada,
+      keke,
+    ];
+    for (let i = 0; i < n; i++) {
+      const v = makers[i](g);
+      if (i === 4) v.scale.setScalar(0.9);
+      const dir = i % 2 ? -1 : 1;
+      dyn.push({
+        o: v,
+        type: "drive",
+        z: lanes[i % lanes.length] + (dir > 0 ? 0.35 : -0.35),
+        speed: rnd(2.4, 5),
+        x: rnd(-16, 16),
+        dir,
+      });
+    }
+  }
+  // As the business grows the street fills up: more stalls and buildings.
+  function buildGrowth(g, ci) {
+    const tier = tierOf(Save.d);
+    const cols = ["#FF7A1A", "#12A99F", "#FF5A5F", "#2FA34F", "#6B2D8C"];
+    for (let i = 0; i < tier; i++) {
+      [-1, 1].forEach((side) => {
+        parasol(
+          g,
+          side * (5.8 + i * 1.6),
+          -2.55,
+          cols[(i + (side > 0 ? 2 : 0)) % 5],
+          "#FFF4DE",
+        );
+        if (ci !== 2)
+          building(
+            g,
+            side * (9 + i * 3.2),
+            -11 - (i % 2) * 2,
+            2.8,
+            4 + i * 1.4,
+            2.4,
+            cols[(i * 2 + (side > 0 ? 1 : 0)) % 5],
+            "#BFE6FF",
+            "#4A1F0C",
+          );
+      });
+    }
+  }
 
   /* ================= STATIONS (interactive 3D food stations) ================= */
   let stationGroup = new T3.Group();
@@ -2758,6 +3108,9 @@ export function mountGame(canvas, host, bridge) {
       this.max = o.patience;
       this.p = this.max;
       this.speed = o.speed || 3.6;
+      this.haggle = o.haggle ? { ...o.haggle, done: false } : null;
+      this.haggleT = 8;
+      this.priceMult = 1;
       this.t = Math.random() * 5;
       this.st = 0;
       this.P = makePerson(lookFor(o));
@@ -2779,8 +3132,13 @@ export function mountGame(canvas, host, bridge) {
         Game.cfg.lanes >= 3 || this.order.length === 4
           ? 2
           : Math.min(this.order.length, 3);
-      this.el = bridge.bubble(this, cols, FOODS, MOODS, () =>
-        Game.select(this),
+      this.el = bridge.bubble(
+        this,
+        cols,
+        FOODS,
+        MOODS,
+        () => Game.select(this),
+        (choice) => Game.resolveHaggle(this, choice),
       );
       this.items = [...this.el.querySelectorAll(".it")];
       this.patEl = this.el.querySelector(".pat b");
@@ -2823,6 +3181,19 @@ export function mountGame(canvas, host, bridge) {
         new T3.Vector3(side * 11, 0, STREET_Z),
       ];
       this.state = "leave";
+      this.P.inner.position.y = 0;
+      this.el.style.opacity = "0";
+    }
+    // Walk to a free chair: step back from the counter, sideways, then sit.
+    goSit() {
+      const s = this.seat,
+        lx = this.root.position.x;
+      this.path = [
+        new T3.Vector3(lx, 0, -1.12),
+        new T3.Vector3(s.x, 0, -1.12),
+        new T3.Vector3(s.x, 0, s.z),
+      ];
+      this.state = "toSeat";
       this.el.style.opacity = "0";
     }
     update(dt) {
@@ -2835,13 +3206,25 @@ export function mountGame(canvas, host, bridge) {
         if (this.sayT <= 0) this.sayEl.classList.remove("show");
       }
       let moving = false;
-      if (this.state === "enter" || this.state === "leave") {
+      // Path following with arrival (slow down at the last point) and
+      // separation (step aside from anyone too close), after Reynolds.
+      if (
+        this.state === "enter" ||
+        this.state === "leave" ||
+        this.state === "toSeat"
+      ) {
         const tgt = this.path[0];
         if (tgt) {
           _v.subVectors(tgt, r.position);
           _v.y = 0;
           const d = _v.length(),
-            step = this.speed * dt;
+            last = this.path.length === 1,
+            step =
+              this.speed *
+              dt *
+              (last && this.state === "toSeat"
+                ? Math.max(0.35, Math.min(1, d / 0.6))
+                : 1);
           if (d <= step) {
             r.position.copy(tgt);
             this.path.shift();
@@ -2851,6 +3234,19 @@ export function mountGame(canvas, host, bridge) {
             this.faceRot = Math.atan2(_v.x, _v.z);
             moving = true;
           }
+          if (!last || this.state !== "toSeat") {
+            for (const o of Game.customers) {
+              if (o === this || o.state === "eat") continue;
+              const dx = r.position.x - o.root.position.x,
+                dz = r.position.z - o.root.position.z,
+                dd = Math.hypot(dx, dz);
+              if (dd > 0.001 && dd < 0.55) {
+                const push = ((0.55 - dd) / dd) * Math.min(1, dt * 6);
+                r.position.x += dx * push;
+                r.position.z += dz * push * 0.4;
+              }
+            }
+          }
         }
         if (!this.path.length) {
           if (this.state === "enter") {
@@ -2859,11 +3255,18 @@ export function mountGame(canvas, host, bridge) {
             this.faceRot = 0;
             this.el.style.opacity = "1";
             Game.onArrive(this);
+          } else if (this.state === "toSeat") {
+            this.state = "eat";
+            this.st = 0;
+            this.eatFor = rnd(4.5, 7);
+            this.faceRot = this.seat.face;
+            Game.startMeal(this);
           } else {
             this.dead = true;
           }
         }
       }
+      if (this.state === "eat" && this.st > this.eatFor) Game.finishMeal(this);
       let dr = this.faceRot - r.rotation.y;
       while (dr > Math.PI) dr -= Math.PI * 2;
       while (dr < -Math.PI) dr += Math.PI * 2;
@@ -2872,6 +3275,8 @@ export function mountGame(canvas, host, bridge) {
       if (this.state === "wait") {
         // Waiting on food that has finished wears patience down faster.
         this.p -= dt * Game.patienceRate() * (this.starved ? 1.4 : 1);
+        if (this.haggle && !this.haggle.done && (this.haggleT -= dt) <= 0)
+          Game.resolveHaggle(this, "refuse");
         if (ratio < 0.3) {
           if (!this.angry) {
             this.angry = true;
@@ -2894,11 +3299,19 @@ export function mountGame(canvas, host, bridge) {
           ratio > 0.6 ? "#2FA34F" : ratio > 0.3 ? "#FFB020" : "#E5343A";
       }
       if (this.state === "happy" || this.state === "sad") {
-        if (this.st > 1.05) this.leave();
+        if (this.st > 1.05) {
+          if (this.state === "happy" && this.seat) this.goSit();
+          else this.leave();
+        }
       }
       // animation
       const I = P.inner;
-      if (moving) {
+      if (this.state === "eat") {
+        I.position.y = lerp(I.position.y, -0.3, dt * 8);
+        P.armR.rotation.x = -1.1 + Math.sin(this.t * 7) * 0.35;
+        P.armL.rotation.x = -0.4;
+        P.head.rotation.x = 0.15 + Math.sin(this.t * 7) * 0.06;
+      } else if (moving) {
         I.position.y = Math.abs(Math.sin(this.t * 11)) * 0.09;
         I.rotation.z = Math.sin(this.t * 11) * 0.05;
         P.armL.rotation.x = Math.sin(this.t * 11) * 0.7;
@@ -2945,99 +3358,257 @@ export function mountGame(canvas, host, bridge) {
       bridge.remove("bubble-" + this.id);
     }
   }
-  /* ================= HELPERS (hired staff behind the counter) ================= */
-  const HELPER_X = [-3.3, 3.3, -2.6, 2.6];
+  /* ================= HELPERS (hired staff, visible and walking) ================= */
+  // Staff live in the back kitchen (camera side of the bench). To reach the
+  // front counter or the dining tables they walk round the bench ends.
+  const HOME = {
+    cook: [
+      { x: -0.7, z: KITCHEN_Z },
+      { x: 0.7, z: KITCHEN_Z },
+    ],
+    server: [
+      { x: 1.6, z: KITCHEN_Z },
+      { x: -1.6, z: KITCHEN_Z },
+    ],
+    cleaner: [{ x: -2.35, z: 3.35 }],
+    errand: [{ x: 2.45, z: 3.35 }],
+    rider: [
+      { x: 3.75, z: -2.95 },
+      { x: -3.75, z: -2.95 },
+    ],
+  };
+  const roleCount = {};
+  const V = (x, z) => new T3.Vector3(x, 0, z);
   class Helper {
-    constructor(spec, slot) {
+    constructor(spec) {
       this.spec = spec;
-      this.home = HELPER_X[slot % HELPER_X.length];
-      this.tx = this.home;
-      this.t = spec.interval * rnd(0.4, 1);
+      const list = HOME[spec.role] || HOME.server,
+        i = (roleCount[spec.role] = (roleCount[spec.role] ?? -1) + 1);
+      const h = list[i % list.length];
+      this.home = V(h.x + Math.floor(i / list.length) * 0.5, h.z);
+      this.t = spec.interval * rnd(0.3, 0.8);
       this.anim = Math.random() * 5;
-      this.busy = 0;
-      const mat = new T3.MeshStandardMaterial({
-        map: ankaraTex([spec.a, spec.b, "#FFF4DE"], 1),
-        roughness: 0.7,
-      });
+      this.path = [];
+      this.job = null;
+      this.work = 0;
+      this.away = 0;
+      this.speed =
+        spec.role === "errand" ? 3.4 : spec.role === "cleaner" ? 3.9 : 3.1;
+      const uni = effects(Save.d).uniforms && spec.role !== "rider";
+      const mat = uni
+        ? M("#F4F7FA", { roughness: 0.6 })
+        : new T3.MeshStandardMaterial({
+            map: ankaraTex([spec.a, spec.b, "#FFF4DE"], 1),
+            roughness: 0.7,
+          });
       this.P = makePerson({
         skin: SKINS[spec.skin],
         bodyMat: mat,
-        accent: spec.b,
-        hat: spec.hat || "chef",
-        scale: 0.78,
+        accent: uni ? "#12A99F" : spec.b,
+        hat: uni ? "chef" : spec.hat || "chef",
+        scale: 0.8,
       });
       this.root = this.P.root;
-      this.root.position.set(this.home, 0, 1.45);
-      this.root.visible = spec.role !== "rider";
+      this.root.position.copy(this.home);
       world.add(this.root);
       setFace(this.P, "happy");
+      // Riders wait beside their parked okada.
+      if (spec.role === "rider") {
+        this.bike = new T3.Group();
+        okada(this.bike);
+        this.bike.position.set(
+          this.home.x + (this.home.x > 0 ? -0.9 : 0.9),
+          0,
+          this.home.z - 0.2,
+        );
+        this.bike.visible = false;
+        world.add(this.bike);
+      }
     }
-    // Each role does one job per beat; serving goes through the same path as the player.
+    // Routes. The bench spans x ±3.7 at z 2.3; the front counter is at z 0.55.
+    toBench(x) {
+      const p = this.root.position;
+      const out = p.z < 2.4 ? this.roundEnd(p.x, true) : [];
+      return [...out, V(clamp(x, -3.3, 3.3), 2.95)];
+    }
+    roundEnd(x, toBack) {
+      const e = x >= 0 ? BENCH_END : -BENCH_END;
+      return toBack
+        ? [V(e, 1.3), V(e, KITCHEN_Z)]
+        : [V(e, KITCHEN_Z), V(e, 1.3)];
+    }
+    toFront(x) {
+      return [...this.roundEnd(x, false), V(clamp(x, -3.2, 3.2), 1.05)];
+    }
+    toTable(t) {
+      const e = t.x >= 0 ? BENCH_END : -BENCH_END;
+      return [V(e, KITCHEN_Z), V(e, 0.1), V(e, -1.05), V(t.x, -1.05)];
+    }
+    homePath() {
+      const p = this.root.position;
+      if (p.z < 2.4) {
+        const e = p.x >= 0 ? BENCH_END : -BENCH_END;
+        return [
+          ...(p.z < 0.3 ? [V(e, -1.05), V(e, 0.1)] : []),
+          V(e, 1.3),
+          V(e, KITCHEN_Z),
+          this.home.clone(),
+        ];
+      }
+      return [this.home.clone()];
+    }
+    go(path, run, hold = 0.6, face = Math.PI) {
+      this.path = path;
+      this.job = { run, hold, face };
+      return true;
+    }
+    // Picks one job; the effect happens when the worker gets there.
     act() {
-      const role = this.spec.role;
+      const role = this.spec.role,
+        G0 = Game;
       if (role === "server") {
-        const waiting = Game.customers
+        const waiting = G0.customers
           .filter((c) => c.state === "wait")
           .sort((a, b) => a.p / a.max - b.p / b.max);
         for (const c of waiting)
           for (const it of nextNeeded(c.order)) {
-            const ck = Game.cookers[it.f];
+            const ck = G0.cookers[it.f];
             if (ck && !hasPortion(ck)) continue;
-            if (ck) takePortion(ck);
+            if (G0.claimed.has(c.id + it.f)) continue;
             const st = stations[it.f];
-            if (st) this.tx = clamp(st.position.x, -3.4, 3.4);
-            Game.deliver(c, it.f, this.root.position.clone().setY(1.4));
-            return true;
+            if (!st) continue;
+            G0.claimed.add(c.id + it.f);
+            return this.go(this.toBench(st.position.x), () => {
+              G0.claimed.delete(c.id + it.f);
+              const k = G0.cookers[it.f];
+              if (!c.needs(it.f) || (k && !hasPortion(k))) return;
+              if (k) takePortion(k);
+              st.userData.bounce = 1;
+              G0.deliver(
+                c,
+                it.f,
+                st.getWorldPosition(new T3.Vector3()).setY(1.4),
+              );
+            });
           }
-        // Nobody at the counter needs anything: pack items for an order instead.
-        for (const o of Game.orders)
+        for (const o of G0.orders)
           for (const it of o.items) {
             if (!packNeeds(o, it.f)) continue;
-            const ck = Game.cookers[it.f];
+            const ck = G0.cookers[it.f];
             if (ck && !hasPortion(ck)) continue;
-            if (ck) takePortion(ck);
-            Game.fillPack(o, it.f);
-            return true;
+            const st = stations[it.f];
+            return this.go(this.toBench(st ? st.position.x : 0), () => {
+              const k = G0.cookers[it.f];
+              if (!packNeeds(o, it.f) || (k && !hasPortion(k))) return;
+              if (k) takePortion(k);
+              G0.fillPack(o, it.f);
+            });
           }
       } else if (role === "rider") {
-        const o = Game.orders.find((x) => packComplete(x) && !x.packing);
-        if (
-          o &&
-          Game.riders.some((r) => r.id === this.spec.id && r.away <= 0)
-        ) {
-          Game.sendOrder(o.id, true);
+        const o = G0.orders.find((x) => packComplete(x) && !x.packing);
+        if (o && G0.riders.some((r) => r.id === this.spec.id && r.away <= 0)) {
+          G0.sendOrder(o.id, true);
           return true;
         }
       } else if (role === "errand") {
-        for (const id in Game.cookers) {
-          const ck = Game.cookers[id];
-          if (FOODS[id].station === "cooler" && ck.stage === "raw") {
-            Game.tapCookerFor(id, true);
-            return true;
-          }
-        }
+        const low = Object.keys(G0.cookers).find((id) => {
+          const ck = G0.cookers[id];
+          return (
+            FOODS[id].station === "cooler" &&
+            (ck.stage === "raw" || (ck.stage === "ready" && ck.stock <= 2))
+          );
+        });
+        const groups = [
+          ...new Set(G0.cfg.foods.map((f) => FOOD_GROUP[f])),
+        ].filter((g) => (Save.d.pantry[g] || 0) < 2 && !isOut(Save.d, g));
+        if (low || groups.length)
+          return this.go(
+            [V(MARKET_EXIT.x, MARKET_EXIT.z)],
+            () => {
+              this.root.visible = false;
+              this.away = 3.5;
+              this.onBack = () => {
+                for (const g of groups)
+                  marketBuy(Save.d, g, 3, G0.eff.pantryCap, 0.8);
+                if (low) {
+                  const ck = G0.cookers[low];
+                  if (ck.stage === "raw") G0.tapCookerFor(low, true);
+                  else ck.stock = ck.spec.batch;
+                  G0.syncStations();
+                }
+              };
+            },
+            0,
+          );
       } else if (role === "cleaner") {
-        const lane = Game.dirty.findIndex((d, i) => d && i < Game.laneX.length);
-        if (lane >= 0 && Game.clearTable(lane, true)) {
-          this.tx = Game.laneX[lane];
-          return true;
+        const s = G0.sink;
+        if (
+          s.plates &&
+          !s.washing &&
+          (sinkFull(s) || s.plates >= 2 || !G0.anyDirty())
+        )
+          return this.go(
+            [V(SINK_POS.x, SINK_POS.z - 0.2)],
+            () => G0.wash(true),
+            s.plates * G0.washTime + 0.3,
+            Math.PI,
+          );
+        if (sinkFull(s)) return false;
+        const lane = G0.dirty.findIndex((d, i) => d && i < G0.laneX.length);
+        if (lane >= 0 && !G0.claimed.has("lane" + lane)) {
+          G0.claimed.add("lane" + lane);
+          return this.go(
+            this.toFront(G0.laneX[lane]),
+            () => {
+              G0.claimed.delete("lane" + lane);
+              G0.clearTable(lane, true);
+            },
+            0.5,
+            Math.PI,
+          );
         }
-        if (Game.sink.plates >= 2 || (Game.sink.plates && lane < 0))
-          return Game.wash(true);
+        const ti = G0.tables.findIndex(
+          (t, i) => t.plates.length && !G0.claimed.has("table" + i),
+        );
+        if (ti >= 0) {
+          G0.claimed.add("table" + ti);
+          return this.go(
+            this.toTable(G0.tables[ti]),
+            () => {
+              G0.claimed.delete("table" + ti);
+              G0.clearDiningTable(ti, true);
+            },
+            0.6,
+            Math.PI,
+          );
+        }
       } else if (role === "cook") {
-        for (const id in Game.cookers) {
+        for (const id in G0.cookers) {
           if (FOODS[id].station === "cooler") continue;
-          const ck = Game.cookers[id],
+          const ck = G0.cookers[id],
             wanted =
-              Game.customers.some(
+              G0.customers.some(
                 (c) =>
                   (c.state === "wait" || c.state === "enter") &&
                   c.order.some((o) => o.f === id && !o.done),
-              ) || Game.orders.some((o) => packNeeds(o, id));
-          if (ck.stage === "burnt" || (ck.stage === "raw" && wanted)) {
-            this.tx = clamp(stations[id].position.x, -3.4, 3.4);
-            Game.tapCookerFor(id, true);
-            return true;
+              ) ||
+              G0.orders.some((o) => packNeeds(o, id)) ||
+              ck.spec.hold === Infinity;
+          if (
+            (ck.stage === "burnt" || (ck.stage === "raw" && wanted)) &&
+            !G0.claimed.has("cook" + id)
+          ) {
+            G0.claimed.add("cook" + id);
+            return this.go(
+              this.toBench(stations[id].position.x),
+              () => {
+                G0.claimed.delete("cook" + id);
+                const k = G0.cookers[id];
+                if (k.stage === "raw" || k.stage === "burnt")
+                  G0.tapCookerFor(id, true);
+              },
+              1.2,
+            );
           }
         }
       }
@@ -3045,38 +3616,99 @@ export function mountGame(canvas, host, bridge) {
     }
     update(dt) {
       this.anim += dt;
-      if (Game.state === "playing") {
+      const P = this.P,
+        r = this.root;
+      if (this.away > 0) {
+        this.away -= dt;
+        if (this.away <= 0) {
+          r.visible = true;
+          if (this.onBack) this.onBack();
+          this.onBack = null;
+          this.path = this.homePath();
+          if (this.bike) this.bike.visible = true;
+        }
+        return;
+      }
+      if (this.bike)
+        this.bike.visible =
+          effects(Save.d).bikes >
+          HOME.rider.findIndex((h) => Math.abs(h.x - this.home.x) < 0.6);
+      let moving = false;
+      const tgt = this.path[0];
+      if (tgt) {
+        _v.subVectors(tgt, r.position);
+        _v.y = 0;
+        const d = _v.length(),
+          step = this.speed * dt;
+        if (d <= step) {
+          r.position.copy(tgt);
+          this.path.shift();
+        } else {
+          _v.multiplyScalar(1 / d);
+          r.position.addScaledVector(_v, step);
+          r.rotation.y = lerp(
+            r.rotation.y,
+            Math.atan2(_v.x, _v.z),
+            Math.min(1, dt * 12),
+          );
+          moving = true;
+        }
+      } else if (this.job) {
+        const j = this.job;
+        this.job = null;
+        if (Game.state === "playing" || Game.state === "ending") j.run();
+        this.work = j.hold;
+        this.face = j.face;
+      } else if (this.work > 0) {
+        this.work -= dt;
+        if (this.work <= 0) this.path = this.homePath();
+      } else if (Game.state === "playing") {
         this.t -= dt * (1 + 0.05 * Save.d.up.fast);
         if (this.t <= 0) {
           this.t = this.spec.interval;
-          if (this.act()) this.busy = 0.8;
+          this.act();
         }
       }
-      if (this.busy > 0) {
-        this.busy -= dt;
-        if (this.busy <= 0) this.tx = this.home;
+      const atHome =
+        !moving &&
+        !this.job &&
+        this.work <= 0 &&
+        r.position.distanceTo(this.home) < 0.05;
+      const want = this.work > 0 ? this.face : atHome ? 0 : r.rotation.y;
+      if (!moving) {
+        let dr = want - r.rotation.y;
+        while (dr > Math.PI) dr -= Math.PI * 2;
+        while (dr < -Math.PI) dr += Math.PI * 2;
+        r.rotation.y += dr * Math.min(1, dt * 8);
       }
-      const P = this.P,
-        x = P.root.position.x,
-        nx = lerp(x, this.tx, Math.min(1, dt * 6));
-      P.root.position.x = nx;
-      const moving = Math.abs(this.tx - nx) > 0.05;
       P.inner.position.y = moving
-        ? Math.abs(Math.sin(this.anim * 14)) * 0.07
+        ? Math.abs(Math.sin(this.anim * 13)) * 0.07
         : 0;
-      P.armR.rotation.x =
-        this.busy > 0
-          ? -1.1 + Math.sin(this.anim * 20) * 0.3
+      P.armL.rotation.x = moving
+        ? Math.sin(this.anim * 13) * 0.6
+        : lerp(P.armL.rotation.x, this.work > 0 ? -0.7 : 0, dt * 8);
+      P.armR.rotation.x = moving
+        ? -Math.sin(this.anim * 13) * 0.6
+        : this.work > 0
+          ? -1.1 + Math.sin(this.anim * 18) * 0.35
           : lerp(P.armR.rotation.x, 0, dt * 6);
-      P.root.rotation.y = moving
-        ? this.tx > nx
-          ? 0.5
-          : -0.5
-        : Math.sin(this.anim * 0.9) * 0.1;
+      if (atHome) P.inner.rotation.z = Math.sin(this.anim * 1.4) * 0.03;
+    }
+    // A dispatched rider rides off on the bike and comes back after the trip.
+    rideAway(trip) {
+      this.root.visible = false;
+      if (this.bike) this.bike.visible = false;
+      this.away = trip;
+      this.path = [];
+      this.job = null;
     }
     dispose() {
       retainResources(this.root);
       world.remove(this.root);
+      if (this.bike) {
+        retainResources(this.bike);
+        world.remove(this.bike);
+      }
     }
   }
   class Stroller {
@@ -3133,9 +3765,21 @@ export function mountGame(canvas, host, bridge) {
       this.tt = setTimeout(() => t.classList.remove("show"), 2200);
     },
     coins() {
-      ["#menuCoins", "#mapCoins", "#shopCoins", "#missionCoins"].forEach(
+      // Header pills share their row with buttons; narrow phones get ₦85k.
+      const narrow = innerWidth < 400;
+      ["#menuCoins", "#mapCoins"].forEach(
+        (s) =>
+          ($(s).textContent = (narrow ? fmtNairaShort : fmtNaira)(
+            Save.d.coins,
+          )),
+      );
+      ["#shopCoins", "#missionCoins"].forEach(
         (s) => ($(s).textContent = fmtNaira(Save.d.coins)),
       );
+      $("#mapStarCount").textContent =
+        Object.values(Save.d.stars).reduce((a, b) => a + b, 0) +
+        " / " +
+        MAX_LEVEL * 3;
       $("#menuRep").textContent = Math.round(Save.d.reputation);
       $("#repPill").title = "Reputation · " + TIERS[tierOf(Save.d)].name;
       $("#growCoins").textContent = fmtNaira(Save.d.coins);
@@ -3288,14 +3932,22 @@ export function mountGame(canvas, host, bridge) {
     riders: [],
     packSel: null,
     bikes: [],
+    tables: [],
+    claimed: new Set(),
+    washTime: 0.5,
     patienceRate() {
       return this.freezeT > 0 ? 0 : 1;
+    },
+    anyDirty() {
+      return (
+        this.dirty.some(Boolean) || this.tables.some((t) => t.plates.length)
+      );
     },
     prepTime() {
       return Math.max(0.08, 0.32 - 0.045 * Save.d.up.fast);
     },
     cookSpeed() {
-      return 1 + 0.08 * Save.d.up.fast;
+      return (1 + 0.08 * Save.d.up.fast) * (this.eff ? this.eff.cookSpeed : 1);
     },
     track(ev, n) {
       track(Save.d, ev, n, today());
@@ -3313,7 +3965,14 @@ export function mountGame(canvas, host, bridge) {
         UI.close(id),
       );
       this.cfg = cfg;
-      buildEnv(cfg.ci);
+      this.eff = effects(Save.d);
+      this.tierStart = tierOf(Save.d);
+      // A bigger business draws a bigger crowd: more customers, more time.
+      if (cfg.mode !== "endless" && this.tierStart) {
+        cfg.goal += 2 * this.tierStart;
+        cfg.duration += 6 * this.tierStart;
+      }
+      buildEnv(cfg.theme ?? cfg.ci, cfg.sign);
       setupStations(cfg.foods);
       this.laneX =
         cfg.lanes === 1
@@ -3353,13 +4012,41 @@ export function mountGame(canvas, host, bridge) {
       // Fried food starts raw. From the stock unlock, every pot, basin and
       // cooler also holds a batch that finishes and must be cooked again.
       this.cookers = {};
+      const eff = this.eff,
+        sized = (spec, cooler) => ({
+          ...spec,
+          batch: cooler
+            ? Math.round(spec.batch * (eff.fridge ? 1.5 : 1))
+            : spec.batch + eff.batchBonus,
+        });
       cfg.foods.forEach((f) => {
+        const cooler = FOODS[f].station === "cooler";
         if (cfg.cooking && FOODS[f].cook)
-          this.cookers[f] = createCooker(FOODS[f].cook);
+          this.cookers[f] = createCooker(sized(FOODS[f].cook, false));
         else if (cfg.stock && STOCK[FOODS[f].station])
-          this.cookers[f] = createCooker(STOCK[FOODS[f].station], true);
+          this.cookers[f] = createCooker(
+            sized(STOCK[FOODS[f].station], cooler),
+            true,
+          );
       });
-      this.sink = createSink(4);
+      this.sink = createSink(eff.sinkCap);
+      this.washTime = eff.washTime;
+      this.claimed = new Set();
+      this.fines = 0;
+      this.busFees = 0;
+      this.hygiene = 80;
+      this.hygT = 0;
+      this.inspector = null;
+      this.inspectT =
+        cfg.inspect && Math.random() < 0.4 + 0.05 * this.tierStart
+          ? rnd(25, Math.max(30, Math.min(120, (cfg.duration || 120) * 0.6)))
+          : Infinity;
+      this.tables = diningTables.map((t) => ({
+        ...t,
+        plates: [],
+        chip: null,
+        seats: t.seats.map((s) => ({ ...s, taken: null })),
+      }));
       this.foodCost = 0;
       this.packCost = 0;
       this.riderFees = 0;
@@ -3380,12 +4067,18 @@ export function mountGame(canvas, host, bridge) {
       chefState.tx = 0;
       chefState.x = 0;
       buildFoodButtons(cfg.foods);
+      for (const k in roleCount) delete roleCount[k];
       this.helpers = STAFF.filter(
         (s) => Save.d.staff.includes(s.id) && !Save.d.staffOff.includes(s.id),
-      ).map((s, i) => new Helper(s, i));
+      ).map((s) => new Helper(s));
+      // Each okada lets one hired rider deliver for free.
       this.riders = createRiders(
-        this.helpers.filter((h) => h.spec.role === "rider").map((h) => h.spec),
+        this.helpers
+          .filter((h) => h.spec.role === "rider")
+          .slice(0, eff.bikes)
+          .map((h) => h.spec),
       );
+      $("#hygiene").hidden = !cfg.dishes;
       this.renderOrders();
       $("#notify").classList.remove("show");
       bridge.caption(cfg, fmtNairaShort(Save.d.endlessBest));
@@ -3429,6 +4122,14 @@ export function mountGame(canvas, host, bridge) {
       this.strollers = [];
       this.helpers.forEach((h) => h.dispose());
       this.helpers = [];
+      if (this.inspector) world.remove(this.inspector.P.root);
+      this.inspector = null;
+      for (const t of this.tables) {
+        t.plates.forEach((m) => m.parent?.remove(m));
+        if (t.chip) bridge.remove(t.chipId);
+        if (t.food) t.food.parent?.remove(t.food);
+      }
+      this.tables = [];
       selRing.visible = false;
       flyers.forEach((f) => world.remove(f.obj));
       flyers.length = 0;
@@ -3517,11 +4218,21 @@ export function mountGame(canvas, host, bridge) {
         (vip ? 0.85 : 1) *
         (c.tutorial ? 1.5 : 1) *
         traits.patience;
+      const bill = order.reduce((s2, f) => s2 + FOODS[f].price, 0);
+      const argues =
+        c.haggle &&
+        !vip &&
+        type !== "odogwu" &&
+        Math.random() <
+          (type === "conductor" || type === "okada" || type === "schoolkid"
+            ? 0.32
+            : 0.16);
       const cu = new Customer(lane, order, {
         vip,
         guest,
         type,
         mood,
+        haggle: argues ? { full: bill, offer: makeOffer(bill) } : null,
         assembly: c.assembly,
         patience: pat,
         speed: c.fast ? 4.8 : type === "okada" ? 4.4 : 3.6,
@@ -3699,7 +4410,10 @@ export function mountGame(canvas, host, bridge) {
       });
     },
     serve(c) {
-      const base = c.order.reduce((s, o) => s + FOODS[o.f].price, 0);
+      if (c.haggle && !c.haggle.done) this.resolveHaggle(c, "refuse", true);
+      const base = Math.round(
+        c.order.reduce((s, o) => s + FOODS[o.f].price, 0) * c.priceMult,
+      );
       const ratio = c.p / c.max;
       const fast = ratio > 0.6;
       const { points: pts, coins } = scoreOrder({
@@ -3742,10 +4456,11 @@ export function mountGame(canvas, host, bridge) {
         fly(o, w, head, 0.25 + i * 0.05, 0.4, (ob) => world.remove(ob));
       });
       tray.userData.items = [];
-      if (this.cfg.dishes) this.leaveDirty(c.lane);
+      // Customers with a free chair carry their plate to the table.
+      c.seat = this.cfg.assembly && !c.vip ? this.claimSeat(c) : null;
+      if (this.cfg.dishes && !c.seat) this.leaveDirty(c.lane);
       Sound.play("serve");
       Haptics.play("serve");
-      chefReact("happy", 0.9);
       const sp = screenPos(_v.set(c.root.position.x, 2.6, c.root.position.z));
       floatText(sp.x, sp.y, "+" + fmtNaira(pts));
       if (fast)
@@ -3831,12 +4546,12 @@ export function mountGame(canvas, host, bridge) {
         sp = st && screenPos(st.getWorldPosition(new T3.Vector3()));
       if (r === "start") {
         // Ingredients are bought for the whole batch; the market errand haggles 20% off.
-        const cost = roundNaira(
-          FOODS[id].price *
-            ck.spec.batch *
-            FOOD_COST *
-            (this.staffOnDuty("errand") ? 0.8 : 1),
-          10,
+        // Ingredients come from the store; if it is empty they are bought on
+        // the spot at a premium (the market errand gets 20% off).
+        const cost = ingredientsForBatch(
+          Save.d,
+          id,
+          this.staffOnDuty("errand") ? 0.8 : 1,
         );
         this.foodCost += cost;
         Sound.play("tap");
@@ -3850,7 +4565,9 @@ export function mountGame(canvas, host, bridge) {
             floatText(
               sp.x,
               sp.y - 40,
-              `${ck.spec.verb}ing… -${fmtNaira(cost)}`,
+              cost
+                ? `${ck.spec.verb}ing… -${fmtNaira(cost)}`
+                : `${ck.spec.verb}ing… (from store)`,
               "small",
             );
         }
@@ -3908,9 +4625,10 @@ export function mountGame(canvas, host, bridge) {
           );
           btn.querySelector(".lbl").textContent =
             ck.stage === "raw"
-              ? ck.spec.hold === Infinity
-                ? "Finished!"
-                : "Tap: " + ck.spec.verb
+              ? // Pans start the day empty; anything that ran out says so.
+                FOODS[id].cook && !ck.batches
+                ? "Tap: " + ck.spec.verb
+                : "Finished!"
               : ck.stage === "cooking"
                 ? ck.spec.verb + "ing"
                 : ck.stage === "burnt"
@@ -3994,7 +4712,9 @@ export function mountGame(canvas, host, bridge) {
       setTimeout(
         () => {
           if (!this.orders.includes(o) || this.state !== "playing") return;
-          const { rider, fee, trip } = dispatch(this.riders),
+          const { rider, fee: riderFee, trip } = dispatch(this.riders),
+            fee =
+              riderFee + (o.kind === "event" && !this.eff.bus ? BUS_HIRE : 0),
             value = orderValue(o),
             packs = packsFor(o) * PACK_COST;
           this.packCost += packs;
@@ -4009,6 +4729,8 @@ export function mountGame(canvas, host, bridge) {
           this.orders.splice(this.orders.indexOf(o), 1);
           this.renderOrders();
           this.rideOut(trip);
+          if (rider)
+            this.helpers.find((h) => h.spec.id === rider.id)?.rideAway(trip);
           Sound.play("serve");
           comboText(o.kind === "event" ? "CATERING DELIVERED!" : "DELIVERED!");
           const r = $("#orders").getBoundingClientRect();
@@ -4127,6 +4849,202 @@ export function mountGame(canvas, host, bridge) {
         }
       }
     },
+    /* ---- haggling ---- */
+    resolveHaggle(c, choice, served) {
+      if (!c.haggle || c.haggle.done) return;
+      let r = haggleOutcome(choice, c.haggle.full, c.haggle.offer);
+      if (served && r.leaves)
+        r = { price: c.haggle.full, rep: -0.5, line: "grumble" };
+      c.haggle.done = true;
+      c.el.querySelector(".haggle")?.remove();
+      this.rep(r.rep);
+      if (r.leaves) {
+        c.say("I no fit pay that one! I dey go.", 1.6);
+        c.state = "sad";
+        c.st = 0;
+        setFace(c.P, "sad");
+        this.laneBusy[c.lane] = null;
+        if (this.selected === c) this.selected = null;
+        this.clearTray(c.lane);
+        Sound.play("lose");
+        return;
+      }
+      c.priceMult = r.price / c.haggle.full;
+      c.say(
+        r.line === "deal"
+          ? "Deal! Thank you Mama!"
+          : r.line === "insist"
+            ? `Abeg, ${fmtNaira(c.haggle.offer)} last price!`
+            : "Ehn! Okay sha, I go pay.",
+        1.6,
+      );
+      if (r.line === "deal") c.p = Math.min(c.max, c.p + c.max * 0.2);
+      Sound.play(r.line === "grumble" ? "wrong" : "click");
+    },
+    /* ---- dining tables ---- */
+    claimSeat(c) {
+      for (const t of this.tables) {
+        if (t.plates.length) continue;
+        const s = t.seats.find((x) => !x.taken);
+        if (s) {
+          s.taken = c;
+          s.table = t;
+          return s;
+        }
+      }
+      return null;
+    },
+    startMeal(c) {
+      const t = c.seat.table,
+        f = c.order[0].f,
+        m = foodModel(f);
+      m.scale.setScalar(0.45);
+      m.position.set(c.seat.x - t.x > 0 ? 0.18 : -0.18, 0.75, 0);
+      t.g.add(m);
+      c.meal = m;
+      if (Math.random() < 0.5) c.say(pick(LINES.happy), 1.4);
+    },
+    finishMeal(c) {
+      const s = c.seat,
+        t = s.table;
+      if (c.meal) t.g.remove(c.meal);
+      s.taken = null;
+      c.seat = null;
+      if (this.cfg.dishes) {
+        const p = dirtyPlate();
+        p.scale.setScalar(0.6);
+        p.position.set(s.x - t.x > 0 ? 0.18 : -0.18, 0.75, 0);
+        t.g.add(p);
+        t.plates.push(p);
+        const i = this.tables.indexOf(t);
+        if (!t.chip) {
+          t.chipId = "tchip-" + i;
+          t.chip = bridge.chip(t.chipId, () => this.clearDiningTable(i), true);
+        }
+      }
+      c.leave();
+    },
+    clearDiningTable(i, byHelper) {
+      const t = this.tables[i];
+      if (!t || !t.plates.length || this.state !== "playing") return false;
+      while (t.plates.length && !sinkFull(this.sink)) {
+        addPlate(this.sink);
+        t.g.remove(t.plates.pop());
+      }
+      if (t.plates.length) {
+        if (!byHelper) {
+          Sound.play("wrong");
+          UI.toast("Sink full! Wash the plates first");
+        }
+        return false;
+      }
+      bridge.remove(t.chipId);
+      t.chip = null;
+      Sound.play("place");
+      if (!byHelper) Haptics.play("tap");
+      this.updateTools();
+      return true;
+    },
+    /* ---- hygiene and health inspectors ---- */
+    updateHygiene() {
+      const starving = this.customers.filter((c) => c.starved).length;
+      this.hygiene = hygieneScore({
+        equipment: this.eff.hygiene,
+        cleaner: this.staffOnDuty("cleaner"),
+        dirty:
+          this.dirty.filter(Boolean).length +
+          // A plate left on a dining table looks less bad than one on the counter.
+          0.5 * this.tables.reduce((n, t) => n + t.plates.length, 0),
+        sinkFull: sinkFull(this.sink),
+        starving,
+      });
+      const el = $("#hygiene");
+      $("#hygTxt").textContent = Math.round(this.hygiene);
+      el.classList.toggle("bad", this.hygiene < 55);
+      el.classList.toggle("ok", this.hygiene >= 75);
+    },
+    updateInspector(dt) {
+      this.inspectT -= dt;
+      if (!this.inspector && this.inspectT <= 0) {
+        this.inspectT = Infinity;
+        const P = makePerson({
+          skin: pick(SKINS),
+          bodyMat: M("#FFFFFF", { roughness: 0.6 }),
+          accent: "#1E5AA8",
+          hat: "cap",
+          scale: 1,
+        });
+        P.root.position.set(-10, 0, STREET_Z);
+        world.add(P.root);
+        setFace(P, "neutral");
+        this.inspector = {
+          P,
+          state: "in",
+          t: 0,
+          path: [V(INSPECT_POS.x, STREET_Z), V(INSPECT_POS.x, INSPECT_POS.z)],
+        };
+        this.notify("🧑‍⚕️", "Health inspector is here! Keep the kitchen clean");
+        Sound.play("tick");
+        return;
+      }
+      const ins = this.inspector;
+      if (!ins) return;
+      ins.t += dt;
+      const r = ins.P.root,
+        tgt = ins.path[0];
+      if (tgt) {
+        _v.subVectors(tgt, r.position);
+        const d = _v.length();
+        if (d < 0.08) ins.path.shift();
+        else {
+          r.position.addScaledVector(
+            _v.multiplyScalar(1 / d),
+            Math.min(d, 2.6 * dt),
+          );
+          r.rotation.y = Math.atan2(_v.x, _v.z);
+        }
+        ins.P.inner.position.y = Math.abs(Math.sin(ins.t * 11)) * 0.07;
+        return;
+      }
+      ins.P.inner.position.y = 0;
+      if (ins.state === "in") {
+        ins.state = "checking";
+        ins.t = 0;
+        r.rotation.y = 0;
+        ins.P.armR.rotation.x = -1.2;
+      } else if (ins.state === "checking" && ins.t > 6) {
+        const res = inspect(this.hygiene, this.tierStart);
+        this.fines += res.fine;
+        this.rep(res.rep);
+        const sp = screenPos(_v.set(r.position.x, 2.6, r.position.z));
+        if (res.result === "pass") {
+          floatText(sp.x, sp.y, "Clean kitchen! Passed", "green small");
+          Sound.play("star");
+        } else if (res.result === "warning") {
+          floatText(sp.x, sp.y, "Warning: clean up!", "small");
+          UI.toast("Inspector warning: dirty plates and tables. Clean up!");
+        } else {
+          floatText(sp.x, sp.y, "Fined " + fmtNaira(res.fine), "bad small");
+          UI.toast(
+            res.result === "sealed"
+              ? `Very dirty kitchen! Fined ${fmtNaira(res.fine)} and customers scared off`
+              : `Hygiene fine: ${fmtNaira(res.fine)}. Buy a handwash station, hire a cleaner`,
+          );
+          Sound.play("lose");
+          if (res.result === "sealed") {
+            this.lives--;
+            this.updateHUD();
+            if (this.lives <= 0) this.finish(false, "lives");
+          }
+        }
+        ins.state = "out";
+        ins.path = [V(INSPECT_POS.x, STREET_Z), V(10, STREET_Z)];
+        ins.P.armR.rotation.x = 0;
+      } else if (ins.state === "out") {
+        world.remove(r);
+        this.inspector = null;
+      }
+    },
     /* ---- tables and the sink ---- */
     leaveDirty(lane) {
       const p = dirtyPlate();
@@ -4237,7 +5155,7 @@ export function mountGame(canvas, host, bridge) {
           : `${s.plates}/${s.capacity}`;
         $("#btnWash").classList.toggle("full", sinkFull(s));
         $("#washBar").style.width = s.washing
-          ? Math.min(100, (s.washing / WASH_TIME) * 100).toFixed(0) + "%"
+          ? Math.min(100, (s.washing / this.washTime) * 100).toFixed(0) + "%"
           : "0";
       }
       BOOSTERS.forEach((b) => {
@@ -4254,57 +5172,85 @@ export function mountGame(canvas, host, bridge) {
     // Settles the shift: costs and salaries are paid from the takings, then
     // savings. Unpaid staff get a strike and quit at the limit.
     settle(sales, extra) {
-      const branches = branchIncome(Save.d),
-        costs = this.foodCost + this.packCost + this.riderFees,
+      const d = Save.d,
+        tier = this.tierStart ?? tierOf(d),
+        tax = taxes(tier, sales + extra),
+        rent = RENT[tier],
+        upkeep = upkeepCost(d),
+        // Branches earn less when the brand's reputation slips.
+        branches = Math.round(
+          branchIncome(d) * clamp(this.repNow / 60, 0.4, 1.2),
+        ),
+        costs =
+          this.foodCost +
+          this.packCost +
+          this.riderFees +
+          tax.levy +
+          tax.vat +
+          rent +
+          upkeep +
+          (this.fines || 0),
         net = sales + extra + branches - costs;
-      const pay = payroll(Save.d, STAFF, Save.d.coins + net);
-      Save.d.coins = Math.max(0, Save.d.coins + net - pay.paid);
+      const pay = payroll(d, STAFF, d.coins + net);
+      const debtBefore = d.debt;
+      d.coins = settleDebt(d, d.coins + net - pay.paid);
+      if (d.debt > 0) this.repNow = clampRep(this.repNow - 3);
       const repBefore = this.repStart;
-      Save.d.reputation = Math.round(this.repNow * 10) / 10;
+      d.reputation = Math.round(this.repNow * 10) / 10;
+      const market = advanceMarket(d, this.eff.fridge);
+      d.lastPlayed = today();
       const rows = [];
-      if (this.foodCost)
-        rows.push({
-          label: "Ingredients",
-          value: "-" + fmtNaira(this.foodCost),
-          cls: "neg",
-        });
-      if (this.packCost)
-        rows.push({
-          label: "Takeaway packs",
-          value: "-" + fmtNaira(this.packCost),
-          cls: "neg",
-        });
-      if (this.riderFees)
-        rows.push({
-          label: "Outside riders",
-          value: "-" + fmtNaira(this.riderFees),
-          cls: "neg",
-        });
-      if (pay.bill)
-        rows.push({
-          label: "Staff salaries",
-          value: "-" + fmtNaira(pay.paid),
-          cls: "neg",
-        });
+      const neg = (label, v) =>
+        v && rows.push({ label, value: "-" + fmtNaira(v), cls: "neg" });
+      neg("Ingredients (on the spot)", this.foodCost);
+      neg("Takeaway packs", this.packCost);
+      neg("Outside riders & bus hire", this.riderFees);
+      neg("LGA levy", tax.levy);
+      neg("VAT 7.5%", tax.vat);
+      neg("Rent & NEPA light", rent);
+      neg("Equipment upkeep", upkeep);
+      neg("Hygiene fine", this.fines);
+      if (pay.bill) neg("Staff salaries", pay.paid);
       if (branches)
         rows.push({
           label: "Branch income",
           value: "+" + fmtNaira(branches),
           cls: "pos",
         });
-      const dRep = Math.round((Save.d.reputation - repBefore) * 10) / 10;
+      if (d.debt > 0)
+        rows.push({
+          label: "Unpaid bills (debt)",
+          value: fmtNaira(d.debt),
+          cls: "warn",
+        });
+      else if (debtBefore > 0)
+        rows.push({ label: "Debt cleared", value: "✓", cls: "pos" });
+      if (market.spoiled)
+        rows.push({
+          label: "Spoiled stock (no freezer)",
+          value: market.spoiled + " units",
+          cls: "warn",
+        });
+      const dRep = Math.round((d.reputation - repBefore) * 10) / 10;
       rows.push({
         label: "Reputation",
-        value: `★ ${Math.round(Save.d.reputation)} (${dRep >= 0 ? "+" : ""}${dRep})`,
+        value: `★ ${Math.round(d.reputation)} (${dRep >= 0 ? "+" : ""}${dRep})`,
         cls: dRep >= 0 ? "pos" : "neg",
       });
+      const tierNow = tierOf(d);
+      if (tierNow !== tier)
+        rows.push({
+          label: tierNow > tier ? "Business grew to" : "Business fell to",
+          value: TIERS[tierNow].name,
+          cls: tierNow > tier ? "pos" : "warn",
+        });
       const name = (id) => STAFF.find((x) => x.id === id).name;
       pay.unpaid
         .filter((id) => !pay.quit.includes(id))
         .forEach((id) =>
           rows.push({
             label: `${name(id)} not paid`,
-            value: `${Save.d.unpaid[id]}/${UNPAID_LIMIT}`,
+            value: `${d.unpaid[id]}/${UNPAID_LIMIT}`,
             cls: "warn",
           }),
         );
@@ -4315,6 +5261,8 @@ export function mountGame(canvas, host, bridge) {
           cls: "warn",
         }),
       );
+      if (market.news)
+        rows.push({ label: "Market news", value: market.news, cls: "news" });
       return { net: net - pay.paid, rows, quit: pay.quit };
     },
     finish(won, why) {
@@ -4379,7 +5327,8 @@ export function mountGame(canvas, host, bridge) {
           const k = cfg.n;
           Save.d.stars[k] = Math.max(Save.d.stars[k] || 0, stars);
           Save.d.best[k] = Math.max(Save.d.best[k] || 0, this.score);
-          if (Save.d.unlocked <= k) Save.d.unlocked = Math.min(51, k + 1);
+          if (Save.d.unlocked <= k)
+            Save.d.unlocked = Math.min(MAX_LEVEL + 1, k + 1);
         } else if (cfg.mode === "daily" && Save.d.dailyDone !== today()) {
           bonus = 6000;
           Save.d.dailyDone = today();
@@ -4415,7 +5364,7 @@ export function mountGame(canvas, host, bridge) {
         $("#winCombo").textContent = "x" + this.bestCombo;
         $("#winNext").hidden = cfg.mode !== "level";
         $("#winNext .buttonLabel").textContent =
-          cfg.n >= 50 ? "Endless!" : "Next";
+          cfg.n >= MAX_LEVEL ? "Endless!" : "Next";
         UI.open("ovWin");
         Sound.play("win");
         Haptics.play("win");
@@ -4517,7 +5466,13 @@ export function mountGame(canvas, host, bridge) {
         }
         this.updateOrders(dt);
         this.checkStarving(dt);
-        const washed = tickSink(this.sink, dt, WASH_TIME);
+        const washed = tickSink(this.sink, dt, this.washTime);
+        this.hygT -= dt;
+        if (this.hygT <= 0) {
+          this.hygT = 0.4;
+          this.updateHygiene();
+        }
+        this.updateInspector(dt);
         if (washed) {
           Sound.play("place");
           this.track("wash", washed);
@@ -4537,7 +5492,12 @@ export function mountGame(canvas, host, bridge) {
         ) {
           if (this.spawn()) {
             const g = this.diff().gap;
-            this.spawnT = rnd(g[0], g[1]) * spawnFactor(this.repNow);
+            this.spawnT =
+              rnd(g[0], g[1]) *
+              spawnFactor(this.repNow) *
+              this.eff.spawn *
+              (1 - 0.05 * this.tierStart) *
+              (Save.d.debt > 0 ? 1.15 : 1);
           } else this.spawnT = 0.25;
         }
         this.hintT -= dt;
@@ -4907,7 +5867,7 @@ export function mountGame(canvas, host, bridge) {
     UI.close("ovPause");
     menuEnv();
     setupStations(
-      CHAPTERS[Math.min(4, chapterOf(Math.min(50, Save.d.unlocked)))].foods,
+      CHAPTERS[chapterOf(Math.min(MAX_LEVEL, Save.d.unlocked))].foods,
     );
     trays.forEach((t) => (t.visible = true));
     [-2.05, 0, 2.05].forEach((x, i) => {
@@ -4933,6 +5893,24 @@ export function mountGame(canvas, host, bridge) {
       decor: DECOR,
       staff: STAFF,
       boosters: BOOSTERS,
+      equipment: EQUIPMENT,
+      equipLevel: (id) => equipLevel(Save.d, id),
+      buyEquip: (it, card, e) => {
+        const cost = it.costs[equipLevel(Save.d, it.id)];
+        if (cost === undefined) return;
+        buy(
+          cost,
+          () => {
+            Save.d.coins += cost;
+            buyEquipment(Save.d, it);
+            envKey = "";
+            showMenuEnvRefresh();
+            UI.toast(`${it.name} added to your buka!`);
+          },
+          card,
+          e,
+        );
+      },
       hireStaff: (s, card, e) =>
         buy(
           s.cost,
@@ -5017,9 +5995,10 @@ export function mountGame(canvas, host, bridge) {
   // The menu shows home (grown with your chapter) or the branch you are visiting.
   function menuEnv() {
     const pl = PLACES.find((x) => x.id === Save.d.place);
-    if (!pl || pl.id === "ojuelegba" || !Save.d.branches.includes(pl.id))
-      buildEnv(Math.min(4, chapterOf(Math.min(50, Save.d.unlocked))));
-    else buildEnv(pl.ci, [pl.name.toUpperCase(), "Mama Put • " + pl.area]);
+    if (!pl || pl.id === "ojuelegba" || !Save.d.branches.includes(pl.id)) {
+      const ch = CHAPTERS[chapterOf(Math.min(MAX_LEVEL, Save.d.unlocked))];
+      buildEnv(ch.theme ?? CHAPTERS.indexOf(ch), ch.sign);
+    } else buildEnv(pl.ci, [pl.name.toUpperCase(), "Mama Put • " + pl.area]);
   }
   function buy(cost, fn, card, e) {
     if (Save.d.coins < cost) {
@@ -5136,6 +6115,7 @@ export function mountGame(canvas, host, bridge) {
   });
   const SHOP_TABS = {
     up: "#tabUp",
+    buka: "#tabBuka",
     staff: "#tabStaff",
     boost: "#tabBoost",
     style: "#tabStyle",
@@ -5189,6 +6169,77 @@ export function mountGame(canvas, host, bridge) {
       },
     });
   }
+  // Market: stock the store before prices rise
+  function buildMarket() {
+    UI.coins();
+    const cap = effects(Save.d).pantryCap;
+    bridge.market({
+      items: Object.entries(INGREDIENTS).map(([id, g]) => ({
+        id,
+        ...g,
+        have: Save.d.pantry[id] || 0,
+        price: marketPrice(Save.d, id),
+        out: isOut(Save.d, id),
+        uses: Object.keys(FOOD_GROUP)
+          .filter((f) => FOOD_GROUP[f] === id)
+          .map((f) => FOODS[f].short)
+          .join(", "),
+      })),
+      news: Save.d.market.news,
+      index: Save.d.market.index,
+      cap,
+      fridge: effects(Save.d).fridge,
+      buy: (id, n, e) => {
+        const discount = Save.d.staff.includes("ngozi") ? 0.8 : 1;
+        const r = marketBuy(Save.d, id, n, cap, discount);
+        if (!r.ok) {
+          Sound.play("wrong");
+          UI.toast(r.why);
+          return;
+        }
+        Save.save();
+        Sound.play("buy");
+        const b = e.currentTarget.getBoundingClientRect();
+        floatText(b.left + b.width / 2, b.top, "-" + fmtNaira(r.cost), "small");
+        buildMarket();
+      },
+    });
+    $("#marketCoins").textContent = fmtNaira(Save.d.coins);
+  }
+  on("#btnMarket", () => {
+    Sound.play("click");
+    buildMarket();
+    UI.open("ovMarket");
+  });
+  on("#marketClose", () => {
+    UI.close("ovMarket");
+    UI.coins();
+  });
+  // Leaderboard against rival bukas
+  const BOARD_TABS = {
+    sales: "#tabBoardSales",
+    stars: "#tabBoardStars",
+    endless: "#tabBoardEndless",
+  };
+  function openBoard(id) {
+    for (const k in BOARD_TABS)
+      $(BOARD_TABS[k]).classList.toggle("on", k === id);
+    bridge.board({
+      rows: ranking(Save.d, id, today()),
+      unit: id === "stars" ? "stars" : "naira",
+      fmt: fmtNaira,
+    });
+    requestAnimationFrame(() =>
+      $("#boardList .boardRow.you")?.scrollIntoView({ block: "center" }),
+    );
+  }
+  on("#btnBoard", () => {
+    Sound.play("click");
+    openBoard("sales");
+    UI.open("ovBoard");
+  });
+  for (const k in BOARD_TABS) on(BOARD_TABS[k], () => openBoard(k));
+  on("#boardClose", () => UI.close("ovBoard"));
   on("#btnGrow", () => {
     Sound.play("click");
     buildGrow();
@@ -5401,7 +6452,7 @@ export function mountGame(canvas, host, bridge) {
   on("#winNext", () => {
     UI.close("ovWin");
     const n = Game.cfg.n + 1;
-    if (n > 50) {
+    if (n > MAX_LEVEL) {
       Game.clear();
       showMenu();
       UI.toast("Endless Rush unlocked!");
@@ -5448,7 +6499,7 @@ export function mountGame(canvas, host, bridge) {
       Game.update(dt);
       if (Game.state === "menu" || Game.state === "map") {
         strollT -= dt;
-        if (strollT <= 0 && Game.strollers.length < 5) {
+        if (strollT <= 0 && Game.strollers.length < 5 + 2 * tierOf(Save.d)) {
           strollT = rnd(1.5, 3.5);
           Game.strollers.push(new Stroller());
         }
@@ -5507,6 +6558,11 @@ export function mountGame(canvas, host, bridge) {
         .project(camera);
       c.el.style.transform = `translate3d(${(((a.x + 1) / 2) * innerWidth).toFixed(1)}px,${(((1 - a.y) / 2) * innerHeight).toFixed(1)}px,0) translate(-50%,-100%)`;
     }
+    for (const t of Game.tables) {
+      if (!t.chip) continue;
+      const p = _v.set(t.x, 1.25, t.z).project(camera);
+      t.chip.style.transform = `translate3d(${(((p.x + 1) / 2) * innerWidth).toFixed(1)}px,${(((1 - p.y) / 2) * innerHeight).toFixed(1)}px,0) translate(-50%,-50%)`;
+    }
     for (let i = 0; i < 3; i++) {
       const chip = Game.chips[i];
       if (!chip || !trays[i]) continue;
@@ -5527,6 +6583,19 @@ export function mountGame(canvas, host, bridge) {
 
   /* ================= BOOT ================= */
   function boot() {
+    const away = absenceDecay(Save.d.lastPlayed, today());
+    if (away.rep && Save.d.decayDay !== today()) {
+      Save.d.decayDay = today();
+      Save.d.reputation = clampRep(Save.d.reputation + away.rep);
+      Save.save();
+      setTimeout(
+        () =>
+          UI.toast(
+            `Your buka was closed for ${away.days} days. Customers went elsewhere (★ ${Math.round(away.rep)})`,
+          ),
+        1500,
+      );
+    }
     initGeo();
     makeThumbs();
     buildChef();

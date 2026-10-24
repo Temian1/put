@@ -111,7 +111,7 @@ const FOODS = {
     color: "#C8812F",
     station: "pan",
     kind: "protein",
-    cook: { time: 3.6, hold: 10, batch: 3, verb: "Fry" },
+    cook: { time: 3.6, hold: Infinity, batch: 3, verb: "Fry" },
   },
   fish: {
     name: "Fried Fish",
@@ -120,7 +120,7 @@ const FOODS = {
     color: "#7B8A99",
     station: "grill",
     kind: "protein",
-    cook: { time: 3.2, hold: 10, batch: 3, verb: "Fry" },
+    cook: { time: 3.2, hold: Infinity, batch: 3, verb: "Fry" },
   },
   egg: {
     name: "Boiled Egg",
@@ -137,7 +137,7 @@ const FOODS = {
     color: "#FFAA1F",
     station: "pan",
     kind: "side",
-    cook: { time: 2.4, hold: 9, batch: 4, verb: "Fry" },
+    cook: { time: 2.4, hold: Infinity, batch: 4, verb: "Fry" },
   },
   moimoi: {
     name: "Moi Moi",
@@ -235,7 +235,120 @@ const CHAPTERS = [
     intro:
       "Iyan, efo riro and goat pepper soup for the fastest crowd in Lagos.",
   },
+  // Levels 51-100: the business outgrows one buka. theme picks the 3D
+  // environment, sign writes the chapter's own signboard.
+  {
+    name: "Ikeja City Restaurant",
+    foods: [
+      "jollof",
+      "friedrice",
+      "whiterice",
+      "chicken",
+      "fish",
+      "plantain",
+      "moimoi",
+      "mineral",
+    ],
+    items: [2, 4],
+    boss: "Ikeja Office Lunch Stampede",
+    color: "#B7472A",
+    vip: 0.25,
+    fast: true,
+    theme: 3,
+    sign: ["IKEJA CITY RESTAURANT", "Mama Put • Since the roadside days"],
+    intro: "Office workers on lunch break. Tables, taxes and inspectors now.",
+  },
+  {
+    name: "Port Harcourt Branch",
+    foods: [
+      "eba",
+      "poundedyam",
+      "egusi",
+      "efo",
+      "peppersoup",
+      "fish",
+      "beef",
+      "malt",
+    ],
+    items: [2, 4],
+    boss: "Garden City Rush",
+    color: "#1D6E8C",
+    vip: 0.25,
+    fast: true,
+    theme: 2,
+    sign: ["PORT HARCOURT BRANCH", "Mama Put • Garden City"],
+    intro: "Swallow and pepper soup for the Garden City crowd.",
+  },
+  {
+    name: "Abuja Food Court",
+    foods: [
+      "amala",
+      "ewedu",
+      "eba",
+      "egusi",
+      "beans",
+      "plantain",
+      "egg",
+      "zobo",
+      "water",
+    ],
+    items: [2, 4],
+    boss: "Central Area Mega Lunch",
+    color: "#2F7D3A",
+    vip: 0.3,
+    fast: true,
+    theme: 4,
+    sign: ["ABUJA FOOD COURT", "Mama Put • Wuse"],
+    intro: "Nine dishes, three lanes and the busiest food court in Abuja.",
+  },
+  {
+    name: "Catering Company",
+    foods: [
+      "jollof",
+      "friedrice",
+      "chicken",
+      "moimoi",
+      "plantain",
+      "beef",
+      "peppersoup",
+      "mineral",
+      "malt",
+    ],
+    items: [2, 4],
+    boss: "Society Wedding of the Year",
+    color: "#7B2E8E",
+    vip: 0.3,
+    guests: true,
+    fast: true,
+    theme: 3,
+    sign: ["MAMA PUT CATERING", "Weddings • Burials • Naming"],
+    intro: "Events every few levels. A bus and riders make the difference.",
+  },
+  {
+    name: "Food Empire HQ",
+    foods: [
+      "jollof",
+      "whiterice",
+      "eba",
+      "poundedyam",
+      "egusi",
+      "efo",
+      "chicken",
+      "fish",
+      "malt",
+    ],
+    items: [3, 4],
+    boss: "The Empire Grand Finale",
+    color: "#0F4C5C",
+    vip: 0.35,
+    fast: true,
+    theme: 4,
+    sign: ["MAMA PUT EMPIRE HQ", "From Roadside Buka to Food Empire"],
+    intro: "The final chapter: every dish, every customer, every bill.",
+  },
 ];
+// 10 chapters of 10 levels.
+const MAX_LEVEL = CHAPTERS.length * 10;
 const UPGRADES = [
   {
     id: "fast",
@@ -305,7 +418,7 @@ const STAFF = [
     name: "Iya Basira",
     role: "cook",
     title: "Cook",
-    desc: "Cooks a fresh pot when food finishes and throws away burnt food",
+    desc: "Cooks a fresh pot or pan when food finishes",
     cost: 45000,
     wage: 1000,
     interval: 1.1,
@@ -441,7 +554,7 @@ const AREAS = [
   "Ojota",
 ];
 // Station stock: every pot, basin and cooler holds a batch that runs out and
-// must be cooked again. Only fried food (FOODS[...].cook) can burn.
+// must be cooked again. Fried food (FOODS[...].cook) starts empty each day.
 const STOCK = {
   pot: { time: 4.5, hold: Infinity, batch: 8, verb: "Cook" },
   basin: { time: 2.6, hold: Infinity, batch: 6, verb: "Make" },
@@ -503,14 +616,28 @@ const EVENT_LEVELS = {
   42: "burial",
   45: "housewarming",
   48: "chieftaincy",
+  53: "birthday",
+  57: "naming",
+  63: "burial",
+  66: "dedication",
+  72: "wedding",
+  75: "housewarming",
+  78: "birthday",
+  82: "wedding",
+  84: "burial",
+  86: "naming",
+  88: "chieftaincy",
+  93: "wedding",
+  96: "burial",
+  98: "chieftaincy",
 };
 // Growth: lifetime sales and reputation decide how big the business is.
 const TIERS = [
   { name: "Roadside Buka", earn: 0, rep: 0 },
-  { name: "Busy Buka", earn: 150000, rep: 45 },
-  { name: "Popular Joint", earn: 600000, rep: 55 },
-  { name: "Catering Business", earn: 1500000, rep: 62 },
-  { name: "Food Empire", earn: 4000000, rep: 70 },
+  { name: "Busy Buka", earn: 250000, rep: 48 },
+  { name: "Popular Joint", earn: 1200000, rep: 56 },
+  { name: "Catering Business", earn: 4000000, rep: 64 },
+  { name: "Food Empire", earn: 12000000, rep: 72 },
 ];
 // Branches in other places. Owned branches pay income after every shift.
 const PLACES = [
@@ -529,7 +656,7 @@ const PLACES = [
     area: "Yaba, Lagos",
     ci: 1,
     tier: 1,
-    cost: 60000,
+    cost: 150000,
     income: 1500,
   },
   {
@@ -538,7 +665,7 @@ const PLACES = [
     area: "Mushin, Lagos",
     ci: 2,
     tier: 2,
-    cost: 150000,
+    cost: 400000,
     income: 3500,
   },
   {
@@ -547,7 +674,7 @@ const PLACES = [
     area: "Ikeja, Lagos",
     ci: 3,
     tier: 3,
-    cost: 400000,
+    cost: 1200000,
     income: 8000,
   },
   {
@@ -556,7 +683,7 @@ const PLACES = [
     area: "Lekki, Lagos",
     ci: 4,
     tier: 4,
-    cost: 900000,
+    cost: 3000000,
     income: 15000,
   },
   {
@@ -565,7 +692,7 @@ const PLACES = [
     area: "Wuse, Abuja",
     ci: 4,
     tier: 4,
-    cost: 2000000,
+    cost: 6000000,
     income: 30000,
   },
 ];
@@ -788,7 +915,7 @@ const LINES = {
 };
 
 function chapterOf(n) {
-  return Math.min(4, Math.floor((n - 1) / 10));
+  return Math.min(CHAPTERS.length - 1, Math.floor((n - 1) / 10));
 }
 // Mechanics unlock gradually: plates are assembled from level 3, pans need
 // frying from level 4 and dirty tables appear from chapter two.
@@ -800,7 +927,9 @@ const UNLOCKS = {
   stock: 6,
   dishes: 11,
   online: 15,
+  inspect: 20,
   events: 27,
+  haggle: 8,
 };
 function levelCfg(n) {
   const ci = chapterOf(n),
@@ -822,6 +951,8 @@ function levelCfg(n) {
     cooking = n >= UNLOCKS.cooking && foods.some((f) => FOODS[f].cook),
     dishes = n >= UNLOCKS.dishes,
     stock = n >= UNLOCKS.stock,
+    haggle = n >= UNLOCKS.haggle,
+    inspect = n >= UNLOCKS.inspect,
     online = n >= UNLOCKS.online,
     event = EVENT_LEVELS[n] || "";
   // Frying, restocking, table clearing and deliveries add work, so the clock grows.
@@ -853,6 +984,12 @@ function levelCfg(n) {
   } else if (n === UNLOCKS.stock) {
     challenge = "New: pots finish. Cook again before customers vex";
     teach = "stock";
+  } else if (n === UNLOCKS.haggle) {
+    challenge = "New: customers may argue the price";
+    teach = "haggle";
+  } else if (n === UNLOCKS.inspect) {
+    challenge = "New: health inspectors can visit. Keep it clean!";
+    teach = "inspect";
   } else if (n === UNLOCKS.dishes) {
     challenge = "New: clear dirty tables and wash plates";
     teach = "dishes";
@@ -898,6 +1035,10 @@ function levelCfg(n) {
     stock,
     online,
     event,
+    haggle,
+    inspect,
+    theme: ch.theme ?? ci,
+    sign: ch.sign || null,
     tutorial: n <= 2,
   };
 }
@@ -961,7 +1102,7 @@ const DAILY_MODS = [
 ];
 function dailyCfg(unlocked = 1, key = today()) {
   const rng = seeded(hashStr(key));
-  const maxN = Math.max(1, Math.min(50, unlocked));
+  const maxN = Math.max(1, Math.min(MAX_LEVEL, unlocked));
   const n = 1 + Math.floor(rng() * maxN);
   const c = levelCfg(n);
   const pool = DAILY_MODS.slice(),
@@ -1019,6 +1160,10 @@ function endlessCfg() {
     stock: true,
     online: true,
     event: "random",
+    haggle: true,
+    inspect: true,
+    theme: 4,
+    sign: null,
     tutorial: false,
   };
 }
@@ -1035,6 +1180,7 @@ export {
   DECOR,
   LINES,
   UNLOCKS,
+  MAX_LEVEL,
   NAMES,
   AREAS,
   STOCK,

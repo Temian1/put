@@ -132,7 +132,7 @@ test("sack staff from the shop", async ({ page }) => {
 test("grow: open a branch in another place and visit it", async ({ page }) => {
   await boot(
     page,
-    fresh({ coins: 80000, stats: { earn: 200000 }, reputation: 52 }),
+    fresh({ coins: 200000, stats: { earn: 300000 }, reputation: 52 }),
   );
   await expect(page.locator("#menuRep")).toHaveText("52");
   await page.locator("#btnGrow").click({ force: true });
@@ -144,7 +144,7 @@ test("grow: open a branch in another place and visit it", async ({ page }) => {
   await yaba.locator(".btn").click();
   await expect(page.locator("#ovGrow")).not.toHaveClass(/show/);
   const d = await saved(page);
-  expect(d).toMatchObject({ place: "yaba", coins: 20000 });
+  expect(d).toMatchObject({ place: "yaba", coins: 50000 });
   expect(d.branches).toContain("yaba");
 });
 

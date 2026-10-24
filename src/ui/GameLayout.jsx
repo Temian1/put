@@ -47,13 +47,24 @@ export const GameLayout = memo(function GameLayout({
               <path d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.5 7.5 0 0 0-1.7-1L15 3h-4l-.4 2.8a7.5 7.5 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1c.5.4 1.1.7 1.7 1L11 21h4l.4-2.8c.6-.3 1.2-.6 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"></path>
             </svg>
           </button>
-          <div className="pill repPill" id="repPill" aria-label="Reputation">
-            <span className="star" aria-hidden="true">
-              {"★"}
-            </span>
-            <span id="menuRep">{"50"}</span>
+          <div className="topRight">
+            <div className="pill repPill" id="repPill" aria-label="Reputation">
+              <svg className="repStar" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5-4.8-4.6 6.6-.9z" />
+              </svg>
+              <span id="menuRep">{"50"}</span>
+            </div>
+            <div className="cashGroup">
+              <CashPill id="menuCoins" pillId="menuCoinPill" />
+              <button
+                className="plusBtn"
+                id="btnShop"
+                aria-label="Upgrades and shop"
+              >
+                <Icon name="upgrade" />
+              </button>
+            </div>
           </div>
-          <CashPill id="menuCoins" pillId="menuCoinPill" />
         </div>
         <div className="logo">
           <div className="l1">{"MAMA PUT"}</div>
@@ -69,16 +80,20 @@ export const GameLayout = memo(function GameLayout({
             <span className="buttonLabel">{"PLAY"}</span>
           </button>
           <div className="row">
-            <button className="btn teal" id="btnShop">
-              <Icon name="upgrade" />
-              <span className="buttonLabel">{"Upgrades"}</span>
+            <button className="btn teal" id="btnBoard">
+              <Icon name="trophy" />
+              <span className="buttonLabel">{"Leaderboard"}</span>
             </button>
             <button className="btn coral" id="btnDaily">
               <Icon name="gift" />
               <span className="buttonLabel">{"Daily"}</span>
             </button>
           </div>
-          <div className="row three">
+          <div className="row four">
+            <button className="btn plain" id="btnMarket">
+              <Icon name="basket" />
+              <span className="buttonLabel">{"Market"}</span>
+            </button>
             <button className="btn plain" id="btnMissions">
               <Icon name="target" />
               <span className="buttonLabel">{"Missions"}</span>
@@ -116,7 +131,15 @@ export const GameLayout = memo(function GameLayout({
               <path d="M15.5 4 7 12l8.5 8 2-2-6.4-6 6.4-6z"></path>
             </svg>
           </button>
-          <h2>{"Your Food Journey"}</h2>
+          <div className="mapTitle">
+            <h2>{"Your Food Journey"}</h2>
+            <span className="mapStars">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5-4.8-4.6 6.6-.9z" />
+              </svg>
+              <span id="mapStarCount">{"0 / 150"}</span>
+            </span>
+          </div>
           <CashPill id="mapCoins" />
         </div>
         <div className="mapScroll scroll" id="mapScroll">
@@ -173,6 +196,10 @@ export const GameLayout = memo(function GameLayout({
           <div className="b3"></div>
         </div>
         <div className="rail" id="rail">
+          <div className="boost hyg" id="hygiene" aria-label="Hygiene">
+            <Icon name="wash" />
+            <b id="hygTxt">{"80"}</b>
+          </div>
           <button className="boost zoom" id="zoomIn" aria-label="Zoom in">
             <Icon name="zoomIn" />
           </button>
@@ -331,6 +358,10 @@ export const GameLayout = memo(function GameLayout({
               <Icon name="upgrade" />
               <span className="buttonLabel">{"Upgrades"}</span>
             </button>
+            <button id="tabBuka">
+              <Icon name="shop" />
+              <span className="buttonLabel">{"Buka"}</span>
+            </button>
             <button id="tabStaff">
               <Icon name="staff" />
               <span className="buttonLabel">{"Staff"}</span>
@@ -399,6 +430,49 @@ export const GameLayout = memo(function GameLayout({
             <button className="btn green" id="sClose">
               <Icon name="check" />
               <span className="buttonLabel">{"Done"}</span>
+            </button>
+          </div>
+        </div>
+      </Surface>
+      <Surface className="overlay" id="ovMarket" tag="div">
+        <div className="panel">
+          <div className="shopHead">
+            <div className="ribbon small" style={{ margin: "0" }}>
+              {"Market"}
+            </div>
+            <CashPill id="marketCoins" />
+          </div>
+          <div className="shopList scroll" id="marketList"></div>
+          <div className="btnRow" style={{ marginTop: "12px" }}>
+            <button className="btn coral" id="marketClose">
+              <Icon name="close" />
+              <span className="buttonLabel">{"Close"}</span>
+            </button>
+          </div>
+        </div>
+      </Surface>
+      <Surface className="overlay" id="ovBoard" tag="div">
+        <div className="panel">
+          <div className="ribbon small">{"Leaderboard"}</div>
+          <div className="tabs three" id="boardTabs">
+            <button id="tabBoardSales" className="on">
+              <Icon name="note" />
+              <span className="buttonLabel">{"Top Bukas"}</span>
+            </button>
+            <button id="tabBoardStars">
+              <Icon name="star" />
+              <span className="buttonLabel">{"Stars"}</span>
+            </button>
+            <button id="tabBoardEndless">
+              <Icon name="infinity" />
+              <span className="buttonLabel">{"Endless"}</span>
+            </button>
+          </div>
+          <div className="shopList scroll" id="boardList"></div>
+          <div className="btnRow" style={{ marginTop: "12px" }}>
+            <button className="btn coral" id="boardClose">
+              <Icon name="close" />
+              <span className="buttonLabel">{"Close"}</span>
             </button>
           </div>
         </div>

@@ -22,6 +22,11 @@ export function createSave(storage = globalThis.localStorage) {
         staffOff: [],
         unpaid: {},
         reputation: 50,
+        equip: {},
+        pantry: {},
+        market: { shift: 0, index: 1, out: [], news: "" },
+        debt: 0,
+        lastPlayed: "",
         branches: ["ojuelegba"],
         place: "ojuelegba",
         boosters: { freeze: 1, auto: 1, calm: 1 },
@@ -78,6 +83,11 @@ export function migrate(d, defaults) {
   out.stats.food = Object.assign({}, out.stats.food || {});
   if (!out.unpaid || typeof out.unpaid !== "object") out.unpaid = {};
   if (typeof out.reputation !== "number") out.reputation = 50;
+  for (const k of ["equip", "pantry"])
+    if (!out[k] || typeof out[k] !== "object") out[k] = {};
+  if (!out.market || typeof out.market.index !== "number")
+    out.market = { shift: 0, index: 1, out: [], news: "" };
+  if (typeof out.debt !== "number") out.debt = 0;
   if (!Array.isArray(out.branches) || !out.branches.includes("ojuelegba"))
     out.branches = [
       "ojuelegba",

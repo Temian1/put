@@ -21,6 +21,7 @@ export function mergeSaves(local, remote) {
   merged.stars = maxMap(local.stars, remote.stars);
   merged.best = maxMap(local.best, remote.best);
   merged.up = maxMap(local.up, remote.up);
+  merged.equip = maxMap(local.equip, remote.equip);
   merged.endlessBest = Math.max(
     local.endlessBest || 0,
     remote.endlessBest || 0,

@@ -1,0 +1,128 @@
+// Buka equipment bought with naira. Every item shows up in the 3D buka and
+// most carry upkeep (gas, light, repairs) charged after each shift.
+export const EQUIPMENT = [
+  {
+    id: "tables",
+    name: "Plastic table & chairs",
+    desc: "Seats 2 more customers. Seated customers free the counter sooner",
+    icon: "🪑",
+    costs: [15000, 35000, 70000, 140000, 280000],
+    upkeep: 150,
+  },
+  {
+    id: "fridge",
+    name: "Deep freezer",
+    desc: "Meat, fish, plantain and drinks stop spoiling. +5 hygiene",
+    icon: "🧊",
+    costs: [85000],
+    upkeep: 500,
+  },
+  {
+    id: "burner",
+    name: "Extra gas burner",
+    desc: "Pots and pans cook 25% faster per burner",
+    icon: "🔥",
+    costs: [35000, 90000],
+    upkeep: 300,
+  },
+  {
+    id: "bigpots",
+    name: "Bigger pots",
+    desc: "+3 plates in every pot and pan batch per level",
+    icon: "🍲",
+    costs: [30000, 80000],
+    upkeep: 0,
+  },
+  {
+    id: "sink",
+    name: "Double sink",
+    desc: "The sink holds 3 more plates and washes faster",
+    icon: "🚰",
+    costs: [25000],
+    upkeep: 100,
+  },
+  {
+    id: "handwash",
+    name: "Handwash station & bin",
+    desc: "+12 hygiene. Health inspectors check for it",
+    icon: "🧼",
+    costs: [12000],
+    upkeep: 50,
+  },
+  {
+    id: "uniforms",
+    name: "Staff uniforms & caps",
+    desc: "+8 hygiene, and your staff look the part",
+    icon: "👕",
+    costs: [20000],
+    upkeep: 0,
+  },
+  {
+    id: "store",
+    name: "Store room shelves",
+    desc: "Keep 10 more of every market item per level",
+    icon: "📦",
+    costs: [45000, 120000],
+    upkeep: 0,
+  },
+  {
+    id: "sign",
+    name: "Lit signboard",
+    desc: "Customers come 8% more often",
+    icon: "💡",
+    costs: [60000],
+    upkeep: 200,
+  },
+  {
+    id: "bike",
+    name: "Delivery okada",
+    desc: "Each okada lets one hired rider deliver with no outside fee",
+    icon: "🏍️",
+    costs: [450000, 600000, 750000],
+    upkeep: 800,
+  },
+  {
+    id: "bus",
+    name: "Catering bus",
+    desc: "Delivers event orders free. Without it you hire a bus for ₦8,000",
+    icon: "🚐",
+    costs: [2500000],
+    upkeep: 2500,
+  },
+];
+export const BUS_HIRE = 8000;
+
+export const level = (d, id) => (d.equip && d.equip[id]) || 0;
+export const maxLevel = (item) => item.costs.length;
+export const nextCost = (d, item) => item.costs[level(d, item.id)];
+
+// What the equipment does, as plain numbers the game reads.
+export function effects(d) {
+  const L = (id) => level(d, id);
+  return {
+    tables: 1 + L("tables"),
+    seats: 2 * (1 + L("tables")),
+    fridge: L("fridge") > 0,
+    cookSpeed: 1 + 0.25 * L("burner"),
+    batchBonus: 3 * L("bigpots"),
+    sinkCap: 4 + 3 * L("sink"),
+    washTime: L("sink") ? 0.35 : 0.5,
+    hygiene: 12 * L("handwash") + 8 * L("uniforms") + 5 * L("fridge"),
+    pantryCap: 10 + 10 * L("store"),
+    spawn: L("sign") ? 0.92 : 1,
+    bikes: L("bike"),
+    bus: L("bus") > 0,
+    uniforms: L("uniforms") > 0,
+  };
+}
+
+export const upkeep = (d) =>
+  EQUIPMENT.reduce((s, it) => s + it.upkeep * level(d, it.id), 0);
+
+export function buyEquipment(d, item) {
+  const cost = nextCost(d, item);
+  if (cost === undefined || d.coins < cost) return false;
+  d.coins -= cost;
+  d.equip = { ...(d.equip || {}), [item.id]: level(d, item.id) + 1 };
+  return true;
+}

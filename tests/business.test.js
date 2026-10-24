@@ -126,18 +126,18 @@ describe("reputation and growth", () => {
   });
   it("business size needs both sales and reputation", () => {
     expect(tierOf(fresh())).toBe(0);
-    expect(tierOf(fresh({ stats: { earn: 700000 }, reputation: 58 }))).toBe(2);
-    expect(tierOf(fresh({ stats: { earn: 700000 }, reputation: 40 }))).toBe(0);
+    expect(tierOf(fresh({ stats: { earn: 1300000 }, reputation: 58 }))).toBe(2);
+    expect(tierOf(fresh({ stats: { earn: 1300000 }, reputation: 40 }))).toBe(0);
     expect(TIERS).toHaveLength(5);
   });
   it("opens branches in other places once the business is big enough", () => {
     const yaba = PLACES.find((p) => p.id === "yaba");
     const small = fresh({ coins: 1e6 });
     expect(canOpen(small, yaba)).toMatchObject({ ok: false });
-    const d = fresh({ coins: 100000, stats: { earn: 200000 }, reputation: 50 });
+    const d = fresh({ coins: 200000, stats: { earn: 300000 }, reputation: 50 });
     expect(canOpen(d, yaba).ok).toBe(true);
     expect(openBranch(d, yaba)).toBe(true);
-    expect(d.coins).toBe(100000 - yaba.cost);
+    expect(d.coins).toBe(200000 - yaba.cost);
     expect(branchIncome(d)).toBe(yaba.income);
     expect(openBranch(d, yaba)).toBe(false);
   });
@@ -289,5 +289,34 @@ describe("level plan", () => {
     const o = CUSTOMER_TYPES.odogwu;
     expect(o.maxItems).toBe(1);
     expect(o.bigTip[0]).toBeGreaterThanOrEqual(2000);
+  });
+});
+
+describe("leaderboard", () => {
+  it("ranks you among rival bukas on every board", async () => {
+    const { ranking, playerRank, BOARDS } = await import(
+      "../src/game/leaderboard.js"
+    );
+    const d = fresh({
+      stats: { ...fresh().stats, earn: 300000 },
+      stars: { 1: 3, 2: 2 },
+      endlessBest: 0,
+    });
+    for (const b of BOARDS) {
+      const rows = ranking(d, b.id, "2026-10-24");
+      expect(rows.filter((r) => r.you)).toHaveLength(1);
+      expect(rows.map((r) => r.rank)).toEqual(rows.map((_, i) => i + 1));
+      for (let i = 1; i < rows.length; i++)
+        expect(rows[i - 1].value).toBeGreaterThanOrEqual(rows[i].value);
+      rows
+        .filter((r) => !r.you)
+        .forEach((r) => expect(r.value).toBeGreaterThan(0));
+    }
+    expect(playerRank(d, "sales", "2026-10-24")).toBe(8);
+    expect(ranking(d, "sales", "2026-10-24")).toEqual(
+      ranking(d, "sales", "2026-10-24"),
+    );
+    const rich = fresh({ stats: { ...fresh().stats, earn: 9e6 } });
+    expect(playerRank(rich, "sales", "2026-10-24")).toBe(1);
   });
 });
