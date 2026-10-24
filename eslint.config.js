@@ -1,11 +1,28 @@
-import js from '@eslint/js';
-import globals from 'globals';
-import hooks from 'eslint-plugin-react-hooks';
+import js from "@eslint/js";
+import globals from "globals";
+import hooks from "eslint-plugin-react-hooks";
 
 export default [
-  { ignores: ['dist/**', 'node_modules/**', '.verification/**'] },
+  { ignores: ["dist/**", "node_modules/**", ".verification/**"] },
   js.configs.recommended,
-  { files: ['**/*.{js,jsx}'], languageOptions: { globals: { ...globals.browser, ...globals.node }, parserOptions: { ecmaFeatures: { jsx: true } } },
-    plugins: { 'react-hooks': hooks },
-    rules: { ...hooks.configs.recommended.rules, 'no-unused-vars': ['error', { varsIgnorePattern: '^([A-Z]|_)', argsIgnorePattern: '^([A-Z]|_)', caughtErrorsIgnorePattern: '^e$' }], 'no-empty': ['error', { allowEmptyCatch: true }] } },
+  {
+    files: ["**/*.{js,jsx}"],
+    languageOptions: {
+      globals: { ...globals.browser, ...globals.node },
+      parserOptions: { ecmaFeatures: { jsx: true } },
+    },
+    plugins: { "react-hooks": hooks },
+    rules: {
+      ...hooks.configs.recommended.rules,
+      "no-unused-vars": [
+        "error",
+        {
+          varsIgnorePattern: "^([A-Z]|_)",
+          argsIgnorePattern: "^([A-Z]|_)",
+          caughtErrorsIgnorePattern: "^e$",
+        },
+      ],
+      "no-empty": ["error", { allowEmptyCatch: true }],
+    },
+  },
 ];
