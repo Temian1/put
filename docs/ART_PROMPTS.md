@@ -84,6 +84,16 @@ The **key** is what you write in `public/ui/manifest.json`.
 
 ## Install the images
 
+### Generation progress
+
+Prompt 1, **Chidi**, is installed as `staff:chidi` in the UI manifest.
+The [1024px transparent PNG master](../art/ui/staff-chidi-v1.png) and
+[256px WebP game image](../public/ui/chidi-v1.webp) were generated with the
+built-in image tool. The [generation record](../art/ui/generation.json)
+contains the exact prompt and master hash. Both exports passed dimension,
+RGBA alpha and transparent-corner checks. The game image is 16,166 bytes.
+Prompts 2–29 remain pending; Aunty Bisi is next.
+
 1. Shrink each to **256x256**, e.g. `magick emeka.png -resize 256x256 -quality 85 emeka.webp`. Keep the 1024px masters outside `public/`, as the food masters are in `art/`.
 2. Copy the small files into [`public/ui/`](../public/ui/).
 3. List them in [`public/ui/manifest.json`](../public/ui/manifest.json):

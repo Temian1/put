@@ -1,0 +1,23 @@
+{
+  "images": [
+    {
+      "key": "staff:chidi",
+      "generator": "built-in image_gen",
+      "sourcePrompt": "docs/ART_PROMPTS.md \u00e2\u20ac\u201d prompt 1",
+      "master": "art/ui/staff-chidi-v1.png",
+      "runtime": "public/ui/chidi-v1.webp",
+      "prompt": "Use case: stylized-concept\nAsset type: transparent staff portrait for a cheerful mobile cooking game set at a Lagos mama put roadside food spot.\nSubject: Chidi, a cheerful young Nigerian apprentice server in his late teens, warm brown skin, teal-and-gold ankara shirt, white apron, holding a plain white ceramic plate with a thin cream rim filled with jollof rice. Head-and-shoulders portrait including his hands and plate.\nStyle: stylised 3D cartoon render, soft and chunky like modern casual mobile games, clay/Pixar-like, friendly face, not photoreal. Saturated appetising colours, simple clear silhouette readable at 56 pixels.\nComposition: one character centred, filling about 80% of the square frame, three-quarter front view. Keep entire head, shoulders, hands and plate inside frame with clear transparent padding.\nLighting: soft warm studio light from top-left.\nOutput: square 1024x1024 PNG, fully transparent background with real alpha.\nConstraints: no text, numbers, logos, brand names, number plates, real people, scenery, table or extra props.",
+      "masterSize": [
+        1024,
+        1024
+      ],
+      "runtimeSize": [
+        256,
+        256
+      ],
+      "masterSha256": "f47a2a3df4c163e5adbad8127c45151f811fc8c57d4ff71efd9bf02e1dcd695d",
+      "runtimeBytes": 16166,
+      "export": "Alpha preserved; subject scaled to approximately 80% extent; WebP quality 88."
+    }
+  ]
+}
