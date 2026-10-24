@@ -3481,7 +3481,7 @@ export function mountGame(canvas, host, bridge) {
             return this.go(this.toBench(st.position.x), () => {
               G0.claimed.delete(c.id + it.f);
               const k = G0.cookers[it.f];
-              if (!c.needs(it.f) || (k && !hasPortion(k))) return;
+              if (!c.needs(it.f) || (k && !hasPortion(k))) return false;
               if (k) takePortion(k);
               st.userData.bounce = 1;
               G0.deliver(
@@ -3494,12 +3494,21 @@ export function mountGame(canvas, host, bridge) {
         for (const o of G0.orders)
           for (const it of o.items) {
             if (!packNeeds(o, it.f)) continue;
+            const claim = `pack:${o.id}:${it.f}`;
+            if (G0.claimed.has(claim)) continue;
             const ck = G0.cookers[it.f];
             if (ck && !hasPortion(ck)) continue;
             const st = stations[it.f];
+            G0.claimed.add(claim);
             return this.go(this.toBench(st ? st.position.x : 0), () => {
+              G0.claimed.delete(claim);
               const k = G0.cookers[it.f];
-              if (!packNeeds(o, it.f) || (k && !hasPortion(k))) return;
+              if (
+                !G0.orders.includes(o) ||
+                !packNeeds(o, it.f) ||
+                (k && !hasPortion(k))
+              )
+                return false;
               if (k) takePortion(k);
               G0.fillPack(o, it.f);
             });
@@ -3583,7 +3592,29 @@ export function mountGame(canvas, host, bridge) {
           );
         }
       } else if (role === "cook") {
-        for (const id in G0.cookers) {
+        // Start food blocking the most urgent plate before preparing stock
+        // for later. Object insertion order is unrelated to customer demand.
+        const demand = G0.customers
+          .filter((c) => c.state === "wait" || c.state === "enter")
+          .sort((a, b) => a.p / a.max - b.p / b.max)
+          .flatMap((c) => [
+            ...nextNeeded(c.order),
+            ...c.order.filter((it) => !it.done),
+          ])
+          .map((it) => it.f)
+          .concat(
+            G0.orders.flatMap((o) =>
+              o.items.filter((it) => packNeeds(o, it.f)).map((it) => it.f),
+            ),
+          );
+        const priority = (id) => {
+          const index = demand.indexOf(id);
+          return index < 0 ? demand.length : index;
+        };
+        const foods = Object.keys(G0.cookers).sort(
+          (a, b) => priority(a) - priority(b),
+        );
+        for (const id of foods) {
           if (FOODS[id].station === "cooler") continue;
           const ck = G0.cookers[id],
             wanted =
@@ -3604,8 +3635,9 @@ export function mountGame(canvas, host, bridge) {
               () => {
                 G0.claimed.delete("cook" + id);
                 const k = G0.cookers[id];
-                if (k.stage === "raw" || k.stage === "burnt")
-                  G0.tapCookerFor(id, true);
+                if (k.stage === "burnt") G0.tapCookerFor(id, true);
+                if (k.stage !== "raw") return false;
+                G0.tapCookerFor(id, true);
               },
               1.2,
             );
@@ -3633,6 +3665,13 @@ export function mountGame(canvas, host, bridge) {
         this.bike.visible =
           effects(Save.d).bikes >
           HOME.rider.findIndex((h) => Math.abs(h.x - this.home.x) < 0.6);
+      // Travel and the work animation count toward the worker's interval.
+      // A walk home can be interrupted as soon as another task is due.
+      const returningPath = this.path;
+      if (Game.state === "playing") {
+        this.t -= dt * (1 + 0.05 * Save.d.up.fast);
+        if (!this.job && this.work <= 0 && this.t <= 0) this.path = [];
+      }
       let moving = false;
       const tgt = this.path[0];
       if (tgt) {
@@ -3656,17 +3695,26 @@ export function mountGame(canvas, host, bridge) {
       } else if (this.job) {
         const j = this.job;
         this.job = null;
-        if (Game.state === "playing" || Game.state === "ending") j.run();
+        if (Game.state === "playing" || Game.state === "ending") {
+          // Another server or the player may have finished this task en route.
+          if (j.run() === false) {
+            this.t = 0;
+            this.work = 0;
+            return;
+          }
+        }
         this.work = j.hold;
         this.face = j.face;
       } else if (this.work > 0) {
         this.work -= dt;
         if (this.work <= 0) this.path = this.homePath();
       } else if (Game.state === "playing") {
-        this.t -= dt * (1 + 0.05 * Save.d.up.fast);
         if (this.t <= 0) {
-          this.t = this.spec.interval;
-          this.act();
+          const assigned = this.act();
+          // Don't spend a whole serving interval waiting for an order to arrive.
+          this.t = assigned ? this.spec.interval : 0.25;
+          if (!assigned && r.position.distanceTo(this.home) > 0.05)
+            this.path = returningPath.length ? returningPath : this.homePath();
         }
       }
       const atHome =

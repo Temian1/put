@@ -15,6 +15,174 @@ const fresh = (patch = {}) => ({
 const saved = (page) =>
   page.evaluate((k) => JSON.parse(localStorage.getItem(k)), SAVE_KEY);
 
+test("workers: idle staff notice new work promptly and cooldown runs during travel", async ({
+  page,
+}) => {
+  await boot(page, fresh({ staff: ["chidi"] }));
+  await startLevel(page, 1);
+  await waitPlaying(page);
+  const result = await page.evaluate(() => {
+    const h = window.__mp.Game.helpers[0];
+    let checks = 0;
+    h.t = 0;
+    h.act = () => {
+      checks++;
+      return false;
+    };
+    for (let i = 0; i < 20; i++) h.update(0.05);
+    const idleChecks = checks;
+    checks = 0;
+    h.t = h.spec.interval;
+    h.go([h.home.clone().add({ x: 3, y: 0, z: 0 })], () => {}, 0.6);
+    for (let i = 0; i < 110; i++) h.update(0.05);
+    return {
+      idleChecks,
+      afterTravelChecks: checks,
+      distanceHome: h.root.position.distanceTo(h.home),
+    };
+  });
+  expect(result.idleChecks).toBeGreaterThanOrEqual(3);
+  expect(result.afterTravelChecks).toBeGreaterThanOrEqual(1);
+  expect(result.distanceHome).toBeLessThan(0.05);
+});
+
+test("workers: two servers reserve different takeaway tasks", async ({
+  page,
+}) => {
+  await boot(page, fresh({ staff: ["chidi", "tunde"] }));
+  await page.evaluate(() =>
+    window.__mp.Game.start({
+      ...window.__mp.levelCfg(15),
+      foods: ["jollof", "beef"],
+      stock: true,
+    }),
+  );
+  await waitPlaying(page);
+  const result = await page.evaluate(() => {
+    const G = window.__mp.Game;
+    G.customers = [];
+    G.orders = [
+      {
+        id: "staff-pack",
+        items: [
+          { f: "jollof", got: 0, need: 1 },
+          { f: "beef", got: 0, need: 1 },
+        ],
+      },
+    ];
+    for (const ck of Object.values(G.cookers))
+      Object.assign(ck, { stage: "ready", stock: 9 });
+    for (const h of G.helpers) h.act();
+    const packed = [];
+    G.fillPack = (order, food) => {
+      packed.push(food);
+      order.items.find((i) => i.f === food).got++;
+    };
+    for (const h of G.helpers) h.job.run();
+    return { packed, claims: G.claimed.size };
+  });
+  expect(result.packed.sort()).toEqual(["beef", "jollof"]);
+  expect(result.claims).toBe(0);
+});
+
+test("workers: cooks prioritize waiting customers over speculative batches", async ({
+  page,
+}) => {
+  await boot(page, fresh({ staff: ["basira"] }));
+  await page.evaluate(() =>
+    window.__mp.Game.start({
+      ...window.__mp.levelCfg(15),
+      foods: ["jollof", "chicken"],
+      stock: true,
+      cooking: true,
+    }),
+  );
+  await waitPlaying(page);
+  const started = await page.evaluate(() => {
+    const G = window.__mp.Game;
+    const chicken = {
+      spec: { time: 3.6, batch: 3, hold: Infinity },
+      stage: "raw",
+      stock: 0,
+    };
+    const jollof = G.cookers.jollof;
+    Object.assign(chicken, { stage: "raw", stock: 0 });
+    Object.assign(jollof, { stage: "raw", stock: 0 });
+    G.cookers = { chicken, jollof };
+    G.customers = [
+      {
+        state: "wait",
+        p: 4,
+        max: 20,
+        order: [{ f: "jollof", layer: 0, done: false }],
+      },
+    ];
+    G.orders = [];
+    const calls = [];
+    G.tapCookerFor = (id) => calls.push(id);
+    const cook = G.helpers[0];
+    cook.act();
+    cook.job.run();
+    return calls;
+  });
+  expect(started).toEqual(["jollof"]);
+});
+
+test("workers: cook and servers finish plates and replenish food without player taps", async ({
+  page,
+}) => {
+  const errors = await boot(
+    page,
+    fresh({ staff: ["chidi", "tunde", "basira"] }),
+  );
+  await page.evaluate(() => {
+    const { Game: G, levelCfg } = window.__mp;
+    G.start({
+      ...levelCfg(4),
+      foods: ["jollof", "chicken"],
+      imin: 2,
+      imax: 2,
+      goal: 4,
+      patience: 80,
+      duration: 180,
+      gap: [1, 2],
+      stock: true,
+      cooking: true,
+      assembly: true,
+      dishes: false,
+      tutorial: false,
+    });
+    G.cookers.jollof.stock = 1;
+  });
+  await waitPlaying(page);
+  // Software WebGL can render only a few frames per second in CI. Advance
+  // normal engine ticks between frames; serving and cooking remain real.
+  const timer = await page.evaluate(() =>
+    setInterval(() => {
+      const G = window.__mp.Game;
+      if (G.state === "playing") for (let i = 0; i < 5; i++) G.update(0.05);
+    }, 50),
+  );
+  try {
+    await page.waitForFunction(() => window.__mp.Game.served >= 4, null, {
+      timeout: 45000,
+    });
+  } finally {
+    await page.evaluate((id) => clearInterval(id), timer);
+  }
+  const result = await page.evaluate(() => ({
+    served: window.__mp.Game.served,
+    jollofBatches: window.__mp.Game.cookers.jollof.batches,
+    chickenBatches: window.__mp.Game.cookers.chicken.batches,
+    mistakes: window.__mp.Game.mistakes,
+  }));
+  expect(result.served).toBeGreaterThanOrEqual(4);
+  expect(result.jollofBatches).toBeGreaterThanOrEqual(1);
+  expect(result.chickenBatches).toBeGreaterThanOrEqual(2);
+  expect(result.mistakes).toBe(0);
+  expect(errors).toEqual([]);
+});
+
 test("online order: notification, pack items, send with a rider", async ({
   page,
 }) => {
