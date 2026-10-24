@@ -64,3 +64,11 @@ These source behaviors were preserved rather than inventing new parity features:
 - The source's Buka contains a zinc wall, palms, parasols and chairs, but no wall-poster implementation.
 
 See [ROADMAP.md](ROADMAP.md) for all requested missing features, estimates, priorities and additional technical improvements. No all-device, all-level, automated pixel-parity or audio-recording comparison is claimed.
+
+## GitHub publication status
+
+The empty target repository received the logical commits on `main`; no force push or pull request was needed. GitHub Pages was enabled with the Actions build type.
+
+The first [deployment workflow run](https://github.com/Temian1/put/actions/runs/40101019337) was rejected **before any build steps or runner started**. GitHub's check annotation states: **“The job was not started because your account is locked due to a billing issue.”** Consequently the hosted Pages deployment is not verified/live from this run. This is an account-level blocker, not a reported lint, test or build failure. All local checks above passed.
+
+Once the account restriction is resolved, rerun the workflow from the repository's Actions tab to build and publish at the configured `https://temian1.github.io/put/` URL. The Vercel configuration is also ready, but no Vercel deployment was requested or performed.
