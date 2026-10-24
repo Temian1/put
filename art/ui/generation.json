@@ -3,7 +3,7 @@
     {
       "key": "staff:chidi",
       "generator": "built-in image_gen",
-      "sourcePrompt": "docs/ART_PROMPTS.md \u00e2\u20ac\u201d prompt 1",
+      "sourcePrompt": "docs/ART_PROMPTS.md - prompt 1",
       "master": "art/ui/staff-chidi-v1.png",
       "runtime": "public/ui/chidi-v1.webp",
       "prompt": "Use case: stylized-concept\nAsset type: transparent staff portrait for a cheerful mobile cooking game set at a Lagos mama put roadside food spot.\nSubject: Chidi, a cheerful young Nigerian apprentice server in his late teens, warm brown skin, teal-and-gold ankara shirt, white apron, holding a plain white ceramic plate with a thin cream rim filled with jollof rice. Head-and-shoulders portrait including his hands and plate.\nStyle: stylised 3D cartoon render, soft and chunky like modern casual mobile games, clay/Pixar-like, friendly face, not photoreal. Saturated appetising colours, simple clear silhouette readable at 56 pixels.\nComposition: one character centred, filling about 80% of the square frame, three-quarter front view. Keep entire head, shoulders, hands and plate inside frame with clear transparent padding.\nLighting: soft warm studio light from top-left.\nOutput: square 1024x1024 PNG, fully transparent background with real alpha.\nConstraints: no text, numbers, logos, brand names, number plates, real people, scenery, table or extra props.",
@@ -18,6 +18,578 @@
       "masterSha256": "f47a2a3df4c163e5adbad8127c45151f811fc8c57d4ff71efd9bf02e1dcd695d",
       "runtimeBytes": 16166,
       "export": "Alpha preserved; subject scaled to approximately 80% extent; WebP quality 88."
+    },
+    {
+      "key": "staff:bisi",
+      "generator": "built-in image_gen",
+      "sourcePrompt": "docs/ART_PROMPTS.md - prompt 2",
+      "master": "art/ui/staff-bisi-v1.png",
+      "runtime": "public/ui/staff-bisi-v1.webp",
+      "prompt": "Use case: stylized-concept\nAsset type: matching transparent game artwork for a cheerful mobile cooking game at a Lagos mama put roadside food spot.\nStyle: stylised 3D cartoon render, soft and chunky like modern casual mobile games (clay/Pixar-like), friendly faces, not photoreal. Nigerian characters with warm brown skin tones and authentic Nigerian clothing as specified. Saturated colours and a clear silhouette readable at 56 pixels.\nComposition: one cohesive subject or small diorama as specified, centred, filling about 80% of the square frame, 3/4 front view. Keep the entire subject inside the frame with clear transparent padding.\nLighting: soft warm studio light from the top-left.\nOutput: square 1024x1024 PNG, fully transparent background with real alpha, including around any diorama.\nConstraints: no text, no numbers, no logos, no brand names, no number plates, no real people, no watermark. No extra objects beyond the subject requested.\nSubject: Aunty Bisi, a kind middle-aged woman who cleans tables, red-and-cream ankara wrapper and matching gele headtie, holding a stack of clean white plates and a dishcloth, head-and-shoulders portrait.",
+      "masterSize": [
+        1024,
+        1024
+      ],
+      "runtimeSize": [
+        256,
+        256
+      ],
+      "masterSha256": "e84292eba566120e98f51848a5af13c9acc31569df2729c1d44c3771d626751c",
+      "runtimeBytes": 18684,
+      "export": "Original alpha preserved; subject scaled to approximately 80% extent; WebP quality 88."
+    },
+    {
+      "key": "staff:basira",
+      "generator": "built-in image_gen",
+      "sourcePrompt": "docs/ART_PROMPTS.md - prompt 3",
+      "master": "art/ui/staff-basira-v1.png",
+      "runtime": "public/ui/staff-basira-v1.webp",
+      "prompt": "Use case: stylized-concept\nAsset type: matching transparent game artwork for a cheerful mobile cooking game at a Lagos mama put roadside food spot.\nStyle: stylised 3D cartoon render, soft and chunky like modern casual mobile games (clay/Pixar-like), friendly faces, not photoreal. Nigerian characters with warm brown skin tones and authentic Nigerian clothing as specified. Saturated colours and a clear silhouette readable at 56 pixels.\nComposition: one cohesive subject or small diorama as specified, centred, filling about 80% of the square frame, 3/4 front view. Keep the entire subject inside the frame with clear transparent padding.\nLighting: soft warm studio light from the top-left.\nOutput: square 1024x1024 PNG, fully transparent background with real alpha, including around any diorama.\nConstraints: no text, no numbers, no logos, no brand names, no number plates, no real people, no watermark. No extra objects beyond the subject requested.\nSubject: Iya Basira, a confident older woman cook, purple-and-gold ankara with gele, stirring a big black pot with a wooden spoon, steam rising, head-and-shoulders portrait.",
+      "masterSize": [
+        1024,
+        1024
+      ],
+      "runtimeSize": [
+        256,
+        256
+      ],
+      "masterSha256": "3372996a4bbae3aaf27c8c41f6e146d2624c124997e177ddc3c064c76dc5b954",
+      "runtimeBytes": 20762,
+      "export": "Original alpha preserved; subject scaled to approximately 80% extent; WebP quality 88."
+    },
+    {
+      "key": "staff:tunde",
+      "generator": "built-in image_gen",
+      "sourcePrompt": "docs/ART_PROMPTS.md - prompt 4",
+      "master": "art/ui/staff-tunde-v1.png",
+      "runtime": "public/ui/staff-tunde-v1.webp",
+      "prompt": "Use case: stylized-concept\nAsset type: matching transparent game artwork for a cheerful mobile cooking game at a Lagos mama put roadside food spot.\nStyle: stylised 3D cartoon render, soft and chunky like modern casual mobile games (clay/Pixar-like), friendly faces, not photoreal. Nigerian characters with warm brown skin tones and authentic Nigerian clothing as specified. Saturated colours and a clear silhouette readable at 56 pixels.\nComposition: one cohesive subject or small diorama as specified, centred, filling about 80% of the square frame, 3/4 front view. Keep the entire subject inside the frame with clear transparent padding.\nLighting: soft warm studio light from the top-left.\nOutput: square 1024x1024 PNG, fully transparent background with real alpha, including around any diorama.\nConstraints: no text, no numbers, no logos, no brand names, no number plates, no real people, no watermark. No extra objects beyond the subject requested.\nSubject: Tunde, an experienced head server in his thirties, blue ankara shirt and blue cap, carrying two plates with a big smile, head-and-shoulders portrait.",
+      "masterSize": [
+        1024,
+        1024
+      ],
+      "runtimeSize": [
+        256,
+        256
+      ],
+      "masterSha256": "6890975667caa46b1db5726a54d9f3d255ee0bcacc62baeafa0824f9c6fe131c",
+      "runtimeBytes": 17442,
+      "export": "Original alpha preserved; subject scaled to approximately 80% extent; WebP quality 88."
+    },
+    {
+      "key": "staff:emeka",
+      "generator": "built-in image_gen",
+      "sourcePrompt": "docs/ART_PROMPTS.md - prompt 5",
+      "master": "art/ui/staff-emeka-v1.png",
+      "runtime": "public/ui/staff-emeka-v1.webp",
+      "prompt": "Use case: stylized-concept\nAsset type: matching transparent game artwork for a cheerful mobile cooking game at a Lagos mama put roadside food spot.\nStyle: stylised 3D cartoon render, soft and chunky like modern casual mobile games (clay/Pixar-like), friendly faces, not photoreal. Nigerian characters with warm brown skin tones and authentic Nigerian clothing as specified. Saturated colours and a clear silhouette readable at 56 pixels.\nComposition: one cohesive subject or small diorama as specified, centred, filling about 80% of the square frame, 3/4 front view. Keep the entire subject inside the frame with clear transparent padding.\nLighting: soft warm studio light from the top-left.\nOutput: square 1024x1024 PNG, fully transparent background with real alpha, including around any diorama.\nConstraints: no text, no numbers, no logos, no brand names, no number plates, no real people, no watermark. No extra objects beyond the subject requested.\nSubject: Emeka, a dispatch rider in his twenties, red helmet with visor up, green reflective vest over a red shirt, thumbs up, a red delivery box strapped behind him, head-and-shoulders portrait.",
+      "masterSize": [
+        1024,
+        1024
+      ],
+      "runtimeSize": [
+        256,
+        256
+      ],
+      "masterSha256": "7153efe70ac4bb530f501251e5635266ee1c041a952e71423152c1533da8fea0",
+      "runtimeBytes": 16250,
+      "export": "Original alpha preserved; subject scaled to approximately 80% extent; WebP quality 88."
+    },
+    {
+      "key": "staff:musa",
+      "generator": "built-in image_gen",
+      "sourcePrompt": "docs/ART_PROMPTS.md - prompt 6",
+      "master": "art/ui/staff-musa-v1.png",
+      "runtime": "public/ui/staff-musa-v1.webp",
+      "prompt": "Use case: stylized-concept\nAsset type: matching transparent game artwork for a cheerful mobile cooking game at a Lagos mama put roadside food spot.\nStyle: stylised 3D cartoon render, soft and chunky like modern casual mobile games (clay/Pixar-like), friendly faces, not photoreal. Nigerian characters with warm brown skin tones and authentic Nigerian clothing as specified. Saturated colours and a clear silhouette readable at 56 pixels.\nComposition: one cohesive subject or small diorama as specified, centred, filling about 80% of the square frame, 3/4 front view. Keep the entire subject inside the frame with clear transparent padding.\nLighting: soft warm studio light from the top-left.\nOutput: square 1024x1024 PNG, fully transparent background with real alpha, including around any diorama.\nConstraints: no text, no numbers, no logos, no brand names, no number plates, no real people, no watermark. No extra objects beyond the subject requested.\nSubject: Musa, an express dispatch rider, green helmet, cream jacket, leaning forward on a motorcycle handlebar ready to go, head-and-shoulders portrait.",
+      "masterSize": [
+        1024,
+        1024
+      ],
+      "runtimeSize": [
+        256,
+        256
+      ],
+      "masterSha256": "71241f130fc16f6d41a327154d0aef64fff4f9a1935b9b38458994c0c765d138",
+      "runtimeBytes": 19530,
+      "export": "Original alpha preserved; subject scaled to approximately 80% extent; WebP quality 88."
+    },
+    {
+      "key": "staff:ngozi",
+      "generator": "built-in image_gen",
+      "sourcePrompt": "docs/ART_PROMPTS.md - prompt 7",
+      "master": "art/ui/staff-ngozi-v1.png",
+      "runtime": "public/ui/staff-ngozi-v1.webp",
+      "prompt": "Use case: stylized-concept\nAsset type: matching transparent game artwork for a cheerful mobile cooking game at a Lagos mama put roadside food spot.\nStyle: stylised 3D cartoon render, soft and chunky like modern casual mobile games (clay/Pixar-like), friendly faces, not photoreal. Nigerian characters with warm brown skin tones and authentic Nigerian clothing as specified. Saturated colours and a clear silhouette readable at 56 pixels.\nComposition: one cohesive subject or small diorama as specified, centred, filling about 80% of the square frame, 3/4 front view. Keep the entire subject inside the frame with clear transparent padding.\nLighting: soft warm studio light from the top-left.\nOutput: square 1024x1024 PNG, fully transparent background with real alpha, including around any diorama.\nConstraints: no text, no numbers, no logos, no brand names, no number plates, no real people, no watermark. No extra objects beyond the subject requested.\nSubject: Ngozi, a young woman on a market errand, orange-and-teal ankara with a small gele, carrying a woven basket of tomatoes, peppers, onions and a crate of drinks, head-and-shoulders portrait.",
+      "masterSize": [
+        1024,
+        1024
+      ],
+      "runtimeSize": [
+        256,
+        256
+      ],
+      "masterSha256": "b68ba3852dad4eacef70138d1e57aea5fbc1dd95a145552cb1714c5bdc75ca61",
+      "runtimeBytes": 21234,
+      "export": "Original alpha preserved; subject scaled to approximately 80% extent; WebP quality 88."
+    },
+    {
+      "key": "online",
+      "generator": "built-in image_gen",
+      "sourcePrompt": "docs/ART_PROMPTS.md - prompt 8",
+      "master": "art/ui/online-v1.png",
+      "runtime": "public/ui/online-v1.webp",
+      "prompt": "Use case: stylized-concept\nAsset type: matching transparent game artwork for a cheerful mobile cooking game at a Lagos mama put roadside food spot.\nStyle: stylised 3D cartoon render, soft and chunky like modern casual mobile games (clay/Pixar-like), friendly faces, not photoreal. Nigerian characters with warm brown skin tones and authentic Nigerian clothing as specified. Saturated colours and a clear silhouette readable at 56 pixels.\nComposition: one cohesive subject or small diorama as specified, centred, filling about 80% of the square frame, 3/4 front view. Keep the entire subject inside the frame with clear transparent padding.\nLighting: soft warm studio light from the top-left.\nOutput: square 1024x1024 PNG, fully transparent background with real alpha, including around any diorama.\nConstraints: no text, no numbers, no logos, no brand names, no number plates, no real people, no watermark. No extra objects beyond the subject requested.\nSubject: A smartphone showing a simple food order screen with a plate icon and a green tick (no readable text), small motorcycle icon beside it.",
+      "masterSize": [
+        1024,
+        1024
+      ],
+      "runtimeSize": [
+        256,
+        256
+      ],
+      "masterSha256": "68062435298c316bc930c52d7f0effbb013a650ca034b0a3184ddae3c6d4edbd",
+      "runtimeBytes": 18934,
+      "export": "Original alpha preserved; subject scaled to approximately 80% extent; WebP quality 88."
+    },
+    {
+      "key": "rider",
+      "generator": "built-in image_gen",
+      "sourcePrompt": "docs/ART_PROMPTS.md - prompt 9",
+      "master": "art/ui/rider-v1.png",
+      "runtime": "public/ui/rider-v1.webp",
+      "prompt": "Use case: stylized-concept\nAsset type: matching transparent game artwork for a cheerful mobile cooking game at a Lagos mama put roadside food spot.\nStyle: stylised 3D cartoon render, soft and chunky like modern casual mobile games (clay/Pixar-like), friendly faces, not photoreal. Nigerian characters with warm brown skin tones and authentic Nigerian clothing as specified. Saturated colours and a clear silhouette readable at 56 pixels.\nComposition: one cohesive subject or small diorama as specified, centred, filling about 80% of the square frame, 3/4 front view. Keep the entire subject inside the frame with clear transparent padding.\nLighting: soft warm studio light from the top-left.\nOutput: square 1024x1024 PNG, fully transparent background with real alpha, including around any diorama.\nConstraints: no text, no numbers, no logos, no brand names, no number plates, no real people, no watermark. No extra objects beyond the subject requested.\nSubject: A full-body Lagos dispatch rider on a small red motorcycle (okada) with a red insulated food delivery box on the back, helmet on, riding to the right, generic bike with no brand or plate.",
+      "masterSize": [
+        1024,
+        1024
+      ],
+      "runtimeSize": [
+        256,
+        256
+      ],
+      "masterSha256": "32662bd1398208cd8857bc79e7fb78390eb826a0b6ef5dced9c1e90a175d1cdb",
+      "runtimeBytes": 20842,
+      "export": "Original alpha preserved; subject scaled to approximately 80% extent; WebP quality 88."
+    },
+    {
+      "key": "pack",
+      "generator": "built-in image_gen",
+      "sourcePrompt": "docs/ART_PROMPTS.md - prompt 10",
+      "master": "art/ui/pack-v1.png",
+      "runtime": "public/ui/pack-v1.webp",
+      "prompt": "Use case: stylized-concept\nAsset type: matching transparent game artwork for a cheerful mobile cooking game at a Lagos mama put roadside food spot.\nStyle: stylised 3D cartoon render, soft and chunky like modern casual mobile games (clay/Pixar-like), friendly faces, not photoreal. Nigerian characters with warm brown skin tones and authentic Nigerian clothing as specified. Saturated colours and a clear silhouette readable at 56 pixels.\nComposition: one cohesive subject or small diorama as specified, centred, filling about 80% of the square frame, 3/4 front view. Keep the entire subject inside the frame with clear transparent padding.\nLighting: soft warm studio light from the top-left.\nOutput: square 1024x1024 PNG, fully transparent background with real alpha, including around any diorama.\nConstraints: no text, no numbers, no logos, no brand names, no number plates, no real people, no watermark. No extra objects beyond the subject requested.\nSubject: A white styrofoam takeaway food pack, lid half open showing jollof rice, chicken and dodo inside, with a small sachet of pure water beside it.",
+      "masterSize": [
+        1024,
+        1024
+      ],
+      "runtimeSize": [
+        256,
+        256
+      ],
+      "masterSha256": "4bbc44c0f5ac30c1336ae372594d8094d63201bc1d4fa2cd579bf2cca0054d3d",
+      "runtimeBytes": 17296,
+      "export": "Original alpha preserved; subject scaled to approximately 80% extent; WebP quality 88."
+    },
+    {
+      "key": "cooler",
+      "generator": "built-in image_gen",
+      "sourcePrompt": "docs/ART_PROMPTS.md - prompt 11",
+      "master": "art/ui/cooler-v1.png",
+      "runtime": "public/ui/cooler-v1.webp",
+      "prompt": "Use case: stylized-concept\nAsset type: matching transparent game artwork for a cheerful mobile cooking game at a Lagos mama put roadside food spot.\nStyle: stylised 3D cartoon render, soft and chunky like modern casual mobile games (clay/Pixar-like), friendly faces, not photoreal. Nigerian characters with warm brown skin tones and authentic Nigerian clothing as specified. Saturated colours and a clear silhouette readable at 56 pixels.\nComposition: one cohesive subject or small diorama as specified, centred, filling about 80% of the square frame, 3/4 front view. Keep the entire subject inside the frame with clear transparent padding.\nLighting: soft warm studio light from the top-left.\nOutput: square 1024x1024 PNG, fully transparent background with real alpha, including around any diorama.\nConstraints: no text, no numbers, no logos, no brand names, no number plates, no real people, no watermark. No extra objects beyond the subject requested.\nSubject: A big blue party food cooler (warmer) with a lid, the kind used for Nigerian party jollof, a serving spoon resting on top.",
+      "masterSize": [
+        1024,
+        1024
+      ],
+      "runtimeSize": [
+        256,
+        256
+      ],
+      "masterSha256": "e8ebc2b14727e812bea263a1422f3ea67b1fed5564383de8bc8677cb59045431",
+      "runtimeBytes": 12500,
+      "export": "Original alpha preserved; subject scaled to approximately 80% extent; WebP quality 88."
+    },
+    {
+      "key": "event:birthday",
+      "generator": "built-in image_gen",
+      "sourcePrompt": "docs/ART_PROMPTS.md - prompt 12",
+      "master": "art/ui/event-birthday-v1.png",
+      "runtime": "public/ui/event-birthday-v1.webp",
+      "prompt": "Use case: stylized-concept\nAsset type: matching transparent game artwork for a cheerful mobile cooking game at a Lagos mama put roadside food spot.\nStyle: stylised 3D cartoon render, soft and chunky like modern casual mobile games (clay/Pixar-like), friendly faces, not photoreal. Nigerian characters with warm brown skin tones and authentic Nigerian clothing as specified. Saturated colours and a clear silhouette readable at 56 pixels.\nComposition: one cohesive subject or small diorama as specified, centred, filling about 80% of the square frame, 3/4 front view. Keep the entire subject inside the frame with clear transparent padding.\nLighting: soft warm studio light from the top-left.\nOutput: square 1024x1024 PNG, fully transparent background with real alpha, including around any diorama.\nConstraints: no text, no numbers, no logos, no brand names, no number plates, no real people, no watermark. No extra objects beyond the subject requested.\nSubject: A small birthday party table: a colourful cake with candles, balloons and a tray of jollof rice and chicken.",
+      "masterSize": [
+        1024,
+        1024
+      ],
+      "runtimeSize": [
+        256,
+        256
+      ],
+      "masterSha256": "3dfc3e2ffa8d0885d3fb0e1def83a6c2464c2af55fe23848e10a8c54adb9062a",
+      "runtimeBytes": 22956,
+      "export": "Original alpha preserved; subject scaled to approximately 80% extent; WebP quality 88."
+    },
+    {
+      "key": "event:naming",
+      "generator": "built-in image_gen",
+      "sourcePrompt": "docs/ART_PROMPTS.md - prompt 13",
+      "master": "art/ui/event-naming-v1.png",
+      "runtime": "public/ui/event-naming-v1.webp",
+      "prompt": "Use case: stylized-concept\nAsset type: matching transparent game artwork for a cheerful mobile cooking game at a Lagos mama put roadside food spot.\nStyle: stylised 3D cartoon render, soft and chunky like modern casual mobile games (clay/Pixar-like), friendly faces, not photoreal. Nigerian characters with warm brown skin tones and authentic Nigerian clothing as specified. Saturated colours and a clear silhouette readable at 56 pixels.\nComposition: one cohesive subject or small diorama as specified, centred, filling about 80% of the square frame, 3/4 front view. Keep the entire subject inside the frame with clear transparent padding.\nLighting: soft warm studio light from the top-left.\nOutput: square 1024x1024 PNG, fully transparent background with real alpha, including around any diorama.\nConstraints: no text, no numbers, no logos, no brand names, no number plates, no real people, no watermark. No extra objects beyond the subject requested.\nSubject: A Nigerian naming ceremony table: a small bowl each of honey, kola nut, bitter kola, salt and a calabash of water, a baby's white shawl folded beside them.",
+      "masterSize": [
+        1024,
+        1024
+      ],
+      "runtimeSize": [
+        256,
+        256
+      ],
+      "masterSha256": "198fa3061695e99b9ef8b20f2995434ddcc71c8ac15fdcffb33f6aa183714c9d",
+      "runtimeBytes": 16940,
+      "export": "Original alpha preserved; subject scaled to approximately 80% extent; WebP quality 88."
+    },
+    {
+      "key": "event:dedication",
+      "generator": "built-in image_gen",
+      "sourcePrompt": "docs/ART_PROMPTS.md - prompt 14",
+      "master": "art/ui/event-dedication-v2.png",
+      "runtime": "public/ui/event-dedication-v2.webp",
+      "prompt": "Edit only the rice in the small tray: make it unmistakably Nigerian fried rice, pale yellow-green rice with green peas, diced carrots and green beans, no orange tomato colour. Preserve the baby, basket, white lace outfit, ribbons, tray shape, 3D cartoon style, framing and warm lighting exactly. Fully transparent background, square PNG, no text or logos.",
+      "masterSize": [
+        1024,
+        1024
+      ],
+      "runtimeSize": [
+        256,
+        256
+      ],
+      "masterSha256": "d00ae3abeccf5dafc9d511c1178e1c293399609b3119bf8fb296508eeeeba381",
+      "runtimeBytes": 16948,
+      "export": "Original alpha preserved; subject scaled to approximately 80% extent; WebP quality 88."
+    },
+    {
+      "key": "event:wedding",
+      "generator": "built-in image_gen",
+      "sourcePrompt": "docs/ART_PROMPTS.md - prompt 15",
+      "master": "art/ui/event-wedding-v2.png",
+      "runtime": "public/ui/event-wedding-v2.webp",
+      "prompt": "Refine this wedding game icon into the objects requested: remove the woman and the plate she holds completely. In her place show folded rich gold aso-ebi fabric with a sculptural gold gele headtie resting on it. Keep the tiered white wedding cake and the open red cooler full of party jollof rice. Arrange these objects as one compact centered group with clear silhouette, 3/4 front view. Preserve soft chunky stylised 3D cartoon look, warm top-left lighting, fully transparent background. No people, no hands, no text or logos. Square PNG.",
+      "masterSize": [
+        1024,
+        1024
+      ],
+      "runtimeSize": [
+        256,
+        256
+      ],
+      "masterSha256": "34e8d834e0278e2c56a26a5b80c2434472eab3af67cffcaba82e9ba2b736bd1f",
+      "runtimeBytes": 18426,
+      "export": "Original alpha preserved; subject scaled to approximately 80% extent; WebP quality 88."
+    },
+    {
+      "key": "event:burial",
+      "generator": "built-in image_gen",
+      "sourcePrompt": "docs/ART_PROMPTS.md - prompt 16",
+      "master": "art/ui/event-burial-v1.png",
+      "runtime": "public/ui/event-burial-v1.webp",
+      "prompt": "Use case: stylized-concept\nAsset type: matching transparent game artwork for a cheerful mobile cooking game at a Lagos mama put roadside food spot.\nStyle: stylised 3D cartoon render, soft and chunky like modern casual mobile games (clay/Pixar-like), friendly faces, not photoreal. Nigerian characters with warm brown skin tones and authentic Nigerian clothing as specified. Saturated colours and a clear silhouette readable at 56 pixels.\nComposition: one cohesive subject or small diorama as specified, centred, filling about 80% of the square frame, 3/4 front view. Keep the entire subject inside the frame with clear transparent padding.\nLighting: soft warm studio light from the top-left.\nOutput: square 1024x1024 PNG, fully transparent background with real alpha, including around any diorama.\nConstraints: no text, no numbers, no logos, no brand names, no number plates, no real people, no watermark. No extra objects beyond the subject requested.\nSubject: A respectful Nigerian burial reception: a white canopy tent, white flowers and rows of covered food coolers, calm colours.",
+      "masterSize": [
+        1024,
+        1024
+      ],
+      "runtimeSize": [
+        256,
+        256
+      ],
+      "masterSha256": "f76523e03fa875bb0181d6502584f7fc4a7804557ad10fc0c6e95242526a4723",
+      "runtimeBytes": 24782,
+      "export": "Original alpha preserved; subject scaled to approximately 80% extent; WebP quality 88."
+    },
+    {
+      "key": "event:housewarming",
+      "generator": "built-in image_gen",
+      "sourcePrompt": "docs/ART_PROMPTS.md - prompt 17",
+      "master": "art/ui/event-housewarming-v1.png",
+      "runtime": "public/ui/event-housewarming-v1.webp",
+      "prompt": "Use case: stylized-concept\nAsset type: matching transparent game artwork for a cheerful mobile cooking game at a Lagos mama put roadside food spot.\nStyle: stylised 3D cartoon render, soft and chunky like modern casual mobile games (clay/Pixar-like), friendly faces, not photoreal. Nigerian characters with warm brown skin tones and authentic Nigerian clothing as specified. Saturated colours and a clear silhouette readable at 56 pixels.\nComposition: one cohesive subject or small diorama as specified, centred, filling about 80% of the square frame, 3/4 front view. Keep the entire subject inside the frame with clear transparent padding.\nLighting: soft warm studio light from the top-left.\nOutput: square 1024x1024 PNG, fully transparent background with real alpha, including around any diorama.\nConstraints: no text, no numbers, no logos, no brand names, no number plates, no real people, no watermark. No extra objects beyond the subject requested.\nSubject: A house warming: a small colourful house with an open door, a pot of pepper soup and drinks on a table in front.",
+      "masterSize": [
+        1024,
+        1024
+      ],
+      "runtimeSize": [
+        256,
+        256
+      ],
+      "masterSha256": "00bdcb82c1467e62837b00d4f0149fff317731aebbf83702bd2d8b4c6ca52152",
+      "runtimeBytes": 19576,
+      "export": "Original alpha preserved; subject scaled to approximately 80% extent; WebP quality 88."
+    },
+    {
+      "key": "event:chieftaincy",
+      "generator": "built-in image_gen",
+      "sourcePrompt": "docs/ART_PROMPTS.md - prompt 18",
+      "master": "art/ui/event-chieftaincy-v1.png",
+      "runtime": "public/ui/event-chieftaincy-v1.webp",
+      "prompt": "Use case: stylized-concept\nAsset type: matching transparent game artwork for a cheerful mobile cooking game at a Lagos mama put roadside food spot.\nStyle: stylised 3D cartoon render, soft and chunky like modern casual mobile games (clay/Pixar-like), friendly faces, not photoreal. Nigerian characters with warm brown skin tones and authentic Nigerian clothing as specified. Saturated colours and a clear silhouette readable at 56 pixels.\nComposition: one cohesive subject or small diorama as specified, centred, filling about 80% of the square frame, 3/4 front view. Keep the entire subject inside the frame with clear transparent padding.\nLighting: soft warm studio light from the top-left.\nOutput: square 1024x1024 PNG, fully transparent background with real alpha, including around any diorama.\nConstraints: no text, no numbers, no logos, no brand names, no number plates, no real people, no watermark. No extra objects beyond the subject requested.\nSubject: A chieftaincy celebration: a red chief's cap, beads and a carved walking stick beside a tray of pounded yam and egusi.",
+      "masterSize": [
+        1024,
+        1024
+      ],
+      "runtimeSize": [
+        256,
+        256
+      ],
+      "masterSha256": "cf3a478c1022a629a33a06cd8e1bfc8063b86f2fa201894933bd263fc590327e",
+      "runtimeBytes": 18328,
+      "export": "Original alpha preserved; subject scaled to approximately 80% extent; WebP quality 88."
+    },
+    {
+      "key": "place:ojuelegba",
+      "generator": "built-in image_gen",
+      "sourcePrompt": "docs/ART_PROMPTS.md - prompt 19",
+      "master": "art/ui/place-ojuelegba-v1.png",
+      "runtime": "public/ui/place-ojuelegba-v1.webp",
+      "prompt": "Use case: stylized-concept\nAsset type: matching transparent game artwork for a cheerful mobile cooking game at a Lagos mama put roadside food spot.\nStyle: stylised 3D cartoon render, soft and chunky like modern casual mobile games (clay/Pixar-like), friendly faces, not photoreal. Nigerian characters with warm brown skin tones and authentic Nigerian clothing as specified. Saturated colours and a clear silhouette readable at 56 pixels.\nComposition: one cohesive subject or small diorama as specified, centred, filling about 80% of the square frame, 3/4 front view. Keep the entire subject inside the frame with clear transparent padding.\nLighting: soft warm studio light from the top-left.\nOutput: square 1024x1024 PNG, fully transparent background with real alpha, including around any diorama.\nConstraints: no text, no numbers, no logos, no brand names, no number plates, no real people, no watermark. No extra objects beyond the subject requested.\nSubject: A small roadside mama put buka with a zinc roof, wooden bench and pots on a table, busy Lagos street corner behind it.",
+      "masterSize": [
+        1024,
+        1024
+      ],
+      "runtimeSize": [
+        256,
+        256
+      ],
+      "masterSha256": "3c8db7f0e5c4358e7ad8f860ef3c62f29d2105d20b472de13c3f4a709c3e962d",
+      "runtimeBytes": 25896,
+      "export": "Original alpha preserved; subject scaled to approximately 80% extent; WebP quality 88."
+    },
+    {
+      "key": "place:yaba",
+      "generator": "built-in image_gen",
+      "sourcePrompt": "docs/ART_PROMPTS.md - prompt 20",
+      "master": "art/ui/place-yaba-v1.png",
+      "runtime": "public/ui/place-yaba-v1.webp",
+      "prompt": "Use case: stylized-concept\nAsset type: matching transparent game artwork for a cheerful mobile cooking game at a Lagos mama put roadside food spot.\nStyle: stylised 3D cartoon render, soft and chunky like modern casual mobile games (clay/Pixar-like), friendly faces, not photoreal. Nigerian characters with warm brown skin tones and authentic Nigerian clothing as specified. Saturated colours and a clear silhouette readable at 56 pixels.\nComposition: one cohesive subject or small diorama as specified, centred, filling about 80% of the square frame, 3/4 front view. Keep the entire subject inside the frame with clear transparent padding.\nLighting: soft warm studio light from the top-left.\nOutput: square 1024x1024 PNG, fully transparent background with real alpha, including around any diorama.\nConstraints: no text, no numbers, no logos, no brand names, no number plates, no real people, no watermark. No extra objects beyond the subject requested.\nSubject: A busy junction food spot in Yaba with a bright orange awning, plastic chairs and a yellow danfo bus passing.",
+      "masterSize": [
+        1024,
+        1024
+      ],
+      "runtimeSize": [
+        256,
+        256
+      ],
+      "masterSha256": "83f6d3b77fe5906495435dade169b9cce8f468f9e3b894c74bc71b860ed6a857",
+      "runtimeBytes": 25738,
+      "export": "Original alpha preserved; subject scaled to approximately 80% extent; WebP quality 88."
+    },
+    {
+      "key": "place:mushin",
+      "generator": "built-in image_gen",
+      "sourcePrompt": "docs/ART_PROMPTS.md - prompt 21",
+      "master": "art/ui/place-mushin-v1.png",
+      "runtime": "public/ui/place-mushin-v1.webp",
+      "prompt": "Use case: stylized-concept\nAsset type: matching transparent game artwork for a cheerful mobile cooking game at a Lagos mama put roadside food spot.\nStyle: stylised 3D cartoon render, soft and chunky like modern casual mobile games (clay/Pixar-like), friendly faces, not photoreal. Nigerian characters with warm brown skin tones and authentic Nigerian clothing as specified. Saturated colours and a clear silhouette readable at 56 pixels.\nComposition: one cohesive subject or small diorama as specified, centred, filling about 80% of the square frame, 3/4 front view. Keep the entire subject inside the frame with clear transparent padding.\nLighting: soft warm studio light from the top-left.\nOutput: square 1024x1024 PNG, fully transparent background with real alpha, including around any diorama.\nConstraints: no text, no numbers, no logos, no brand names, no number plates, no real people, no watermark. No extra objects beyond the subject requested.\nSubject: A lively amala spot in Mushin with a red awning, clay pots of soup and a crowd of happy customers.",
+      "masterSize": [
+        1024,
+        1024
+      ],
+      "runtimeSize": [
+        256,
+        256
+      ],
+      "masterSha256": "bff98a13a9a9b21fd43488d51cd795dc9b98f2242709424ca4b2c2d2347dbaf4",
+      "runtimeBytes": 26062,
+      "export": "Original alpha preserved; subject scaled to approximately 80% extent; WebP quality 88."
+    },
+    {
+      "key": "place:ikeja",
+      "generator": "built-in image_gen",
+      "sourcePrompt": "docs/ART_PROMPTS.md - prompt 22",
+      "master": "art/ui/place-ikeja-v1.png",
+      "runtime": "public/ui/place-ikeja-v1.webp",
+      "prompt": "Use case: stylized-concept\nAsset type: matching transparent game artwork for a cheerful mobile cooking game at a Lagos mama put roadside food spot.\nStyle: stylised 3D cartoon render, soft and chunky like modern casual mobile games (clay/Pixar-like), friendly faces, not photoreal. Nigerian characters with warm brown skin tones and authentic Nigerian clothing as specified. Saturated colours and a clear silhouette readable at 56 pixels.\nComposition: one cohesive subject or small diorama as specified, centred, filling about 80% of the square frame, 3/4 front view. Keep the entire subject inside the frame with clear transparent padding.\nLighting: soft warm studio light from the top-left.\nOutput: square 1024x1024 PNG, fully transparent background with real alpha, including around any diorama.\nConstraints: no text, no numbers, no logos, no brand names, no number plates, no real people, no watermark. No extra objects beyond the subject requested.\nSubject: A neat catering kitchen and shop front in Ikeja GRA with purple and gold decorations and party coolers lined up.",
+      "masterSize": [
+        1024,
+        1024
+      ],
+      "runtimeSize": [
+        256,
+        256
+      ],
+      "masterSha256": "0a3e49904ac2eeaec0deaf32b7f93b792840356145df6020fd8724d3ecf2f5a4",
+      "runtimeBytes": 20610,
+      "export": "Original alpha preserved; subject scaled to approximately 80% extent; WebP quality 88."
+    },
+    {
+      "key": "place:lekki",
+      "generator": "built-in image_gen",
+      "sourcePrompt": "docs/ART_PROMPTS.md - prompt 23",
+      "master": "art/ui/place-lekki-v1.png",
+      "runtime": "public/ui/place-lekki-v1.webp",
+      "prompt": "Use case: stylized-concept\nAsset type: matching transparent game artwork for a cheerful mobile cooking game at a Lagos mama put roadside food spot.\nStyle: stylised 3D cartoon render, soft and chunky like modern casual mobile games (clay/Pixar-like), friendly faces, not photoreal. Nigerian characters with warm brown skin tones and authentic Nigerian clothing as specified. Saturated colours and a clear silhouette readable at 56 pixels.\nComposition: one cohesive subject or small diorama as specified, centred, filling about 80% of the square frame, 3/4 front view. Keep the entire subject inside the frame with clear transparent padding.\nLighting: soft warm studio light from the top-left.\nOutput: square 1024x1024 PNG, fully transparent background with real alpha, including around any diorama.\nConstraints: no text, no numbers, no logos, no brand names, no number plates, no real people, no watermark. No extra objects beyond the subject requested.\nSubject: A modern mama put restaurant in Lekki Phase 1 with glass front, teal sign shape (no text), fairy lights and potted palms.",
+      "masterSize": [
+        1024,
+        1024
+      ],
+      "runtimeSize": [
+        256,
+        256
+      ],
+      "masterSha256": "54361002a3e4380bb5ecb0c19c760c9f2bc3445671274f43ffe7062bd6f732eb",
+      "runtimeBytes": 20378,
+      "export": "Original alpha preserved; subject scaled to approximately 80% extent; WebP quality 88."
+    },
+    {
+      "key": "place:abuja",
+      "generator": "built-in image_gen",
+      "sourcePrompt": "docs/ART_PROMPTS.md - prompt 24",
+      "master": "art/ui/place-abuja-v1.png",
+      "runtime": "public/ui/place-abuja-v1.webp",
+      "prompt": "Use case: stylized-concept\nAsset type: matching transparent game artwork for a cheerful mobile cooking game at a Lagos mama put roadside food spot.\nStyle: stylised 3D cartoon render, soft and chunky like modern casual mobile games (clay/Pixar-like), friendly faces, not photoreal. Nigerian characters with warm brown skin tones and authentic Nigerian clothing as specified. Saturated colours and a clear silhouette readable at 56 pixels.\nComposition: one cohesive subject or small diorama as specified, centred, filling about 80% of the square frame, 3/4 front view. Keep the entire subject inside the frame with clear transparent padding.\nLighting: soft warm studio light from the top-left.\nOutput: square 1024x1024 PNG, fully transparent background with real alpha, including around any diorama.\nConstraints: no text, no numbers, no logos, no brand names, no number plates, no real people, no watermark. No extra objects beyond the subject requested.\nSubject: A big food stall at Wuse Market, Abuja, with green-and-white canopies, stacked yams and a busy market behind.",
+      "masterSize": [
+        1024,
+        1024
+      ],
+      "runtimeSize": [
+        256,
+        256
+      ],
+      "masterSha256": "b4ab0e92a6817b861caca6a7a15cc9d59663e6a51f49fd6f372b3049339db1d7",
+      "runtimeBytes": 22096,
+      "export": "Original alpha preserved; subject scaled to approximately 80% extent; WebP quality 88."
+    },
+    {
+      "key": "customer:odogwu",
+      "generator": "built-in image_gen",
+      "sourcePrompt": "docs/ART_PROMPTS.md - prompt 25",
+      "master": "art/ui/customer-odogwu-v1.png",
+      "runtime": "public/ui/customer-odogwu-v1.webp",
+      "prompt": "Use case: stylized-concept\nAsset type: matching transparent game artwork for a cheerful mobile cooking game at a Lagos mama put roadside food spot.\nStyle: stylised 3D cartoon render, soft and chunky like modern casual mobile games (clay/Pixar-like), friendly faces, not photoreal. Nigerian characters with warm brown skin tones and authentic Nigerian clothing as specified. Saturated colours and a clear silhouette readable at 56 pixels.\nComposition: one cohesive subject or small diorama as specified, centred, filling about 80% of the square frame, 3/4 front view. Keep the entire subject inside the frame with clear transparent padding.\nLighting: soft warm studio light from the top-left.\nOutput: square 1024x1024 PNG, fully transparent background with real alpha, including around any diorama.\nConstraints: no text, no numbers, no logos, no brand names, no number plates, no real people, no watermark. No extra objects beyond the subject requested.\nSubject: An \"Odogwu\": a flashy, generous big man in a rich maroon agbada with gold embroidery, gold chain and red fila cap, holding out a fan of green banknotes with no readable numbers, laughing.",
+      "masterSize": [
+        1024,
+        1024
+      ],
+      "runtimeSize": [
+        256,
+        256
+      ],
+      "masterSha256": "6118661144c8dafc78099d7b379c8f26f6ba9596d7ceba1befdf806fb7ef0283",
+      "runtimeBytes": 16334,
+      "export": "Original alpha preserved; subject scaled to approximately 80% extent; WebP quality 88."
+    },
+    {
+      "key": "customer:okada",
+      "generator": "built-in image_gen",
+      "sourcePrompt": "docs/ART_PROMPTS.md - prompt 26",
+      "master": "art/ui/customer-okada-v1.png",
+      "runtime": "public/ui/customer-okada-v1.webp",
+      "prompt": "Use case: stylized-concept\nAsset type: matching transparent game artwork for a cheerful mobile cooking game at a Lagos mama put roadside food spot.\nStyle: stylised 3D cartoon render, soft and chunky like modern casual mobile games (clay/Pixar-like), friendly faces, not photoreal. Nigerian characters with warm brown skin tones and authentic Nigerian clothing as specified. Saturated colours and a clear silhouette readable at 56 pixels.\nComposition: one cohesive subject or small diorama as specified, centred, filling about 80% of the square frame, 3/4 front view. Keep the entire subject inside the frame with clear transparent padding.\nLighting: soft warm studio light from the top-left.\nOutput: square 1024x1024 PNG, fully transparent background with real alpha, including around any diorama.\nConstraints: no text, no numbers, no logos, no brand names, no number plates, no real people, no watermark. No extra objects beyond the subject requested.\nSubject: An okada rider customer in an orange reflective vest and yellow helmet, holding a takeaway pack.",
+      "masterSize": [
+        1024,
+        1024
+      ],
+      "runtimeSize": [
+        256,
+        256
+      ],
+      "masterSha256": "33d085dc48ab4fde15025d7d4e7f79739242f5f66e151f67ccd98d566fa65328",
+      "runtimeBytes": 19672,
+      "export": "Original alpha preserved; subject scaled to approximately 80% extent; WebP quality 88."
+    },
+    {
+      "key": "customer:conductor",
+      "generator": "built-in image_gen",
+      "sourcePrompt": "docs/ART_PROMPTS.md - prompt 27",
+      "master": "art/ui/customer-conductor-v1.png",
+      "runtime": "public/ui/customer-conductor-v1.webp",
+      "prompt": "Use case: stylized-concept\nAsset type: matching transparent game artwork for a cheerful mobile cooking game at a Lagos mama put roadside food spot.\nStyle: stylised 3D cartoon render, soft and chunky like modern casual mobile games (clay/Pixar-like), friendly faces, not photoreal. Nigerian characters with warm brown skin tones and authentic Nigerian clothing as specified. Saturated colours and a clear silhouette readable at 56 pixels.\nComposition: one cohesive subject or small diorama as specified, centred, filling about 80% of the square frame, 3/4 front view. Keep the entire subject inside the frame with clear transparent padding.\nLighting: soft warm studio light from the top-left.\nOutput: square 1024x1024 PNG, fully transparent background with real alpha, including around any diorama.\nConstraints: no text, no numbers, no logos, no brand names, no number plates, no real people, no watermark. No extra objects beyond the subject requested.\nSubject: A danfo bus conductor in a yellow shirt and black cap, hanging off a yellow bus door and waving.",
+      "masterSize": [
+        1024,
+        1024
+      ],
+      "runtimeSize": [
+        256,
+        256
+      ],
+      "masterSha256": "715d551634f2523084a41d7de19e635ddda1ab1bd68e5f3f7228a9f49baf51c2",
+      "runtimeBytes": 18328,
+      "export": "Original alpha preserved; subject scaled to approximately 80% extent; WebP quality 88."
+    },
+    {
+      "key": "customer:schoolkid",
+      "generator": "built-in image_gen",
+      "sourcePrompt": "docs/ART_PROMPTS.md - prompt 28",
+      "master": "art/ui/customer-schoolkid-v1.png",
+      "runtime": "public/ui/customer-schoolkid-v1.webp",
+      "prompt": "Use case: stylized-concept\nAsset type: matching transparent game artwork for a cheerful mobile cooking game at a Lagos mama put roadside food spot.\nStyle: stylised 3D cartoon render, soft and chunky like modern casual mobile games (clay/Pixar-like), friendly faces, not photoreal. Nigerian characters with warm brown skin tones and authentic Nigerian clothing as specified. Saturated colours and a clear silhouette readable at 56 pixels.\nComposition: one cohesive subject or small diorama as specified, centred, filling about 80% of the square frame, 3/4 front view. Keep the entire subject inside the frame with clear transparent padding.\nLighting: soft warm studio light from the top-left.\nOutput: square 1024x1024 PNG, fully transparent background with real alpha, including around any diorama.\nConstraints: no text, no numbers, no logos, no brand names, no number plates, no real people, no watermark. No extra objects beyond the subject requested.\nSubject: A happy Nigerian schoolchild in a blue school uniform with a backpack, holding a sachet of pure water.",
+      "masterSize": [
+        1024,
+        1024
+      ],
+      "runtimeSize": [
+        256,
+        256
+      ],
+      "masterSha256": "edf0a5464534a808ac5dde27bd31cec3e2f09562419cc21b1c95a07d451a56cd",
+      "runtimeBytes": 12640,
+      "export": "Original alpha preserved; subject scaled to approximately 80% extent; WebP quality 88."
+    },
+    {
+      "key": "customer:alhaji",
+      "generator": "built-in image_gen",
+      "sourcePrompt": "docs/ART_PROMPTS.md - prompt 29",
+      "master": "art/ui/customer-alhaji-v1.png",
+      "runtime": "public/ui/customer-alhaji-v1.webp",
+      "prompt": "Use case: stylized-concept\nAsset type: matching transparent game artwork for a cheerful mobile cooking game at a Lagos mama put roadside food spot.\nStyle: stylised 3D cartoon render, soft and chunky like modern casual mobile games (clay/Pixar-like), friendly faces, not photoreal. Nigerian characters with warm brown skin tones and authentic Nigerian clothing as specified. Saturated colours and a clear silhouette readable at 56 pixels.\nComposition: one cohesive subject or small diorama as specified, centred, filling about 80% of the square frame, 3/4 front view. Keep the entire subject inside the frame with clear transparent padding.\nLighting: soft warm studio light from the top-left.\nOutput: square 1024x1024 PNG, fully transparent background with real alpha, including around any diorama.\nConstraints: no text, no numbers, no logos, no brand names, no number plates, no real people, no watermark. No extra objects beyond the subject requested.\nSubject: A calm, dignified Alhaji in a white kaftan and white kufi cap with gold trim, holding prayer beads.",
+      "masterSize": [
+        1024,
+        1024
+      ],
+      "runtimeSize": [
+        256,
+        256
+      ],
+      "masterSha256": "05b661dad37d00c74894bf1fe7940964ea7bd266790c057b5c057724abac3029",
+      "runtimeBytes": 10874,
+      "export": "Original alpha preserved; subject scaled to approximately 80% extent; WebP quality 88."
+    }
+  ],
+  "variants": [
+    {
+      "key": "event:dedication",
+      "generator": "built-in image_gen",
+      "sourcePrompt": "docs/ART_PROMPTS.md - prompt 14",
+      "master": "art/ui/event-dedication-v1.png",
+      "runtime": "public/ui/event-dedication-v1.webp",
+      "prompt": "Use case: stylized-concept\nAsset type: matching transparent game artwork for a cheerful mobile cooking game at a Lagos mama put roadside food spot.\nStyle: stylised 3D cartoon render, soft and chunky like modern casual mobile games (clay/Pixar-like), friendly faces, not photoreal. Nigerian characters with warm brown skin tones and authentic Nigerian clothing as specified. Saturated colours and a clear silhouette readable at 56 pixels.\nComposition: one cohesive subject or small diorama as specified, centred, filling about 80% of the square frame, 3/4 front view. Keep the entire subject inside the frame with clear transparent padding.\nLighting: soft warm studio light from the top-left.\nOutput: square 1024x1024 PNG, fully transparent background with real alpha, including around any diorama.\nConstraints: no text, no numbers, no logos, no brand names, no number plates, no real people, no watermark. No extra objects beyond the subject requested.\nSubject: A child dedication celebration: a baby in a white lace outfit in a basket with white and gold ribbons and a small tray of fried rice.",
+      "masterSize": [
+        1024,
+        1024
+      ],
+      "runtimeSize": [
+        256,
+        256
+      ],
+      "masterSha256": "c9da791a7e13d8cb98d8e8a927424939bd63326846df0b095a94d46c5a635fd7",
+      "runtimeBytes": 21220,
+      "export": "Original alpha preserved; subject scaled to approximately 80% extent; WebP quality 88."
+    },
+    {
+      "key": "event:wedding",
+      "generator": "built-in image_gen",
+      "sourcePrompt": "docs/ART_PROMPTS.md - prompt 15",
+      "master": "art/ui/event-wedding-v1.png",
+      "runtime": "public/ui/event-wedding-v1.webp",
+      "prompt": "Use case: stylized-concept\nAsset type: matching transparent game artwork for a cheerful mobile cooking game at a Lagos mama put roadside food spot.\nStyle: stylised 3D cartoon render, soft and chunky like modern casual mobile games (clay/Pixar-like), friendly faces, not photoreal. Nigerian characters with warm brown skin tones and authentic Nigerian clothing as specified. Saturated colours and a clear silhouette readable at 56 pixels.\nComposition: one cohesive subject or small diorama as specified, centred, filling about 80% of the square frame, 3/4 front view. Keep the entire subject inside the frame with clear transparent padding.\nLighting: soft warm studio light from the top-left.\nOutput: square 1024x1024 PNG, fully transparent background with real alpha, including around any diorama.\nConstraints: no text, no numbers, no logos, no brand names, no number plates, no real people, no watermark. No extra objects beyond the subject requested.\nSubject: An Owambe wedding: a tiered white cake, gold aso-ebi fabric, a gele and a big cooler of party jollof.",
+      "masterSize": [
+        1024,
+        1024
+      ],
+      "runtimeSize": [
+        256,
+        256
+      ],
+      "masterSha256": "efb0fcdab96d788a25beb668f1a3bed0b732011c490a43f1dee8459522bae72a",
+      "runtimeBytes": 22186,
+      "export": "Original alpha preserved; subject scaled to approximately 80% extent; WebP quality 88."
     }
   ]
 }
