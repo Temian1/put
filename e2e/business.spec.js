@@ -26,24 +26,38 @@ test("online order: notification, pack items, send with a rider", async ({
     const G = window.__mp.Game;
     G.spawnT = 999;
     G.orderT = 0;
+    // Every pan and pot ready, so each tap packs a portion.
+    for (const id in G.cookers)
+      Object.assign(G.cookers[id], { stage: "ready", stock: 9, t: 0 });
   });
   await expect(page.locator("#notify")).toHaveClass(/show/);
   await expect(page.locator("#notify")).toContainText("Online order");
-  const card = page.locator(".ocard").first();
-  await expect(card).toBeVisible();
+  const firstCard = page.locator(".ocard").first();
+  await expect(firstCard).toBeVisible();
+  const orderId = await firstCard.getAttribute("data-order");
+  const card = page.locator(`.ocard[data-order="${orderId}"]`);
   await card.dispatchEvent("pointerdown");
   await expect(card).toHaveClass(/sel/);
-  const items = await page.evaluate(() =>
-    window.__mp.Game.orders[0].items.map((it) => it.f),
-  );
-  for (const f of items) {
-    await page.locator(`.food[data-id="${f}"]`).dispatchEvent("pointerdown");
-    await page.waitForTimeout(400);
+  // Pack outstanding portions through real buttons, waiting for a batch if a
+  // pan needs cooking again. Later incoming orders must not retarget this test.
+  for (let attempt = 0; attempt < 80; attempt++) {
+    const next = await page.evaluate(
+      (id) =>
+        window.__mp.Game.orders
+          .find((order) => order.id === id)
+          ?.items.find((it) => it.got < it.need)?.f,
+      orderId,
+    );
+    if (!next) break;
+    const button = page.locator(`.food[data-id="${next}"]`);
+    if ((await button.getAttribute("data-stage")) !== "cooking")
+      await button.dispatchEvent("pointerdown");
+    await page.waitForTimeout(280);
   }
   await expect(card).toHaveClass(/done/);
   const before = await page.evaluate(() => window.__mp.Game.served);
   await card.locator(".osend").dispatchEvent("pointerdown");
-  await expect(page.locator(".ocard")).toHaveCount(0, { timeout: 5000 });
+  await expect(card).toHaveCount(0, { timeout: 5000 });
   const g = await page.evaluate(() => {
     const G = window.__mp.Game;
     return {

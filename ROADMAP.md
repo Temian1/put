@@ -22,6 +22,22 @@ The previous top 10, plus the requested economy and staff changes:
 | Hired help | Four staff (two servers, a cleaner, a cook) with hire cost, per-shift wages and on/off duty. | Staff upgrades and morale. |
 | Mobile overlay fix | Panels are border-box, never wider than the screen, and scroll when taller than it; HUD no longer overflows at 320 px. | — |
 
+## Delivered in the business update
+
+| Item | What shipped |
+| --- | --- |
+| Nigerian names | Every customer has a Nigerian name tag; VIPs, Alhaji and Odogwu get titles. |
+| Odogwu customer | Orders one small item, tips ₦2,000–₦5,000 with "Keep the change!". |
+| Salaries | Staff paid after each shift from takings then savings; three unpaid shifts and they quit; sack and off-duty to save money. |
+| Delivery and errand staff | Two dispatch riders (trip times 9 s and 6 s) and a market errand worker (restocks drinks, 20% cheaper ingredients). |
+| Reputation | ★ 0–100 changes with service; controls how often customers come and how much they tip. |
+| Online orders and packing | From level 15: notifications, order cards, packing with ₦150 packs, hired or outside riders, deadlines. |
+| Catering events | Birthday, naming ceremony, child dedication, wedding, burial, house warming and chieftaincy orders on seven levels and in Endless. |
+| Food finishes | From level 6 every station holds a batch that runs out and costs ingredients to cook again; customers complain while waiting. |
+| Left rail and zoom | Tools moved to a left rail; zoom with buttons, wheel or pinch. |
+| Growth and places | Five business tiers, six branches with per-shift income, visiting changes the menu scene. |
+| Art prompts | docs/ART_PROMPTS.md with keys the game loads from public/ui/manifest.json. |
+
 ## Next candidates
 
 1. Self-host fonts and add an install prompt (1–2 days).

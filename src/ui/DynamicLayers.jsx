@@ -224,7 +224,7 @@ function StaffCard({ s, save, art, hire, toggle, sack, unpaidLimit }) {
             onClick={() => {
               if (!arm) {
                 setArm(true);
-                setTimeout(() => setArm(false), 3000);
+                setTimeout(() => setArm(false), 4000);
               } else sack(s);
             }}
           >

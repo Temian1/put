@@ -5,6 +5,8 @@ Generated with the built-in image tool. Each image has genuine transparency, a 1
 Click a food name to open its master. Exact generation prompts and hashes are recorded in [generation.json](../art/food-icons/generation.json).
 The earlier jollof prototype is preserved separately; the installed v2 adds the peas, carrots and onion rings in the document.
 
+See [FOOD_ART_VERIFICATION.md](FOOD_ART_VERIFICATION.md) for asset validation and test results.
+
 | Food | Food | Food |
 | --- | --- | --- |
 | [**Jollof Rice**](../art/food-icons/jollof-v2.png)<br><img src="../public/food/jollof-v2.webp" width="144" height="144" alt="Jollof Rice"><br><code>jollof</code> | [**Fried Rice**](../art/food-icons/friedrice-v1.png)<br><img src="../public/food/friedrice-v1.webp" width="144" height="144" alt="Fried Rice"><br><code>friedrice</code> | [**Rice & Stew**](../art/food-icons/whiterice-v1.png)<br><img src="../public/food/whiterice-v1.webp" width="144" height="144" alt="Rice & Stew"><br><code>whiterice</code> |

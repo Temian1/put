@@ -34,10 +34,17 @@ Playwright needs a browser once: `npx playwright install chromium`. To use an in
   - **Levels 1–2:** tap what customers want.
   - **Level 3 (plate assembly):** dish the main first; meat, dodo and soup go on top ("Jollof first!"). Every swallow comes with a soup. Tapping a topping too early is a hint, not a mistake.
   - **Level 4 (cooking stages):** dodo, chicken and fish must be fried. Tap to start frying; a ready batch holds several portions and burns if left too long. Tap a burnt pan to throw it away.
-  - **Level 11 (dishwashing):** served customers leave dirty plates. Tap **Clear** (or the tray) to move a plate to the sink; the lane stays closed until you do. The sink holds four plates. Tap **Sink** (or press **W**) to wash.
+  - **Level 6 (food finishes):** every pot, basin and cooler holds a batch (e.g. 8 plates of rice) that runs out. A finished food shows **Finished!**; tap it to cook a new batch, which costs ingredients (30% of menu price). Customers waiting only on finished food complain, lose patience faster and hurt your reputation.
+  - **Level 11 (dishwashing):** served customers leave dirty plates. Tap **Clear** (or the tray) to move a plate to the sink; the lane stays closed until you do. The sink holds four plates. Tap the blue sink button on the left rail (or press **W**) to wash.
+  - **Level 15 (online orders):** orders pop up with a notification and appear as cards above the food buttons, with a deadline. Tap a card to select it, tap foods to pack them, then **Pack & send**. Packs cost ₦150 each. A hired dispatch rider delivers free; with none free, an outside rider is called for ₦1,000. Late orders are cancelled and cost reputation.
+  - **Level 27 onward (catering events):** birthday parties, naming ceremonies, child dedications, owambe weddings, burial receptions, house warmings and chieftaincy titles order in bulk (8–16 portions) for a 40% premium. The day cannot close until the event is delivered or runs out of time.
 - **Boosters** (one of each to start, more in the shop): *Freeze Time* stops the clock and patience for 8 s, *Auto-Serve* completes the most urgent order, *Patience Boost* refills everyone waiting.
-- **Customers:** schoolkids, okada riders, danfo conductors and Alhaji join the regulars, VIPs and wedding guests, each with their own look, patience, tips and favourite orders. Some show a mood (😌 calm, 🤤 hungry, 💸 generous, 😤 grumpy). Happy customers who did not wait long leave a tip.
-- **Hire help** (Menu → Hire Help, or Shop → Staff): Chidi and Tunde serve, Aunty Bisi clears tables and washes plates, Iya Basira keeps the pans frying. Staff work every shift and their wages come out of that shift's takings. Toggle anyone off duty to save wages.
+- **Customers** all have Nigerian names (Chief, Alhaji and Odogwu titles included). Schoolkids, okada riders, danfo conductors, Alhaji and the **Odogwu** (buys something small, then says "Keep the change!" and tips ₦2,000–₦5,000) join the regulars, VIPs and wedding guests. Some show a mood (😌 calm, 🤤 hungry, 💸 generous, 😤 grumpy).
+- **Reputation (★ 0–100, menu top bar):** fast, correct service raises it; lost customers, wrong food, complaints and late deliveries lower it. Higher reputation brings customers more often and bigger tips; low reputation means fewer customers.
+- **Staff** (Menu → Staff, or Shop → Staff): Chidi and Tunde serve and pack orders, Aunty Bisi clears and washes, Iya Basira cooks when pots finish, Emeka and Musa are dispatch riders, Ngozi runs market errands (restocks drinks, ingredients 20% cheaper). Salaries are paid after every shift from that shift's cash, then savings. A worker unpaid three shifts in a row quits. Put staff off duty, or **Sack** them, to save money.
+- **End of shift:** the summary lists sales, ingredients, takeaway packs, outside riders, salaries, branch income and the change in reputation. A failed shift still keeps the sales made and still pays its bills.
+- **Grow** (menu): your business grows from Roadside Buka to Food Empire with lifetime sales and reputation. Bigger businesses can open branches in other places (Yaba, Mushin, Ikeja GRA, Lekki, Wuse in Abuja). Each branch pays income after every shift and can be visited, which changes the menu scene to that place.
+- **Left rail in levels:** zoom in/out (also mouse wheel or two-finger pinch), boosters and the sink.
 - **Missions:** three new daily missions with naira rewards, plus lifetime achievements. The menu badge shows how many are ready to claim.
 - Upgrades, outfits, decor, daily login reward, daily challenge (₦6,000 win bonus) and Endless Rush (after level 50) remain.
 - **Escape** pauses. The game pauses when its tab is hidden. Settings has sound, music, vibration and graphics toggles.
@@ -68,7 +75,10 @@ src/
     currency.js              Naira formatting and rounding
     recipes.js               Plate assembly: believable buka orders
     OrderSystem.js           Item matching with main-before-topping layering
-    kitchen.js               Cooking stage state machine and the sink
+    kitchen.js               Cooking/stock state machine and the sink
+    deliveries.js            Online and event orders, packing, dispatch riders
+    staff.js                 Payroll, unpaid strikes, quitting and sacking
+    growth.js                Reputation, business tiers and branches
     customers.js             Customer kind/mood selection and traits
     missions.js              Daily missions, achievements and lifetime stats
     scoring.js               Bill, combo/fast/VIP bonuses, tips and wages
@@ -87,20 +97,23 @@ src/
     Icon.jsx                 Inline SVG icons
   styles/
     original.css             Base game stylesheet
-    react.css                Additions: notes, tools, cooking states, small screens
+    react.css                Additions: notes, cooking states, small screens
+    business.css             Tool rail, order cards, staff, growth, shift ledger
 public/
   sw.js, manifest.webmanifest, icons/   Offline/install support
-  food/manifest.json                    Optional painted food icons
+  food/manifest.json                    Painted food icons
+  ui/manifest.json                      Optional staff, order and place art
 tests/                       Vitest rules, systems and lifecycle tests
 e2e/                         Playwright journeys, layout, PWA and visual tests
 docs/FOOD_ART_PROMPTS.md     Image prompts for food art
+docs/ART_PROMPTS.md          Image prompts for staff, riders, packs, events, places
 ```
 
 The engine stays in one module to keep its shared geometry/material caches and animation ordering. Rules and systems are plain modules without React or Three.js, so they are unit-tested directly.
 
 React creates every HTML layer, including order bubbles, dirty-table chips, flying naira notes and floating text. The small store publishes structural changes only; bubble and chip positions, patience bars, cooking rings and count-ups update DOM refs directly, at most every 100 ms for HUD text.
 
-Development builds expose `window.__mp = { Game, Save, levelCfg, FOODS, stations, trays }` for tests. Production builds omit it.
+Development builds expose `window.__mp = { Game, Save, levelCfg, FOODS, stations, trays, camera }` for tests. Production builds omit it.
 
 ## Saves and cloud save
 

@@ -1,6 +1,6 @@
 # Port parity and verification
 
-> Historical record of the initial React port. The current game has since expanded to a 21-food menu, naira prices, cooking and business systems, PWA support and generated food art. The original reference HTML was removed during that expansion. The 80-test counts and original gameplay observations below describe the earlier port, not the current build. Current art, source prompts and exports are documented in [FOOD_ART_GALLERY.md](docs/FOOD_ART_GALLERY.md) and [generation.json](art/food-icons/generation.json).
+> Historical record of the initial React port. The current game has since expanded to a 21-food menu, naira prices, cooking and business systems, PWA support and generated food art. The original reference HTML was removed during that expansion. The 80-test counts and original gameplay observations below describe the earlier port, not the current build. Current art, source prompts and exports are documented in [FOOD_ART_GALLERY.md](docs/FOOD_ART_GALLERY.md), [generation.json](art/food-icons/generation.json) and the [current verification report](docs/FOOD_ART_VERIFICATION.md).
 
 Validated on 24 October 2026 using Node 22.14, Chromium, React 18.3.1 and Three.js 0.149.0. The supplied `mama-put-rush.html` is retained unchanged as the rule-test oracle.
 
