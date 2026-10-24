@@ -66,6 +66,7 @@ export const GameLayout = memo(function GameLayout({
             </div>
           </div>
         </div>
+        <div className="announce" id="announce" hidden></div>
         <div className="logo">
           <div className="l1">{"MAMA PUT"}</div>
           <div className="l2">
@@ -419,6 +420,22 @@ export const GameLayout = memo(function GameLayout({
             <Toggle id="sMusic" label="Music" />
             <Toggle id="sHaptics" label="Vibration" />
             <Toggle id="sQuality" label="High quality graphics" />
+            <div className="toggle nameRow">
+              <label htmlFor="playerName">{"Buka name"}</label>
+              <input
+                id="playerName"
+                className="nameInput"
+                maxLength={30}
+                placeholder="Mama Put"
+                autoComplete="off"
+              />
+              <button className="btn teal small" id="savePlayerName">
+                {"Save"}
+              </button>
+            </div>
+            <p className="sub small" id="onlineStatus">
+              {"Offline mode"}
+            </p>
             <button className="btn teal" id="sBackup">
               <Icon name="cloud" />
               <span className="buttonLabel">{"Backup & cloud save"}</span>
@@ -554,7 +571,6 @@ export const GameLayout = memo(function GameLayout({
           <button
             className="btn green"
             id="cloudSync"
-            hidden
             style={{ width: "100%", marginBottom: "10px" }}
           >
             <Icon name="cloud" />

@@ -59,8 +59,6 @@ import {
   mergeSaves,
   encodeBackup,
   decodeBackup,
-  newPlayerId,
-  createCloudSync,
 } from "../systems/CloudSave.js";
 import { scoreOrder, tipFor } from "../game/scoring.js";
 import {
@@ -99,7 +97,8 @@ import {
   achievementProgress,
 } from "../game/missions.js";
 import { fmtNaira, fmtNairaShort, roundNaira } from "../game/currency.js";
-import { ranking } from "../game/leaderboard.js";
+import { createOnline } from "../systems/Online.js";
+import { LIVE, applyLiveConfig } from "../game/live.js";
 import {
   EQUIPMENT,
   effects,
@@ -144,8 +143,14 @@ export function mountGame(canvas, host, bridge) {
   const dailyCfg = () => makeDailyCfg(Save.d.unlocked);
   const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const Haptics = createHaptics(Save, navigator, REDUCED);
-  const cloudUrl = import.meta.env.VITE_CLOUD_SAVE_URL;
-  const Cloud = cloudUrl ? createCloudSync({ url: cloudUrl }) : null;
+  // Kikter backend: account, live settings, cloud save, shifts, leaderboard.
+  // The last settings received are applied straight away for offline play.
+  const Online = createOnline();
+  applyLiveConfig(Online.cachedConfig());
+  const syncPrices = () => {
+    for (const id in FOODS) FOODS[id].price = FOOD_DATA[id].price;
+  };
+  syncPrices();
   listen(document, "pointerdown", () => Sound.init(), { capture: true });
   let cleanupScene = () => {};
   const cleanup = () => {
@@ -4026,11 +4031,21 @@ export function mountGame(canvas, host, bridge) {
       return this.helpers.some((h) => h.spec.role === role);
     },
     start(cfg) {
+      if (LIVE.maintenance) {
+        UI.toast("Mama Put Rush is under maintenance. Please try again soon.");
+        return;
+      }
       this.clear();
       ["ovReward", "ovDaily", "ovShop", "ovMissions"].forEach((id) =>
         UI.close(id),
       );
       this.cfg = cfg;
+      this.startedAt = performance.now();
+      // Systems the admin has switched off for everyone.
+      if (!LIVE.features.haggle) cfg.haggle = false;
+      if (!LIVE.features.inspections) cfg.inspect = false;
+      if (!LIVE.features.onlineOrders) cfg.online = false;
+      if (!LIVE.features.events) cfg.event = "";
       this.eff = effects(Save.d);
       this.tierStart = tierOf(Save.d);
       // A bigger business draws a bigger crowd: more customers, more time.
@@ -4104,7 +4119,8 @@ export function mountGame(canvas, host, bridge) {
       this.hygT = 0;
       this.inspector = null;
       this.inspectT =
-        cfg.inspect && Math.random() < 0.4 + 0.05 * this.tierStart
+        cfg.inspect &&
+        Math.random() < LIVE.inspectionChance + 0.05 * this.tierStart
           ? rnd(25, Math.max(30, Math.min(120, (cfg.duration || 120) * 0.6)))
           : Infinity;
       this.tables = diningTables.map((t) => ({
@@ -5241,7 +5257,7 @@ export function mountGame(canvas, host, bridge) {
       const d = Save.d,
         tier = this.tierStart ?? tierOf(d),
         tax = taxes(tier, sales + extra),
-        rent = RENT[tier],
+        rent = roundNaira(RENT[tier] * LIVE.rent, 10),
         upkeep = upkeepCost(d),
         // Branches earn less when the brand's reputation slips.
         branches = Math.round(
@@ -5352,6 +5368,24 @@ export function mountGame(canvas, host, bridge) {
           false,
         );
     },
+    // Sends the finished shift to the backend and syncs the cloud save.
+    report(won, sales, cash, stars) {
+      const cfg = this.cfg;
+      Online.reportShift({
+        mode: cfg.mode,
+        level: cfg.mode === "level" ? cfg.n : null,
+        won: !!won,
+        served: this.served,
+        lost: this.lost,
+        sales: Math.max(0, Math.round(sales)),
+        cash: Math.round(cash),
+        stars: stars || 0,
+        duration: Math.round(
+          (performance.now() - (this.startedAt || 0)) / 1000,
+        ),
+      });
+      scheduleSync();
+    },
     showEnd() {
       this.state = "over";
       const cfg = this.cfg;
@@ -5364,6 +5398,7 @@ export function mountGame(canvas, host, bridge) {
         const nb = this.score > Save.d.endlessBest;
         if (nb) Save.d.endlessBest = this.score;
         Save.save();
+        this.report(true, this.coinsEarned, coins, 0);
         $("#winTitle").textContent = nb ? "New Best!" : "Rush Over!";
         $("#winSub").textContent =
           `You served ${this.served} customers. Personal best: ${fmtNaira(Save.d.endlessBest)}`;
@@ -5396,7 +5431,7 @@ export function mountGame(canvas, host, bridge) {
           if (Save.d.unlocked <= k)
             Save.d.unlocked = Math.min(MAX_LEVEL + 1, k + 1);
         } else if (cfg.mode === "daily" && Save.d.dailyDone !== today()) {
-          bonus = 6000;
+          bonus = LIVE.dailyBonus;
           Save.d.dailyDone = today();
         }
         const shift = this.settle(this.coinsEarned, bonus),
@@ -5406,6 +5441,7 @@ export function mountGame(canvas, host, bridge) {
         this.track("win");
         if (!this.lost) this.track("perfect");
         Save.save();
+        this.report(true, this.coinsEarned, total, stars);
         $("#winTitle").textContent =
           cfg.mode === "daily"
             ? "Challenge Done!"
@@ -5472,6 +5508,7 @@ export function mountGame(canvas, host, bridge) {
           },
         ]);
         Save.save();
+        this.report(false, this.coinsEarned, shift.net, 0);
         $("#failTitle").textContent =
           this.why === "time" ? "Time Don Finish!" : "Ah! Customers Vex!";
         $("#failSub").textContent = pick([
@@ -6167,7 +6204,7 @@ export function mountGame(canvas, host, bridge) {
       Save.d.lastClaim && isYesterday(Save.d.lastClaim)
         ? Math.min(7, Save.d.streak + 1)
         : 1;
-    const amt = 1000 + streak * 500;
+    const amt = LIVE.dailyReward.base + streak * LIVE.dailyReward.step;
     $("#rewardSub").textContent =
       `Welcome back! Day ${streak} of your streak. Come back tomorrow for more.`;
     $("#rewardAmt").textContent = fmtNaira(amt);
@@ -6199,7 +6236,7 @@ export function mountGame(canvas, host, bridge) {
   function openDaily() {
     const c = dailyCfg();
     $("#dailySub").textContent =
-      `Level ${c.n} with a twist. Serve ${c.goal} customers.${Save.d.dailyDone === today() ? " Bonus already collected today." : ` Win for a ${fmtNaira(6000)} bonus!`}`;
+      `Level ${c.n} with a twist. Serve ${c.goal} customers.${Save.d.dailyDone === today() ? " Bonus already collected today." : ` Win for a ${fmtNaira(LIVE.dailyBonus)} bonus!`}`;
     bridge.dailyMods(c.mods);
     UI.open("ovDaily");
     bridge.bind("#dailyGo", () => {
@@ -6335,17 +6372,68 @@ export function mountGame(canvas, host, bridge) {
     stars: "#tabBoardStars",
     endless: "#tabBoardEndless",
   };
-  function openBoard(id) {
+  // Real players from the Kikter backend; your row is added if you are
+  // outside the top 50.
+  let boardSeq = 0;
+  async function openBoard(id) {
     for (const k in BOARD_TABS)
       $(BOARD_TABS[k]).classList.toggle("on", k === id);
+    const unit = id === "stars" ? "stars" : "naira",
+      seq = ++boardSeq;
     bridge.board({
-      rows: ranking(Save.d, id, today()),
-      unit: id === "stars" ? "stars" : "naira",
+      rows: [],
+      unit,
       fmt: fmtNaira,
+      note: "Loading the leaderboard…",
     });
-    requestAnimationFrame(() =>
-      $("#boardList .boardRow.you")?.scrollIntoView({ block: "center" }),
-    );
+    if (!LIVE.features.leaderboard || !Online.enabled) {
+      bridge.board({
+        rows: [],
+        unit,
+        fmt: fmtNaira,
+        note: "The online leaderboard is not available right now.",
+      });
+      return;
+    }
+    const render = (data) => {
+      if (seq !== boardSeq) return;
+      if (!data) {
+        bridge.board({
+          rows: [],
+          unit,
+          fmt: fmtNaira,
+          note: "You are offline. Connect to see real players.",
+        });
+        return;
+      }
+      const rows = data.rows.map((r) => ({
+        rank: r.rank,
+        name: r.name,
+        where: `${r.tier} · ${r.restaurants} restaurant${r.restaurants === 1 ? "" : "s"}`,
+        value: r.value,
+        you: r.you,
+      }));
+      if (data.me && !rows.some((r) => r.you))
+        rows.push({
+          rank: data.me.rank,
+          name: data.me.name,
+          where: "You",
+          value: data.me.value,
+          you: true,
+        });
+      bridge.board({
+        rows,
+        unit,
+        fmt: fmtNaira,
+        note: `${data.players.toLocaleString()} real players. Play more shifts to climb.`,
+      });
+      requestAnimationFrame(() =>
+        $("#boardList .boardRow.you")?.scrollIntoView({ block: "center" }),
+      );
+    };
+    // Show the board straight away, then again once your latest save is in.
+    render(await Online.leaderboard(id));
+    if (await syncNow()) render(await Online.leaderboard(id));
   }
   on("#btnBoard", () => {
     Sound.play("click");
@@ -6416,6 +6504,7 @@ export function mountGame(canvas, host, bridge) {
   on("#btnWash", () => Game.wash());
   on("#btnSettings", () => {
     syncToggles();
+    showOnlineStatus();
     $("#sReset .buttonLabel").textContent = "Reset progress";
     UI.open("ovSettings");
   });
@@ -6483,10 +6572,12 @@ export function mountGame(canvas, host, bridge) {
   };
   on("#sBackup", () => {
     $("#backupCode").value = encodeBackup(Save.d);
-    $("#cloudSync").hidden = !Cloud;
+    $("#cloudSync").hidden = !Online.enabled;
     $("#backupSub").textContent =
       "Copy this code to move your progress to another phone. Paste a code here and tap Restore." +
-      (Cloud ? " Cloud sync keeps the best progress from every device." : "");
+      (Online.enabled
+        ? " Your save also syncs automatically with your Kikter cloud account."
+        : "");
     UI.open("ovBackup");
   });
   on("#backupClose", () => UI.close("ovBackup"));
@@ -6514,18 +6605,29 @@ export function mountGame(canvas, host, bridge) {
     Save.d = migrate(mergeSaves(Save.d, incoming), Save.defaults());
     afterRestore("Progress restored!");
   });
-  on("#cloudSync", (e) => {
-    if (!Cloud) return;
+  on("#cloudSync", async (e) => {
     const b = e.currentTarget;
     b.disabled = true;
-    if (!Save.d.playerId) Save.d.playerId = newPlayerId();
-    Cloud.sync(Save.d)
-      .then((merged) => {
-        Save.d = migrate(merged, Save.defaults());
-        afterRestore("Cloud save synced");
-      })
-      .catch((err) => UI.toast(err.message))
-      .finally(() => (b.disabled = false));
+    const ok = await syncNow();
+    b.disabled = false;
+    UI.toast(
+      ok ? "Cloud save synced" : "Could not reach the server. Try again.",
+    );
+  });
+  // Buka name shown on the leaderboard
+  on("#savePlayerName", async () => {
+    const name = $("#playerName").value.trim();
+    if (name.length < 2) {
+      UI.toast("Use at least 2 letters");
+      return;
+    }
+    const r = await Online.rename(name);
+    UI.toast(
+      r
+        ? `Your buka is now "${r.name}"`
+        : "Could not reach the server. Try again.",
+    );
+    showOnlineStatus();
   });
   on("#pSound", toggleSound);
   on("#sSound", toggleSound);
@@ -6728,6 +6830,7 @@ export function mountGame(canvas, host, bridge) {
     buildChef();
     fitCamera();
     showMenu();
+    goOnline();
     requestAnimationFrame((t) => {
       last = t;
       requestAnimationFrame(loop);
@@ -6735,8 +6838,105 @@ export function mountGame(canvas, host, bridge) {
     setTimeout(() => $("#boot").classList.add("gone"), 200);
     // expose a tiny debug hook for testing
     if (import.meta.env.DEV)
-      window.__mp = { Game, Save, levelCfg, FOODS, stations, trays, camera };
+      window.__mp = {
+        Game,
+        Save,
+        levelCfg,
+        FOODS,
+        stations,
+        trays,
+        camera,
+        Online,
+        syncNow,
+      };
   }
+  /* ================= ONLINE (Kikter backend) ================= */
+  function showOnlineStatus() {
+    const el = $("#onlineStatus");
+    if (!el) return;
+    const p = Online.player;
+    el.textContent = !Online.enabled
+      ? "Offline mode"
+      : Online.status.banned
+        ? "This player has been suspended"
+        : p
+          ? `Online as ${p.name}`
+          : Online.status.online
+            ? "Online"
+            : "Connecting…";
+    if (p && document.activeElement !== $("#playerName"))
+      $("#playerName").value = p.name;
+  }
+  function showAnnouncement() {
+    const a = $("#announce");
+    const text = LIVE.maintenance
+      ? "Mama Put Rush is under maintenance. Please check back soon."
+      : LIVE.announcement;
+    a.hidden = !text;
+    a.textContent = text || "";
+  }
+  let syncing = null;
+  // Pull, merge and push the save; admin edits on the server come in here.
+  function syncNow() {
+    if (!Online.enabled) return Promise.resolve(false);
+    if (syncing) return syncing;
+    syncing = Online.sync(Save.d)
+      .then((merged) => {
+        if (!merged) return false;
+        const before = JSON.stringify([
+          Save.d.coins,
+          Save.d.unlocked,
+          Save.d.reputation,
+        ]);
+        Save.d = migrate(merged, Save.defaults());
+        Save.save();
+        if (Game.state === "menu" || Game.state === "map") {
+          UI.coins();
+          if (
+            JSON.stringify([
+              Save.d.coins,
+              Save.d.unlocked,
+              Save.d.reputation,
+            ]) !== before
+          )
+            Game.state === "map" ? buildMap() : showMenuEnvRefresh();
+        }
+        return true;
+      })
+      .catch(() => false)
+      .finally(() => {
+        syncing = null;
+        showOnlineStatus();
+        if (Online.status.banned)
+          UI.toast("This player has been suspended by an admin.");
+      });
+    return syncing;
+  }
+  let syncTimer = 0;
+  function scheduleSync() {
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(syncNow, 1500);
+  }
+  async function goOnline() {
+    showAnnouncement();
+    if (!Online.enabled) return showOnlineStatus();
+    const fresh =
+      !Save.d.lastPlayed && Save.d.unlocked === 1 && !Save.d.stats.serve;
+    const cfg = await Online.config();
+    if (lifetime.disposed) return;
+    if (applyLiveConfig(cfg)) {
+      syncPrices();
+      if (fresh && Save.d.coins !== LIVE.startCash) {
+        Save.d.coins = LIVE.startCash;
+        Save.save();
+      }
+      showAnnouncement();
+      UI.coins();
+    }
+    await syncNow();
+  }
+  listen(window, "online", () => syncNow());
+
   const fontsReady =
     document.fonts && document.fonts.load
       ? Promise.all([

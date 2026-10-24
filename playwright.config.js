@@ -52,6 +52,8 @@ export default defineConfig({
       url: "http://127.0.0.1:4180/put/",
       reuseExistingServer: !process.env.CI,
       timeout: 180_000,
+      // Never create players on the live Kikter backend from tests.
+      env: { VITE_MAMAPUT_API: "off" },
     },
   ],
 });

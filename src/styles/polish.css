@@ -541,3 +541,37 @@ svg.star.on {
   font: 400 26px/1.1 var(--display);
   color: var(--ink);
 }
+
+/* ---------- live announcement and online account ---------- */
+.announce {
+  pointer-events: none;
+  max-width: 520px;
+  margin: 8px auto 0;
+  padding: 8px 14px;
+  border-radius: 14px;
+  background: var(--plum);
+  color: #fff;
+  font-weight: 800;
+  font-size: 14px;
+  text-align: center;
+  border: 2px solid #fff;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25);
+}
+.toggle.nameRow {
+  gap: 8px;
+}
+.nameInput {
+  flex: 1;
+  min-width: 0;
+  border: 2px solid #e2c9a0;
+  border-radius: 10px;
+  padding: 6px 8px;
+  font: 700 15px var(--body);
+  color: var(--ink);
+  -webkit-user-select: text;
+  user-select: text;
+}
+.btn.small {
+  font-size: 15px;
+  padding: 6px 12px;
+}

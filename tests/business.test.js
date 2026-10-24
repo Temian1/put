@@ -322,32 +322,3 @@ describe("level plan", () => {
     expect(o.bigTip[0]).toBeGreaterThanOrEqual(2000);
   });
 });
-
-describe("leaderboard", () => {
-  it("ranks you among rival bukas on every board", async () => {
-    const { ranking, playerRank, BOARDS } = await import(
-      "../src/game/leaderboard.js"
-    );
-    const d = fresh({
-      stats: { ...fresh().stats, earn: 300000 },
-      stars: { 1: 3, 2: 2 },
-      endlessBest: 0,
-    });
-    for (const b of BOARDS) {
-      const rows = ranking(d, b.id, "2026-10-24");
-      expect(rows.filter((r) => r.you)).toHaveLength(1);
-      expect(rows.map((r) => r.rank)).toEqual(rows.map((_, i) => i + 1));
-      for (let i = 1; i < rows.length; i++)
-        expect(rows[i - 1].value).toBeGreaterThanOrEqual(rows[i].value);
-      rows
-        .filter((r) => !r.you)
-        .forEach((r) => expect(r.value).toBeGreaterThan(0));
-    }
-    expect(playerRank(d, "sales", "2026-10-24")).toBe(8);
-    expect(ranking(d, "sales", "2026-10-24")).toEqual(
-      ranking(d, "sales", "2026-10-24"),
-    );
-    const rich = fresh({ stats: { ...fresh().stats, earn: 9e6 } });
-    expect(playerRank(rich, "sales", "2026-10-24")).toBe(1);
-  });
-});

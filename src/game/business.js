@@ -1,4 +1,5 @@
 import { roundNaira } from "./currency.js";
+import { LIVE } from "./live.js";
 
 // Running costs that grow with the business. Values are per shift.
 // Small bukas pay a local government levy; registered businesses (Popular
@@ -8,9 +9,10 @@ export const RENT = [1000, 2500, 6000, 15000, 35000];
 export const VAT_RATE = 0.075;
 export const VAT_FROM_TIER = 2;
 
+// Rates come from the admin's live settings (default 7.5% VAT, normal levy).
 export function taxes(tier, sales) {
-  const vat = tier >= VAT_FROM_TIER ? roundNaira(sales * VAT_RATE, 10) : 0;
-  return { levy: LEVY[tier], vat };
+  const vat = tier >= VAT_FROM_TIER ? roundNaira(sales * LIVE.vatRate, 10) : 0;
+  return { levy: roundNaira(LEVY[tier] * LIVE.levy, 10), vat };
 }
 
 // Hygiene 0–100. Equipment and a cleaner help; dirty plates, a full sink and

@@ -905,13 +905,10 @@ export function Ledger({ rows }) {
 }
 
 // Ranked list for the leaderboard. The player's row is highlighted.
-export function Board({ rows, unit, fmt }) {
+export function Board({ rows, unit, fmt, note }) {
   return (
     <>
-      <p className="hintText">
-        Rival bukas across Nigeria. Climb by selling more, earning stars and
-        beating Endless scores.
-      </p>
+      <p className="hintText">{note || "Real Mama Put Rush players."}</p>
       {rows.map((r) => (
         <div
           key={r.name}

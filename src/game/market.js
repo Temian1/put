@@ -1,6 +1,7 @@
 import { FOODS, STOCK, FOOD_COST } from "./data.js";
 import { seeded, hashStr } from "./utils.js";
 import { roundNaira } from "./currency.js";
+import { LIVE } from "./live.js";
 
 // The market: stock up on ingredients before prices rise. Each cooked batch
 // uses one unit of its ingredient from the pantry. With none in the pantry
@@ -107,7 +108,8 @@ export function advanceMarket(d, fridge) {
   const m = d.market || freshMarket();
   const rng = seeded(hashStr("market" + m.shift));
   m.shift++;
-  let rise = 0.004 + rng() * 0.006;
+  // Average rise is the admin's inflation setting (0.7% per shift by default).
+  let rise = (0.004 + rng() * 0.006) * (LIVE.inflation / 0.007);
   m.news = "";
   const r = rng();
   if (r < 0.12) {
@@ -119,7 +121,10 @@ export function advanceMarket(d, fridge) {
   }
   m.index = Math.max(0.8, m.index * (1 + rise));
   const groups = Object.keys(INGREDIENTS);
-  m.out = groups.filter(() => rng() < 0.1).slice(0, 2);
+  m.out = LIVE.outOfStock
+    ? LIVE.outOfStock.slice()
+    : groups.filter(() => rng() < 0.1).slice(0, 2);
+  if (LIVE.news) m.news = LIVE.news;
   d.market = m;
   let spoiled = 0;
   if (!fridge)

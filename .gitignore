@@ -12,3 +12,6 @@ coverage/
 dist-e2e/
 test-results/
 playwright-report/
+
+# Local copy of the war.kikter.com Laravel backend (has its own .env); never commit it here.
+/game/

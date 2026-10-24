@@ -78,6 +78,32 @@ The game runs for **100 levels in 10 chapters**. After the Mama Put Empire (leve
 - **Decline:** reputation falls if the buka stays closed (up to 15 points for long absences), and branch income shrinks with low reputation. Business level is set by reputation and lifetime sales, so a struggling business drops back down the levels.
 - **Growth is slow on purpose:** business levels need ₦250k, ₦1.2m, ₦4m and ₦12m in lifetime sales. Branches cost ₦150k–₦6m, an okada ₦450k+ and the bus ₦2.5m. The street fills with more stalls, buildings, people and traffic as you grow.
 
+## Online backend and admin (war.kikter.com)
+
+The frontend (Vercel, https://mamaput-phi.vercel.app) talks to the Kikter Games Laravel app at **https://war.kikter.com/api/mamaput**. Admins manage the game in Filament at **https://war.kikter.com/admin**, under **Mama Put Rush**:
+
+- **Players:** every device's player with business level, level reached, lifetime sales, cash, reputation, stars, restaurants, staff, shifts and last seen. Admins can:
+  - edit name, cash, reputation and level unlocked (the game applies it on its next sync)
+  - link a player to a Kikter account
+  - ban or unban, reset progress, or delete
+  - view the full cloud save
+- **Shifts:** every shift the game reports (mode, level, won, served, sales, cash, stars, duration). Shifts that look impossible are flagged and counted in the sidebar badge.
+- **Settings:** maintenance mode, menu announcement, leaderboard on/off, starting cash, daily rewards and bonus, all 21 menu prices, each restaurant's opening cost and income, multipliers for equipment, staff and boosters, VAT rate, levy and rent, market inflation, news headline and sold-out items, and switches for haggling, inspections, online orders and events (plus inspection chance).
+- **Dashboard:** a Mama Put Rush stats row (players, active today, shifts, sales, status).
+
+How the game uses it:
+
+- **Account:** on first start the game creates a player and keeps its token in the browser. Players can rename their buka in Settings, and that name shows on the leaderboard.
+- **Settings:** the game fetches them at start and caches them for offline play. Maintenance blocks starting shifts.
+- **Cloud save:** syncs at start, after every shift and on reconnect, with version checks; a conflict merges and retries. Admin edits and resets win over local progress.
+- **Leaderboard:** real players only (lifetime sales, stars, Endless best). Banned players are hidden.
+
+API: `GET /config`, `POST /players`, `GET|PATCH /me`, `GET|PUT /save`, `POST /shifts`, `GET /leaderboard?board=sales|stars|endless`. Players authenticate with `Authorization: Bearer <token>`.
+
+The backend files added to war.kikter.com are copied in [`server/kikter-backend/`](server/kikter-backend/), because that server has no git repository. The production build uses the API by default. Dev and tests don't, unless `VITE_MAMAPUT_API` is set; `off` disables it.
+
+**Hosting note:** the cPanel account is close to its **inode (file count) limit**: about 3,500 of 300,000 left. Avoid `composer install`, `npm install` and `php artisan optimize`/`view:cache` on the server, since they create thousands of files. The app's vendor folder is packed into one `storage/app/deploy/vendor.tar.gz` phar for this reason.
+
 ## Offline and install
 
 Production builds register a service worker (`public/sw.js`) and a web app manifest. After one online visit the game loads offline and can be installed to the home screen. Built assets are cached cache-first because their file names are content-hashed. The page and JSON lists are network-first, so a new deploy is picked up on the next online visit. The dev server does not register the worker.
