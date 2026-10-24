@@ -6,15 +6,17 @@ use App\MamaputConfig;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
- * A Mama Put Rush player (one per device, optionally linked to a Kikter
- * account). Holds the cloud save and the numbers the leaderboard ranks.
+ * A Mama Put Rush player: a guest on one device, or signed in with a Kikter
+ * account and/or Lagos Life so every device shares one save and wallet.
+ * Holds the cloud save and the numbers the leaderboard ranks.
  */
 class MamaputPlayer extends Model
 {
-    protected $fillable = ['name', 'user_id', 'coins', 'reputation', 'unlocked', 'banned_at'];
+    protected $fillable = ['name', 'user_id', 'vatar_player_id', 'coins', 'reputation', 'unlocked', 'banned_at'];
 
     protected $hidden = ['token_hash', 'save'];
 
@@ -31,6 +33,27 @@ class MamaputPlayer extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function vatarPlayer(): BelongsTo
+    {
+        return $this->belongsTo(VatarPlayer::class);
+    }
+
+    public function walletLogs(): HasMany
+    {
+        return $this->hasMany(MamaputWalletLog::class, 'player_id');
+    }
+
+    /** Where the player signs in: guest, kikter, lagoslife or both. */
+    public function source(): string
+    {
+        return match (true) {
+            $this->user_id && $this->vatar_player_id => 'both',
+            (bool) $this->user_id => 'kikter',
+            (bool) $this->vatar_player_id => 'lagoslife',
+            default => 'guest',
+        };
     }
 
     public function shifts(): HasMany
@@ -60,9 +83,35 @@ class MamaputPlayer extends Model
         return [$player, $token];
     }
 
+    /** A new sign-in token for another device; returns the plain text once. */
+    public function newToken(): string
+    {
+        $token = Str::random(48);
+        DB::table('mamaput_tokens')->insert([
+            'player_id' => $this->id, 'token_hash' => hash('sha256', $token),
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        return $token;
+    }
+
+    public static function revokeToken(string $token): void
+    {
+        $hash = hash('sha256', $token);
+        DB::table('mamaput_tokens')->where('token_hash', $hash)->delete();
+        // The first guest token lives on the player row; rotate it away.
+        static::query()->where('token_hash', $hash)->update(['token_hash' => hash('sha256', Str::random(48))]);
+    }
+
     public static function findByToken(?string $token): ?self
     {
-        return $token ? static::query()->where('token_hash', hash('sha256', $token))->first() : null;
+        if (! $token) {
+            return null;
+        }
+        $hash = hash('sha256', $token);
+        $id = DB::table('mamaput_tokens')->where('token_hash', $hash)->value('player_id');
+
+        return $id ? static::find($id) : static::query()->where('token_hash', $hash)->first();
     }
 
     /**

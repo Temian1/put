@@ -47,6 +47,14 @@ export const GameLayout = memo(function GameLayout({
               <path d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.5 7.5 0 0 0-1.7-1L15 3h-4l-.4 2.8a7.5 7.5 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1c.5.4 1.1.7 1.7 1L11 21h4l.4-2.8c.6-.3 1.2-.6 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"></path>
             </svg>
           </button>
+          <button
+            className="iconBtn plum accountBtn"
+            id="btnAccount"
+            aria-label="Account and coins"
+          >
+            <Icon name="user" />
+            <span className="dot" id="accountDot" hidden></span>
+          </button>
           <div className="topRight">
             <div className="pill repPill" id="repPill" aria-label="Reputation">
               <svg className="repStar" viewBox="0 0 24 24" aria-hidden="true">
@@ -436,6 +444,10 @@ export const GameLayout = memo(function GameLayout({
             <p className="sub small" id="onlineStatus">
               {"Offline mode"}
             </p>
+            <button className="btn gold" id="sAccount">
+              <Icon name="user" />
+              <span className="buttonLabel">{"Account & coins"}</span>
+            </button>
             <button className="btn teal" id="sBackup">
               <Icon name="cloud" />
               <span className="buttonLabel">{"Backup & cloud save"}</span>
@@ -517,6 +529,10 @@ export const GameLayout = memo(function GameLayout({
               <span className="buttonLabel">{"Endless"}</span>
             </button>
           </div>
+          <label className="boardScope" id="boardScopeRow" hidden>
+            <input type="checkbox" id="boardScope" />
+            <span>{"Lagos Life players only"}</span>
+          </label>
           <div className="shopList scroll" id="boardList"></div>
           <div className="btnRow" style={{ marginTop: "12px" }}>
             <button className="btn coral" id="boardClose">
@@ -541,6 +557,109 @@ export const GameLayout = memo(function GameLayout({
               <span className="buttonLabel">{"Close"}</span>
             </button>
           </div>
+        </div>
+      </Surface>
+      <Surface className="overlay scroll" id="ovAccount" tag="div">
+        <div className="panel accountPanel">
+          <div className="ribbon small">{"Account"}</div>
+          <div id="accGuest">
+            <p className="sub small" id="accIntro">
+              {
+                "Sign in to keep your buka on every phone, earn coins and play with the same account in Lagos Life and Lagos War."
+              }
+            </p>
+            <button className="btn gold accLagos" id="accLagos" hidden>
+              <Icon name="star" />
+              <span className="buttonLabel">{"Continue with Lagos Life"}</span>
+            </button>
+            <div className="tabs two" id="accTabs">
+              <button id="tabLogin" className="on" type="button">
+                <span className="buttonLabel">{"Log in"}</span>
+              </button>
+              <button id="tabRegister" type="button">
+                <span className="buttonLabel">{"Create account"}</span>
+              </button>
+            </div>
+            <form className="accForm" id="accForm" noValidate>
+              <input
+                id="accName"
+                className="nameInput"
+                placeholder="Your name"
+                autoComplete="nickname"
+                maxLength={30}
+                aria-label="Your name"
+                hidden
+              />
+              <input
+                id="accEmail"
+                className="nameInput"
+                type="email"
+                placeholder="Email"
+                autoComplete="email"
+                aria-label="Email"
+              />
+              <input
+                id="accPassword"
+                className="nameInput"
+                type="password"
+                placeholder="Password"
+                autoComplete="current-password"
+                aria-label="Password"
+              />
+              <p className="accError" id="accError" role="alert" hidden></p>
+              <button className="btn green" id="accSubmit" type="submit">
+                <Icon name="check" />
+                <span className="buttonLabel">{"Log in"}</span>
+              </button>
+            </form>
+            <p className="sub small accHint" id="accGuestHint">
+              {
+                "Your progress on this phone joins your account when you sign in."
+              }
+            </p>
+          </div>
+          <div id="accSigned" hidden>
+            <p className="accWho" id="accWho"></p>
+            <div className="walletBox">
+              <div className="walletCoins">
+                <Icon name="coin" />
+                <span id="accCoins">{"0"}</span>
+                <small>{" coins"}</small>
+              </div>
+              <p className="sub small" id="accWalletNote"></p>
+              <div className="toggle nameRow">
+                <input
+                  id="accSwap"
+                  className="nameInput"
+                  type="number"
+                  inputMode="numeric"
+                  min="1"
+                  aria-label="Coins to swap"
+                />
+                <button
+                  className="btn teal small"
+                  id="accSwapBtn"
+                  type="button"
+                >
+                  {"Swap for ₦"}
+                </button>
+              </div>
+            </div>
+            <div className="accPacks" id="accPacks" hidden></div>
+            <button className="btn plain" id="accLogout" type="button">
+              <Icon name="exit" />
+              <span className="buttonLabel">{"Log out"}</span>
+            </button>
+          </div>
+          <button
+            className="btn coral"
+            id="accClose"
+            type="button"
+            style={{ width: "100%", marginTop: "10px" }}
+          >
+            <Icon name="close" />
+            <span className="buttonLabel">{"Close"}</span>
+          </button>
         </div>
       </Surface>
       <Surface className="overlay scroll" id="ovBackup" tag="div">

@@ -4,8 +4,11 @@ namespace App\Filament\Pages;
 
 use App\Filament\NavigationGroup;
 use App\MamaputConfig;
+use App\Models\VatarSetting;
 use BackedEnum;
 use Filament\Forms\Components\CheckboxList;
+use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -17,6 +20,7 @@ use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
+use Illuminate\Validation\ValidationException;
 use UnitEnum;
 
 /**
@@ -52,8 +56,10 @@ class MamaputSettings extends Page
             $costs[$i] = $v['opening_costs'][$i] ?? $cost;
             $income[$i] = $v['branch_income'][$i] ?? $earn;
         }
+        $vatar = VatarSetting::find(2);
         $this->form->fill(array_merge($v, [
             'food_prices' => $prices, 'opening_costs' => $costs, 'branch_income' => $income,
+            'own_vatar' => (bool) $vatar?->enabled, 'vatar_mode' => $vatar->mode ?? 'test',
         ]));
     }
 
@@ -131,6 +137,40 @@ class MamaputSettings extends Page
                             CheckboxList::make('out_of_stock')->label('Sold out at the market right now')
                                 ->options(MamaputConfig::INGREDIENTS)->columns(4),
                         ]),
+                        Tab::make('Accounts & Lagos Life')->icon(Heroicon::OutlinedUserCircle)->schema([
+                            Section::make('Sign-in')->columns(2)->schema([
+                                Toggle::make('guests_allowed')->label('Allow guest play without an account')
+                                    ->helperText('Off: players must sign in with a Kikter account or Lagos Life.'),
+                                Toggle::make('lagoslife_enabled')->label('Allow Lagos Life sign-in'),
+                            ]),
+                            Section::make('Coin wallet')
+                                ->description('Signed-in players share one coin balance with Lagos War (Kikter coins). Lagos Life-only players get their own wallet, which joins their Kikter balance when they link an account. Coins can be swapped for in-game naira.')
+                                ->columns(4)->schema([
+                                    TextInput::make('coins_per_win')->label('Coins per won shift')->required()->integer()->minValue(0)->maxValue(1000)
+                                        ->dehydrateStateUsing(fn (mixed $state): int => (int) $state),
+                                    TextInput::make('coins_daily_cap')->label('Most coins earned per day')->required()->integer()->minValue(0)->maxValue(100000)
+                                        ->dehydrateStateUsing(fn (mixed $state): int => (int) $state),
+                                    $naira('coin_naira_rate', 'In-game naira per coin', 1_000_000),
+                                    TextInput::make('coins_exchange_min')->label('Smallest swap (coins)')->required()->integer()->minValue(1)->maxValue(100000)
+                                        ->dehydrateStateUsing(fn (mixed $state): int => (int) $state),
+                                ]),
+                            Repeater::make('lagoslife_products')->label('Lagos Life coin packs')
+                                ->helperText('Create the same product IDs in the Lagos Life (Vatar) dashboard; Lagos Life sets the price. Each purchase adds its coins to the wallet once.')
+                                ->maxItems(20)->columns(3)->schema([
+                                    TextInput::make('product_id')->required()->maxLength(32)->regex('/^[a-z0-9_-]+$/')->distinct(),
+                                    TextInput::make('name')->required()->maxLength(60),
+                                    TextInput::make('coins')->required()->integer()->minValue(1)->maxValue(65000)
+                                        ->dehydrateStateUsing(fn (mixed $state): int => (int) $state),
+                                ]),
+                            Section::make('Lagos Life game keys')
+                                ->description('Only if Mama Put is registered as its own game in Lagos Life. Otherwise it uses the Lagos War keys from Game settings. The key is encrypted and never shown again; leave it blank to keep the saved one.')
+                                ->columns(3)->schema([
+                                    Toggle::make('own_vatar')->label('Use separate Mama Put keys'),
+                                    Select::make('vatar_mode')->options(['test' => 'Sandbox', 'live' => 'Live'])->required(),
+                                    TextInput::make('vatar_secret')->label('API secret')->password()->maxLength(250)
+                                        ->rule('regex:/^vtr_(test|live)_[a-zA-Z0-9_-]+$/'),
+                                ]),
+                        ]),
                         Tab::make('Features')->icon(Heroicon::OutlinedPuzzlePiece)->schema([
                             Section::make('Gameplay systems')->columns(2)->schema([
                                 Toggle::make('haggle')->label('Customers haggle over prices'),
@@ -148,7 +188,23 @@ class MamaputSettings extends Page
 
     public function save(): void
     {
-        MamaputConfig::store($this->form->getState());
+        $state = $this->form->getState();
+        $vatar = VatarSetting::firstOrCreate(['id' => 2], ['enabled' => false, 'mode' => 'test', 'products' => []]);
+        $secret = $state['vatar_secret'] ?? null;
+        if (filled($secret) && ! str_starts_with($secret, 'vtr_'.$state['vatar_mode'].'_')) {
+            throw ValidationException::withMessages(['data.vatar_secret' => 'The key must match the selected mode.']);
+        }
+        if ($state['vatar_mode'] !== $vatar->mode && ! filled($secret) && filled($vatar->secret)) {
+            throw ValidationException::withMessages(['data.vatar_secret' => 'Supply the key for the new mode.']);
+        }
+        if ($state['own_vatar'] && ! filled($secret ?: $vatar->secret)) {
+            throw ValidationException::withMessages(['data.vatar_secret' => 'Supply the API secret first.']);
+        }
+        $vatar->update(array_merge(filled($secret) ? ['secret' => $secret] : [], [
+            'enabled' => (bool) $state['own_vatar'], 'mode' => $state['vatar_mode'],
+        ]));
+        $this->data['vatar_secret'] = null;
+        MamaputConfig::store($state);
         Notification::make()->title('Mama Put settings saved')->body('Players get them the next time the game starts.')->success()->send();
     }
 }

@@ -23,6 +23,10 @@ export const LIVE = {
     leaderboard: true,
   },
   inspectionChance: 0.4,
+  // Sign-in and the coin wallet shared with Lagos War and Lagos Life.
+  accounts: { guests: true, lagoslife: true },
+  wallet: { perWin: 5, dailyCap: 100, rate: 200, min: 10 },
+  lagoslifeProducts: [],
 };
 
 // Original prices, so multipliers always apply to the built-in values.
@@ -47,6 +51,10 @@ export function applyLiveConfig(c) {
   if (c.dailyReward)
     LIVE.dailyReward = { ...LIVE.dailyReward, ...c.dailyReward };
   if (c.features) LIVE.features = { ...LIVE.features, ...c.features };
+  if (c.accounts) LIVE.accounts = { ...LIVE.accounts, ...c.accounts };
+  if (c.wallet) LIVE.wallet = { ...LIVE.wallet, ...c.wallet };
+  if (Array.isArray(c.lagoslifeProducts))
+    LIVE.lagoslifeProducts = c.lagoslifeProducts;
   if (c.market) {
     LIVE.inflation = c.market.inflation ?? LIVE.inflation;
     LIVE.news = c.market.news || null;

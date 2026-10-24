@@ -98,6 +98,7 @@ import {
 } from "../game/missions.js";
 import { fmtNaira, fmtNairaShort, roundNaira } from "../game/currency.js";
 import { createOnline } from "../systems/Online.js";
+import { createLagosLife, lagosLifeHinted } from "../systems/LagosLife.js";
 import { LIVE, applyLiveConfig } from "../game/live.js";
 import {
   EQUIPMENT,
@@ -146,6 +147,8 @@ export function mountGame(canvas, host, bridge) {
   // Kikter backend: account, live settings, cloud save, shifts, leaderboard.
   // The last settings received are applied straight away for offline play.
   const Online = createOnline();
+  // Lagos Life (Vatar SDK) when the game is embedded there.
+  const Lagos = createLagosLife();
   applyLiveConfig(Online.cachedConfig());
   const syncPrices = () => {
     for (const id in FOODS) FOODS[id].price = FOOD_DATA[id].price;
@@ -4035,6 +4038,11 @@ export function mountGame(canvas, host, bridge) {
         UI.toast("Mama Put Rush is under maintenance. Please try again soon.");
         return;
       }
+      if (needsSignIn()) {
+        UI.toast("Sign in to play");
+        openAccount();
+        return;
+      }
       this.clear();
       ["ovReward", "ovDaily", "ovShop", "ovMissions"].forEach((id) =>
         UI.close(id),
@@ -5383,6 +5391,11 @@ export function mountGame(canvas, host, bridge) {
         duration: Math.round(
           (performance.now() - (this.startedAt || 0)) / 1000,
         ),
+      }).then((r) => {
+        if (r?.coins > 0) {
+          UI.toast(`+${r.coins} coins in your wallet`);
+          showAccountDot();
+        }
       });
       scheduleSync();
     },
@@ -6374,8 +6387,12 @@ export function mountGame(canvas, host, bridge) {
   };
   // Real players from the Kikter backend; your row is added if you are
   // outside the top 50.
-  let boardSeq = 0;
+  let boardSeq = 0,
+    boardTab = "sales";
   async function openBoard(id) {
+    boardTab = id;
+    const scope = $("#boardScope").checked ? "lagoslife" : "all";
+    $("#boardScopeRow").hidden = !Online.enabled;
     for (const k in BOARD_TABS)
       $(BOARD_TABS[k]).classList.toggle("on", k === id);
     const unit = id === "stars" ? "stars" : "naira",
@@ -6409,7 +6426,11 @@ export function mountGame(canvas, host, bridge) {
       const rows = data.rows.map((r) => ({
         rank: r.rank,
         name: r.name,
-        where: `${r.tier} · ${r.restaurants} restaurant${r.restaurants === 1 ? "" : "s"}`,
+        where:
+          `${r.tier} · ${r.restaurants} restaurant${r.restaurants === 1 ? "" : "s"}` +
+          (r.source === "lagoslife" || r.source === "both"
+            ? " · Lagos Life"
+            : ""),
         value: r.value,
         you: r.you,
       }));
@@ -6425,15 +6446,19 @@ export function mountGame(canvas, host, bridge) {
         rows,
         unit,
         fmt: fmtNaira,
-        note: `${data.players.toLocaleString()} real players. Play more shifts to climb.`,
+        note:
+          `${data.players.toLocaleString()} real ${scope === "lagoslife" ? "Lagos Life " : ""}players. Play more shifts to climb.` +
+          (Online.account?.signedIn
+            ? ""
+            : " Sign in to keep your place on every phone."),
       });
       requestAnimationFrame(() =>
         $("#boardList .boardRow.you")?.scrollIntoView({ block: "center" }),
       );
     };
     // Show the board straight away, then again once your latest save is in.
-    render(await Online.leaderboard(id));
-    if (await syncNow()) render(await Online.leaderboard(id));
+    render(await Online.leaderboard(id, scope));
+    if (await syncNow()) render(await Online.leaderboard(id, scope));
   }
   on("#btnBoard", () => {
     Sound.play("click");
@@ -6442,6 +6467,9 @@ export function mountGame(canvas, host, bridge) {
   });
   for (const k in BOARD_TABS) on(BOARD_TABS[k], () => openBoard(k));
   on("#boardClose", () => UI.close("ovBoard"));
+  listen(host, "change", (e) => {
+    if (e.target.id === "boardScope") openBoard(boardTab);
+  });
   on("#btnGrow", () => {
     Sound.play("click");
     buildGrow();
@@ -6509,6 +6537,10 @@ export function mountGame(canvas, host, bridge) {
     UI.open("ovSettings");
   });
   on("#sClose", () => UI.close("ovSettings"));
+  on("#sAccount", () => {
+    UI.close("ovSettings");
+    openAccount();
+  });
   on("#btnDaily", () => {
     Sound.play("click");
     openDaily();
@@ -6850,20 +6882,279 @@ export function mountGame(canvas, host, bridge) {
         syncNow,
       };
   }
+  /* ================= ACCOUNT (Kikter account / Lagos Life) ================= */
+  const needsSignIn = () =>
+    Online.enabled && !LIVE.accounts.guests && !Online.account?.signedIn;
+  function showAccountDot() {
+    const dot = $("#accountDot");
+    if (dot)
+      dot.hidden =
+        !Online.enabled ||
+        (!!Online.account?.signedIn && !Online.status.expired);
+  }
+  let accMode = "login";
+  function setAccMode(mode) {
+    accMode = mode;
+    $("#tabLogin").classList.toggle("on", mode === "login");
+    $("#tabRegister").classList.toggle("on", mode === "register");
+    $("#accName").hidden = mode !== "register";
+    $("#accPassword").autocomplete =
+      mode === "register" ? "new-password" : "current-password";
+    $("#accPassword").placeholder =
+      mode === "register" ? "Password (8+ characters)" : "Password";
+    $("#accSubmit .buttonLabel").textContent =
+      mode === "register" ? "Create account" : "Log in";
+    accError("");
+  }
+  function accError(msg) {
+    const el = $("#accError");
+    el.hidden = !msg;
+    el.textContent = msg || "";
+  }
+  function renderAccount() {
+    const acc = Online.account,
+      signed = !!acc?.signedIn && !Online.status.expired;
+    $("#accGuest").hidden = signed;
+    $("#accSigned").hidden = !signed;
+    const lagosReady = Lagos.state.active && LIVE.accounts.lagoslife;
+    $("#accLagos").hidden = !lagosReady || signed;
+    $("#accIntro").textContent = !Online.enabled
+      ? "Online play is off in this version of the game."
+      : Online.status.expired
+        ? "Your sign-in ended. Sign in again to keep your buka in sync."
+        : LIVE.accounts.guests
+          ? "Sign in to keep your buka on every phone, earn coins and use the same account in Lagos Life and Lagos War."
+          : "Sign in or create a free account to play.";
+    if (!signed) return;
+    const via = [
+      acc.email,
+      acc.lagoslife ? `Lagos Life: ${acc.lagoslife}` : null,
+    ].filter(Boolean);
+    $("#accWho").textContent =
+      `${Online.player?.name || "Your buka"} · ${via.join(" · ")}`;
+    $("#accCoins").textContent = (acc.wallet || 0).toLocaleString();
+    const w = LIVE.wallet;
+    $("#accWalletNote").textContent =
+      `Shared with Lagos War${acc.lagoslife ? " and Lagos Life" : ""}. Win shifts to earn ${w.perWin} coins (up to ${w.dailyCap} a day). 1 coin = ${fmtNaira(w.rate)} in your buka, swap at least ${w.min}.`;
+    $("#accSwap").min = String(w.min);
+    if (!$("#accSwap").value) $("#accSwap").value = String(w.min);
+    // Lagos Life coin packs, bought with Lagos Life checkout.
+    const packs = $("#accPacks");
+    const show =
+      Lagos.state.active &&
+      !!acc.lagoslife &&
+      LIVE.lagoslifeProducts.length > 0;
+    packs.hidden = !show;
+    packs.replaceChildren(
+      ...(show ? LIVE.lagoslifeProducts : []).map((p) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "btn gold";
+        const name = document.createElement("b");
+        name.textContent = p.name;
+        const coins = document.createElement("small");
+        coins.textContent = `${p.coins.toLocaleString()} coins`;
+        b.append(name, coins);
+        b.onclick = () => buyPack(p, b);
+        return b;
+      }),
+    );
+  }
+  async function openAccount() {
+    setAccMode(accMode);
+    renderAccount();
+    UI.open("ovAccount");
+    if (Online.account?.signedIn) {
+      await Online.wallet();
+      renderAccount();
+    }
+  }
+  // After any sign-in: merge this phone's progress with the account's save.
+  async function afterSignIn(welcome) {
+    warnedExpired = false;
+    await syncNow();
+    await Online.wallet();
+    showOnlineStatus();
+    renderAccount();
+    if (Game.state === "menu") showMenu();
+    UI.toast(welcome);
+  }
+  async function submitAccount() {
+    const email = $("#accEmail").value.trim(),
+      password = $("#accPassword").value,
+      name = $("#accName").value.trim();
+    if (accMode === "register" && name.length < 2)
+      return accError("Enter your name (at least 2 letters).");
+    if (!/^\S+@\S+\.\S+$/.test(email)) return accError("Enter a valid email.");
+    if (password.length < (accMode === "register" ? 8 : 1))
+      return accError(
+        accMode === "register"
+          ? "Use a password of at least 8 characters."
+          : "Enter your password.",
+      );
+    const btn = $("#accSubmit");
+    btn.disabled = true;
+    accError("");
+    const r =
+      accMode === "register"
+        ? await Online.register(name, email, password)
+        : await Online.login(email, password);
+    btn.disabled = false;
+    if (!r.ok) {
+      Sound.play("wrong");
+      return accError(r.error);
+    }
+    $("#accPassword").value = "";
+    Sound.play("coin");
+    await afterSignIn(
+      accMode === "register"
+        ? "Account created. Welcome!"
+        : `Welcome back, ${r.player.account?.name || r.player.name}!`,
+    );
+    // Inside Lagos Life, link the Lagos Life player to this account too.
+    if (Lagos.state.active && LIVE.accounts.lagoslife) await signInLagos(true);
+  }
+  async function signInLagos(quiet) {
+    if (!Lagos.state.active) return false;
+    let r;
+    try {
+      r = await Online.lagosLife(await Lagos.session());
+    } catch (e) {
+      r = { ok: false, error: e.message };
+    }
+    if (!r.ok) {
+      if (!quiet) accError(r.error);
+      return false;
+    }
+    await afterSignIn(
+      `Signed in with Lagos Life as ${r.player.lagoslife?.name || r.player.name}`,
+    );
+    claimPurchases();
+    return true;
+  }
+  // Delivers Lagos Life purchases; the server adds each one's coins once.
+  async function claimPurchase(purchaseId) {
+    const r = await Online.claimPurchase(await Lagos.session(), purchaseId);
+    if (r?.granted) {
+      Sound.play("coin");
+      UI.toast("Coins added to your wallet!");
+    } else if (r?.error) UI.toast(r.error);
+    renderAccount();
+  }
+  async function claimPurchases() {
+    for (const p of await Lagos.purchases())
+      await claimPurchase(p.purchaseId).catch(() => {});
+  }
+  async function buyPack(p, b) {
+    b.disabled = true;
+    try {
+      const purchase = await Lagos.purchase(p.productId);
+      if (purchase?.purchaseId) await claimPurchase(purchase.purchaseId);
+    } catch (e) {
+      UI.toast(e.message || "Purchase cancelled");
+    }
+    b.disabled = false;
+  }
+  async function connectLagos() {
+    if (!Online.enabled || !LIVE.accounts.lagoslife || !lagosLifeHinted())
+      return;
+    const r = await Lagos.connect({
+      onPause: () => Game.pause(),
+      onPurchase: (p) => claimPurchase(p.purchaseId).catch(() => {}),
+    });
+    if (!r || lifetime.disposed) return;
+    const acc = Online.account;
+    if (acc?.lagoslife && !Online.status.expired) claimPurchases();
+    else await signInLagos(true);
+  }
+  setAccMode("login");
+  on("#btnAccount", () => {
+    Sound.play("click");
+    openAccount();
+  });
+  on("#tabLogin", () => setAccMode("login"));
+  on("#tabRegister", () => setAccMode("register"));
+  listen(host, "submit", (e) => {
+    if (e.target.id !== "accForm") return;
+    e.preventDefault();
+    Sound.init();
+    submitAccount();
+  });
+  on("#accLagos", () => signInLagos(false));
+  on("#accClose", () => UI.close("ovAccount"));
+  on("#accSwapBtn", async (e) => {
+    const b = e.currentTarget,
+      n = Math.floor(Number($("#accSwap").value));
+    if (!(n >= LIVE.wallet.min)) {
+      UI.toast(`Swap at least ${LIVE.wallet.min} coins`);
+      return;
+    }
+    b.disabled = true;
+    const r = await Online.exchange(n);
+    b.disabled = false;
+    if (!r.ok) {
+      Sound.play("wrong");
+      UI.toast(r.error);
+      return;
+    }
+    Save.d.coins += r.cash;
+    Save.save();
+    UI.coins();
+    Sound.play("coin");
+    UI.toast(`${n} coins swapped for ${fmtNaira(r.cash)}`);
+    renderAccount();
+    syncNow();
+  });
+  on("#accLogout", async (e) => {
+    const b = e.currentTarget;
+    if (!b.dataset.arm) {
+      b.dataset.arm = 1;
+      b.querySelector(".buttonLabel").textContent =
+        "Tap again: this phone starts a fresh buka";
+      setTimeout(() => {
+        delete b.dataset.arm;
+        b.querySelector(".buttonLabel").textContent = "Log out";
+      }, 3000);
+      return;
+    }
+    delete b.dataset.arm;
+    b.querySelector(".buttonLabel").textContent = "Log out";
+    await syncNow();
+    await Online.logout();
+    // The account keeps its progress; this phone goes back to a new guest.
+    Save.d = Save.defaults();
+    Save.d.coins = LIVE.startCash;
+    Save.save();
+    buildChef();
+    envKey = "";
+    UI.close("ovAccount");
+    showMenu();
+    showOnlineStatus();
+    UI.toast("Logged out. Your buka is safe in your account.");
+    if (LIVE.accounts.guests) syncNow();
+    else openAccount();
+  });
   /* ================= ONLINE (Kikter backend) ================= */
   function showOnlineStatus() {
     const el = $("#onlineStatus");
     if (!el) return;
-    const p = Online.player;
+    const p = Online.player,
+      acc = Online.account;
     el.textContent = !Online.enabled
       ? "Offline mode"
       : Online.status.banned
         ? "This player has been suspended"
-        : p
-          ? `Online as ${p.name}`
-          : Online.status.online
-            ? "Online"
-            : "Connecting…";
+        : Online.status.expired
+          ? "Signed out. Open Account to sign in again."
+          : p
+            ? `Online as ${p.name}` +
+              (acc?.signedIn
+                ? ` · ${acc.email || "Lagos Life"}`
+                : " · guest on this phone")
+            : Online.status.online
+              ? "Online"
+              : "Connecting…";
+    showAccountDot();
     if (p && document.activeElement !== $("#playerName"))
       $("#playerName").value = p.name;
   }
@@ -6875,7 +7166,8 @@ export function mountGame(canvas, host, bridge) {
     a.hidden = !text;
     a.textContent = text || "";
   }
-  let syncing = null;
+  let syncing = null,
+    warnedExpired = false;
   // Pull, merge and push the save; admin edits on the server come in here.
   function syncNow() {
     if (!Online.enabled) return Promise.resolve(false);
@@ -6909,6 +7201,11 @@ export function mountGame(canvas, host, bridge) {
         showOnlineStatus();
         if (Online.status.banned)
           UI.toast("This player has been suspended by an admin.");
+        else if (Online.status.expired && !warnedExpired) {
+          warnedExpired = true;
+          UI.toast("You were signed out. Sign in again to keep syncing.");
+        }
+        Lagos.score(Save.d.stats?.earn || 0);
       });
     return syncing;
   }
@@ -6933,7 +7230,11 @@ export function mountGame(canvas, host, bridge) {
       showAnnouncement();
       UI.coins();
     }
-    await syncNow();
+    await connectLagos();
+    if (lifetime.disposed) return;
+    if (needsSignIn()) openAccount();
+    else await syncNow();
+    if (Online.account?.signedIn) Online.wallet();
   }
   listen(window, "online", () => syncNow());
 

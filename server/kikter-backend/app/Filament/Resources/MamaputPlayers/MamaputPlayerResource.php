@@ -4,6 +4,7 @@ namespace App\Filament\Resources\MamaputPlayers;
 
 use App\Filament\NavigationGroup;
 use App\Filament\Resources\MamaputPlayers\Pages\ManageMamaputPlayers;
+use App\MamaputAccounts;
 use App\MamaputConfig;
 use App\Models\MamaputPlayer;
 use BackedEnum;
@@ -49,6 +50,8 @@ class MamaputPlayerResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'name';
 
+    public const SOURCES = ['guest' => 'Guest', 'kikter' => 'Kikter account', 'lagoslife' => 'Lagos Life', 'both' => 'Kikter + Lagos Life'];
+
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
@@ -87,6 +90,14 @@ class MamaputPlayerResource extends Resource
                 TextEntry::make('shifts_played')->label('Shifts'),
                 TextEntry::make('last_seen_at')->label('Last seen')->since(),
             ]),
+            Section::make('Sign-in and wallet')->columns(4)->schema([
+                TextEntry::make('source')->label('Signs in with')->badge()
+                    ->state(fn (MamaputPlayer $r): string => self::SOURCES[$r->source()]),
+                TextEntry::make('user.email')->label('Kikter account')->placeholder('—'),
+                TextEntry::make('vatarPlayer.name')->label('Lagos Life player')->placeholder('—'),
+                TextEntry::make('wallet_coins')->label('Coin wallet')
+                    ->state(fn (MamaputPlayer $r): string => number_format(MamaputAccounts::balance($r)).' coins'),
+            ]),
             Section::make('Cloud save')->collapsed()->schema([
                 CodeEntry::make('save')->hiddenLabel()
                     ->state(fn (MamaputPlayer $record): string => json_encode($record->save, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) ?: '{}'),
@@ -103,6 +114,11 @@ class MamaputPlayerResource extends Resource
             ->columns([
                 TextColumn::make('name')->searchable()->weight('bold')
                     ->description(fn (MamaputPlayer $r): ?string => $r->user?->email),
+                TextColumn::make('source')->label('Sign-in')->badge()
+                    ->state(fn (MamaputPlayer $r): string => self::SOURCES[$r->source()])
+                    ->color(fn (MamaputPlayer $r): string => match ($r->source()) {
+                        'guest' => 'gray', 'lagoslife' => 'success', default => 'primary',
+                    }),
                 TextColumn::make('tier')->label('Business')->badge()->color('info')
                     ->formatStateUsing(fn ($state): string => MamaputConfig::TIERS[$state][0] ?? '—'),
                 TextColumn::make('unlocked')->label('Level')->sortable(),
@@ -125,6 +141,14 @@ class MamaputPlayerResource extends Resource
                     ),
                 Filter::make('active')->label('Active in the last 24h')
                     ->query(fn (Builder $q) => $q->where('last_seen_at', '>=', now()->subDay())),
+                SelectFilter::make('source')->label('Sign-in')->options(self::SOURCES)
+                    ->query(fn (Builder $q, array $data) => match ($data['value'] ?? null) {
+                        'guest' => $q->whereNull('user_id')->whereNull('vatar_player_id'),
+                        'kikter' => $q->whereNotNull('user_id')->whereNull('vatar_player_id'),
+                        'lagoslife' => $q->whereNull('user_id')->whereNotNull('vatar_player_id'),
+                        'both' => $q->whereNotNull('user_id')->whereNotNull('vatar_player_id'),
+                        default => $q,
+                    }),
                 SelectFilter::make('tier')->label('Business level')
                     ->options(collect(MamaputConfig::TIERS)->mapWithKeys(fn (array $t, int $i): array => [$i => $t[0]])),
             ])
@@ -152,6 +176,18 @@ class MamaputPlayerResource extends Resource
                         $r->banned_at = $r->isBanned() ? null : now();
                         $r->save();
                         Notification::make()->title($r->isBanned() ? 'Player banned' : 'Player unbanned')->success()->send();
+                    }),
+                Action::make('coins')
+                    ->label('Adjust coins')
+                    ->icon(Heroicon::OutlinedCircleStack)
+                    ->visible(fn (MamaputPlayer $r): bool => $r->source() !== 'guest')
+                    ->schema([
+                        TextInput::make('amount')->label('Coins to add (negative to take away)')->integer()->required()
+                            ->minValue(-1_000_000)->maxValue(1_000_000),
+                    ])
+                    ->action(function (MamaputPlayer $r, array $data): void {
+                        $balance = MamaputAccounts::credit($r, (int) $data['amount'], 'admin', auth()->user()?->email);
+                        Notification::make()->title('Wallet now '.number_format($balance).' coins')->success()->send();
                     }),
                 Action::make('reset')
                     ->label('Reset progress')

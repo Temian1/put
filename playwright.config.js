@@ -28,6 +28,12 @@ export default defineConfig({
       use: { ...phone, baseURL: "http://127.0.0.1:5180/put/" },
     },
     {
+      // Sign-in, wallet and leaderboard against a mocked Kikter backend.
+      name: "account",
+      testMatch: /account/,
+      use: { ...phone, baseURL: "http://127.0.0.1:5181/put/" },
+    },
+    {
       name: "pwa",
       testMatch: /pwa/,
       use: { ...phone, baseURL: "http://127.0.0.1:4180/put/" },
@@ -45,6 +51,12 @@ export default defineConfig({
       command: "npx vite --host 127.0.0.1 --port 5180 --strictPort",
       url: "http://127.0.0.1:5180/put/",
       reuseExistingServer: !process.env.CI,
+    },
+    {
+      command: "npx vite --host 127.0.0.1 --port 5181 --strictPort",
+      url: "http://127.0.0.1:5181/put/",
+      reuseExistingServer: !process.env.CI,
+      env: { VITE_MAMAPUT_API: "https://api.mock/mamaput" },
     },
     {
       command:

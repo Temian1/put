@@ -82,23 +82,29 @@ The game runs for **100 levels in 10 chapters**. After the Mama Put Empire (leve
 
 The frontend (Vercel, https://mamaput-phi.vercel.app) talks to the Kikter Games Laravel app at **https://war.kikter.com/api/mamaput**. Admins manage the game in Filament at **https://war.kikter.com/admin**, under **Mama Put Rush**:
 
-- **Players:** every device's player with business level, level reached, lifetime sales, cash, reputation, stars, restaurants, staff, shifts and last seen. Admins can:
+- **Players:** every player with how they sign in (guest, Kikter account, Lagos Life or both), business level, level reached, lifetime sales, cash, reputation, stars, restaurants, staff, shifts and last seen. Admins can:
   - edit name, cash, reputation and level unlocked (the game applies it on its next sync)
   - link a player to a Kikter account
+  - add or take away coins from their wallet
   - ban or unban, reset progress, or delete
   - view the full cloud save
 - **Shifts:** every shift the game reports (mode, level, won, served, sales, cash, stars, duration). Shifts that look impossible are flagged and counted in the sidebar badge.
 - **Settings:** maintenance mode, menu announcement, leaderboard on/off, starting cash, daily rewards and bonus, all 21 menu prices, each restaurant's opening cost and income, multipliers for equipment, staff and boosters, VAT rate, levy and rent, market inflation, news headline and sold-out items, and switches for haggling, inspections, online orders and events (plus inspection chance).
+- **Accounts & Lagos Life (Settings tab):** allow or block guest play, switch Lagos Life sign-in on or off, coins per won shift and daily cap, naira per coin and smallest swap, Lagos Life coin packs (product ID, name, coins), and optional separate Lagos Life keys if Mama Put is registered as its own Lagos Life game (otherwise it uses the Lagos War keys).
+- **Coin ledger:** every wallet change: won shifts, swaps for naira, Lagos Life purchases, linked wallets and admin adjustments.
 - **Dashboard:** a Mama Put Rush stats row (players, active today, shifts, sales, status).
 
 How the game uses it:
 
-- **Account:** on first start the game creates a player and keeps its token in the browser. Players can rename their buka in Settings, and that name shows on the leaderboard.
+- **Guest play:** on first start the game creates a guest player and keeps its token in the browser. Players can rename their buka in Settings, and that name shows on the leaderboard.
+- **Sign-in (account button, top left):** log in or create a Kikter account. It is the same account Lagos War uses, so the coin balance is shared. Signing in merges this phone's guest progress into the account. Every device signed in to the account shares one save. Logging out leaves the progress on the account and starts this phone as a fresh guest.
+- **Lagos Life:** when the game runs inside Lagos Life (in a frame from lagoslife.app, or with `?lagoslife=1`), it loads the Vatar SDK and signs in with the Lagos Life player automatically. The server verifies the session. A Lagos Life player who also logs in with a Kikter account gets both linked to one player, so progress made outside and inside Lagos Life syncs. Lagos Life coin packs are bought with Lagos Life checkout, and each purchase adds its coins to the wallet once. Lifetime sales are sent to the Lagos Life score board.
+- **Coins:** signed-in players earn coins for won shifts (up to a daily cap) and can swap coins for naira in their buka.
 - **Settings:** the game fetches them at start and caches them for offline play. Maintenance blocks starting shifts.
 - **Cloud save:** syncs at start, after every shift and on reconnect, with version checks; a conflict merges and retries. Admin edits and resets win over local progress.
-- **Leaderboard:** real players only (lifetime sales, stars, Endless best). Banned players are hidden.
+- **Leaderboard:** real players only (lifetime sales, stars, Endless best). Banned players are hidden. Lagos Life players are marked, and a filter shows only Lagos Life players.
 
-API: `GET /config`, `POST /players`, `GET|PATCH /me`, `GET|PUT /save`, `POST /shifts`, `GET /leaderboard?board=sales|stars|endless`. Players authenticate with `Authorization: Bearer <token>`.
+API: `GET /config`, `POST /players`, `POST /auth/register|login|lagoslife|logout`, `GET|PATCH /me`, `GET|PUT /save`, `POST /shifts`, `GET /wallet`, `POST /wallet/exchange`, `POST /lagoslife/purchase`, `GET /leaderboard?board=sales|stars|endless&scope=all|lagoslife`. Players authenticate with `Authorization: Bearer <token>`. Each device gets its own token, and logging out revokes it.
 
 The backend files added to war.kikter.com are copied in [`server/kikter-backend/`](server/kikter-backend/), because that server has no git repository. The production build uses the API by default. Dev and tests don't, unless `VITE_MAMAPUT_API` is set; `off` disables it.
 

@@ -911,7 +911,7 @@ export function Board({ rows, unit, fmt, note }) {
       <p className="hintText">{note || "Real Mama Put Rush players."}</p>
       {rows.map((r) => (
         <div
-          key={r.name}
+          key={r.rank + r.name}
           className={
             "boardRow" + (r.you ? " you" : "") + (r.rank <= 3 ? " top" : "")
           }

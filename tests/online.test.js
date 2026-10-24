@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { createOnline } from "../src/systems/Online.js";
+import { createLagosLife, lagosLifeHinted } from "../src/systems/LagosLife.js";
 import { LIVE, applyLiveConfig } from "../src/game/live.js";
 import { FOODS, PLACES, STAFF } from "../src/game/data.js";
 import { EQUIPMENT } from "../src/game/equipment.js";
@@ -21,7 +22,39 @@ function fakeServer() {
   const fetchImpl = vi.fn(async (url, opts = {}) => {
     const path = url.replace("https://api.test", "");
     const body = opts.body ? JSON.parse(opts.body) : null;
-    const authed = opts.headers?.Authorization === "Bearer tok";
+    const bearer = opts.headers?.Authorization?.slice(7);
+    if (s.revoked?.includes(bearer))
+      return json(401, { message: "Unknown player." });
+    const authed = bearer === "tok" || bearer === "acct";
+    if (path === "/auth/login") {
+      if (body.password !== "secret-pass")
+        return json(422, { errors: { email: ["Wrong email or password."] } });
+      s.loginBearer = bearer;
+      return json(200, {
+        id: 7,
+        name: "Mama Put 1234",
+        token: "acct",
+        source: "kikter",
+        account: { name: "Iya Bose", email: body.email },
+        wallet: { coins: 1000 },
+      });
+    }
+    if (path === "/auth/lagoslife")
+      return json(200, {
+        id: 7,
+        name: "Mama Put 1234",
+        token: "acct",
+        source: "both",
+        account: { email: "bose@example.com" },
+        lagoslife: { name: "Bose LL" },
+        wallet: { coins: 1000 },
+      });
+    if (path === "/auth/logout") {
+      (s.revoked ||= []).push(bearer);
+      return json(200, { ok: true });
+    }
+    if (path === "/wallet/exchange")
+      return json(200, { cash: body.coins * 200, coins: 1000 - body.coins });
     if (path === "/players" && opts.method === "POST")
       return json(201, {
         id: 7,
@@ -43,7 +76,9 @@ function fakeServer() {
     }
     if (path === "/shifts") {
       s.shifts.push(body);
-      return json(201, { ok: true });
+      return bearer === "acct"
+        ? json(201, { ok: true, coins: 5, wallet: 1005 })
+        : json(201, { ok: true, coins: 0, wallet: null });
     }
     if (path.startsWith("/leaderboard"))
       return json(200, {
@@ -162,7 +197,7 @@ describe("online services", () => {
     });
     expect(
       await o.reportShift({ mode: "level", level: 3, won: true, sales: 9000 }),
-    ).toBe(true);
+    ).toMatchObject({ ok: true, coins: 0 });
     expect(s.shifts).toHaveLength(1);
     const board = await o.leaderboard("sales");
     expect(board.rows[0].name).toBe("Iya Bose");
@@ -181,6 +216,130 @@ describe("online services", () => {
     });
     expect((await offline.config()).foodPrices.jollof).toBe(1100);
     expect(offline.status.online).toBe(false);
+  });
+});
+
+describe("accounts and wallet", () => {
+  it("signs a guest in, earns and swaps coins, then logs out", async () => {
+    const { s, fetchImpl } = fakeServer();
+    const storage = memory();
+    const o = createOnline({ base: "https://api.test", storage, fetchImpl });
+    await o.sync({ coins: 3000, unlocked: 2, updatedAt: 1 });
+    expect(o.account).toMatchObject({ source: "guest", signedIn: false });
+    const bad = await o.login("bose@example.com", "nope");
+    expect(bad).toEqual({ ok: false, error: "Wrong email or password." });
+    const r = await o.login("bose@example.com", "secret-pass");
+    expect(r.ok).toBe(true);
+    // The guest token goes with the login so the server can merge it.
+    expect(s.loginBearer).toBe("tok");
+    expect(o.account).toMatchObject({
+      source: "kikter",
+      signedIn: true,
+      email: "bose@example.com",
+      wallet: 1000,
+    });
+    // Signed in on the next page load too.
+    const reload = createOnline({
+      base: "https://api.test",
+      storage,
+      fetchImpl,
+    });
+    expect(reload.account.signedIn).toBe(true);
+    expect((await o.reportShift({ won: true })).coins).toBe(5);
+    expect(o.account.wallet).toBe(1005);
+    expect(await o.exchange(10)).toMatchObject({ ok: true, cash: 2000 });
+    expect(o.account.wallet).toBe(990);
+    await o.logout();
+    expect(o.account).toBe(null);
+    expect(s.revoked).toEqual(["acct"]);
+  });
+  it("never turns an ended sign-in into a guest", async () => {
+    const { s, fetchImpl } = fakeServer();
+    const o = createOnline({
+      base: "https://api.test",
+      storage: memory(),
+      fetchImpl,
+    });
+    await o.login("bose@example.com", "secret-pass");
+    s.revoked = ["acct"];
+    expect(await o.sync({ coins: 1, unlocked: 1 })).toBe(null);
+    expect(o.status.expired).toBe(true);
+    expect(o.account.signedIn).toBe(true);
+    expect(
+      fetchImpl.mock.calls.filter(([u]) => u.endsWith("/players")),
+    ).toHaveLength(0);
+  });
+  it("signs in with a Lagos Life session", async () => {
+    const { fetchImpl } = fakeServer();
+    const o = createOnline({
+      base: "https://api.test",
+      storage: memory(),
+      fetchImpl,
+    });
+    const r = await o.lagosLife("signed-session");
+    expect(r.ok).toBe(true);
+    expect(o.account).toMatchObject({ source: "both", lagoslife: "Bose LL" });
+    const call = fetchImpl.mock.calls.find(([u]) =>
+      u.endsWith("/auth/lagoslife"),
+    );
+    expect(JSON.parse(call[1].body)).toEqual({ session: "signed-session" });
+  });
+});
+
+describe("Lagos Life SDK", () => {
+  const sdk = () => ({
+    init: vi.fn(async () => ({
+      player: { id: "p_1", name: "Bose" },
+      session: "s1",
+      mode: "live",
+    })),
+    session: vi.fn(async () => ({ session: "s2", exp: Date.now() + 120000 })),
+    submitScore: vi.fn(async (n) => ({ best: n, accepted: true })),
+    leaderboard: vi.fn(async () => ({ top: [], me: null })),
+    purchases: vi.fn(async () => [{ purchaseId: "pu_1" }]),
+    onPause: vi.fn(() => () => {}),
+    onResume: vi.fn(() => () => {}),
+    onPurchase: vi.fn(() => () => {}),
+  });
+  it("only loads inside Lagos Life", () => {
+    const win = (top, referrer, search = "") => {
+      const w = { location: { search }, document: { referrer } };
+      w.self = w;
+      w.top = top ? w : {};
+      return w;
+    };
+    expect(lagosLifeHinted(win(true, ""))).toBe(false);
+    expect(lagosLifeHinted(win(true, "", "?lagoslife=1"))).toBe(true);
+    expect(lagosLifeHinted(win(false, "https://lagoslife.app/play"))).toBe(
+      true,
+    );
+    expect(lagosLifeHinted(win(false, "https://evil.example/"))).toBe(false);
+  });
+  it("connects, refreshes sessions and sends only new high scores", async () => {
+    const Vatar = sdk();
+    const ll = createLagosLife({ win: { Vatar }, doc: {} });
+    expect(await ll.connect()).toEqual({
+      player: { id: "p_1", name: "Bose" },
+      session: "s1",
+    });
+    expect(await ll.session()).toBe("s1");
+    ll.score(5000);
+    await Promise.resolve();
+    ll.score(4000);
+    expect(Vatar.submitScore).toHaveBeenCalledTimes(1);
+    expect(Vatar.submitScore).toHaveBeenCalledWith(5000);
+    expect(await ll.purchases()).toEqual([{ purchaseId: "pu_1" }]);
+    ll.dispose();
+  });
+  it("reports no Lagos Life when the SDK fails", async () => {
+    const ll = createLagosLife({
+      win: {
+        Vatar: { init: async () => Promise.reject(new Error("not_framed")) },
+      },
+      doc: {},
+    });
+    expect(await ll.connect()).toBe(null);
+    expect(ll.state.active).toBe(false);
   });
 });
 

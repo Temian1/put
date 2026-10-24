@@ -3,6 +3,7 @@
 namespace App;
 
 use App\Models\GameSetting;
+use App\Models\VatarSetting;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -75,6 +76,13 @@ final class MamaputConfig
         'inspection_chance' => 40,
         'max_sales_per_shift' => 3000000,
         'leaderboard_enabled' => true,
+        'guests_allowed' => true,
+        'lagoslife_enabled' => true,
+        'coins_per_win' => 5,
+        'coins_daily_cap' => 100,
+        'coin_naira_rate' => 200,
+        'coins_exchange_min' => 10,
+        'lagoslife_products' => [],
     ];
 
     /** @return array<string, mixed> */
@@ -98,6 +106,12 @@ final class MamaputConfig
         $merged = array_merge(self::values(), array_intersect_key($values, self::DEFAULTS));
         GameSetting::query()->updateOrCreate(['key' => self::KEY], ['value' => $merged]);
         Cache::forget(self::CACHE_KEY);
+    }
+
+    /** @return array{product_id: string, name: string, coins: int}|null */
+    public static function product(string $id): ?array
+    {
+        return collect((array) self::get('lagoslife_products'))->first(fn (array $p): bool => $p['product_id'] === $id);
     }
 
     public static function tierOf(int $sales, float $reputation): int
@@ -161,6 +175,19 @@ final class MamaputConfig
                 'leaderboard' => (bool) $v['leaderboard_enabled'],
             ],
             'inspectionChance' => (float) $v['inspection_chance'] / 100,
+            'accounts' => [
+                'guests' => (bool) $v['guests_allowed'],
+                'lagoslife' => (bool) $v['lagoslife_enabled'] && VatarSetting::mamaput()->configured(),
+            ],
+            'wallet' => [
+                'perWin' => (int) $v['coins_per_win'],
+                'dailyCap' => (int) $v['coins_daily_cap'],
+                'rate' => (int) $v['coin_naira_rate'],
+                'min' => (int) $v['coins_exchange_min'],
+            ],
+            'lagoslifeProducts' => array_values(array_map(fn (array $p): array => [
+                'productId' => $p['product_id'], 'name' => $p['name'], 'coins' => (int) $p['coins'],
+            ], (array) $v['lagoslife_products'])),
         ];
     }
 }

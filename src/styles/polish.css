@@ -575,3 +575,114 @@ svg.star.on {
   font-size: 15px;
   padding: 6px 12px;
 }
+/* Account and coin wallet */
+.iconBtn.accountBtn {
+  position: relative;
+  margin-right: auto;
+  color: #fff;
+  background: linear-gradient(180deg, #8a3d7c, var(--plum));
+  box-shadow:
+    0 5px 0 #3b1434,
+    0 8px 14px rgba(0, 0, 0, 0.25),
+    inset 0 2px 0 rgba(255, 255, 255, 0.4);
+}
+.iconBtn.accountBtn .buttonIcon {
+  width: 24px;
+  height: 24px;
+  stroke-width: 2.4;
+}
+.accountBtn .dot {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--coral);
+  border: 2px solid #fff;
+}
+.accountPanel .tabs {
+  margin: 10px 0 8px;
+}
+.accForm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.accForm .nameInput {
+  flex: none;
+  padding: 10px 12px;
+  font-size: 16px;
+}
+.accForm .btn,
+.accLagos,
+#accSigned > .btn {
+  width: 100%;
+}
+.accLagos {
+  margin-top: 6px;
+}
+.accError {
+  margin: 0;
+  color: #c62828;
+  font-weight: 800;
+  font-size: 14px;
+}
+.accHint {
+  margin-top: 8px;
+}
+.accWho {
+  margin: 6px 0 10px;
+  text-align: center;
+  font-weight: 800;
+  color: var(--ink);
+}
+.walletBox {
+  border: 2px dashed #e2c9a0;
+  border-radius: 14px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  background: #fff8ea;
+}
+.walletCoins {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font: 400 30px var(--display);
+  color: var(--ink);
+}
+.walletCoins .buttonIcon {
+  width: 28px;
+  height: 28px;
+  color: #d39b00;
+}
+.walletCoins small {
+  font: 800 15px var(--body);
+}
+.walletBox .nameRow {
+  margin-top: 8px;
+  padding: 0;
+  background: none;
+  box-shadow: none;
+}
+.accPacks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.accPacks .btn {
+  flex-direction: column;
+  font-size: 15px;
+  padding: 8px;
+}
+.boardScope {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 4px 8px;
+  font-weight: 800;
+  font-size: 14px;
+  color: var(--ink);
+}

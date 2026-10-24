@@ -17,6 +17,7 @@ const OVERLAYS = [
   ["#btnSettings", "#ovSettings", "#sClose"],
   ["#btnBoard", "#ovBoard", "#boardClose"],
   ["#btnGrow", "#ovGrow", "#growClose"],
+  ["#btnAccount", "#ovAccount", "#accClose"],
 ];
 
 async function expectFits(page, overlay) {
