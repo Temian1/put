@@ -5,5 +5,5 @@ export default defineConfig({
   plugins: [react()],
   base: "/put/",
   build: { rollupOptions: { output: { manualChunks: { three: ["three"] } } } },
-  test: { environment: "node" },
+  test: { environment: "node", include: ["tests/**/*.test.js"] },
 });

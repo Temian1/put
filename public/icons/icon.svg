@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="0" fill="#FF7A1A"/>
+  <circle cx="256" cy="256" r="236" fill="#FFB25C"/>
+  <path d="M0 404h512v108H0z" fill="#12A99F"/>
+  <path d="M0 404h512v18H0z" fill="#FFC531"/>
+  <ellipse cx="256" cy="330" rx="170" ry="52" fill="#4A1F0C" opacity=".25"/>
+  <ellipse cx="256" cy="312" rx="168" ry="56" fill="#FFFFFF"/>
+  <ellipse cx="256" cy="306" rx="140" ry="42" fill="#F1E3CB"/>
+  <path d="M146 300c0-62 50-112 110-112s110 50 110 112c-40 14-180 14-220 0z" fill="#E8501F"/>
+  <g fill="#5DBB3F"><rect x="196" y="236" width="14" height="14" rx="3"/><rect x="262" y="214" width="14" height="14" rx="3"/><rect x="306" y="252" width="14" height="14" rx="3"/></g>
+  <g fill="#FFB347"><rect x="232" y="262" width="13" height="13" rx="3"/><rect x="286" y="236" width="13" height="13" rx="3"/></g>
+  <g fill="#F39A1E"><ellipse cx="350" cy="302" rx="30" ry="16"/><ellipse cx="380" cy="290" rx="26" ry="14"/></g>
+  <path d="M112 96h288" stroke="#4A1F0C" stroke-width="0"/>
+  <text x="256" y="150" font-family="Arial Rounded MT Bold, Trebuchet MS, sans-serif" font-size="92" font-weight="900" text-anchor="middle" fill="#FFC531" stroke="#4A1F0C" stroke-width="14" paint-order="stroke">₦ PUT</text>
+</svg>

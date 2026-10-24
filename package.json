@@ -7,10 +7,12 @@
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "lint": "eslint src tests vite.config.js eslint.config.js",
+    "lint": "eslint src tests e2e vite.config.js eslint.config.js playwright.config.js",
     "test": "vitest run",
     "build:vercel": "vite build --base=/",
-    "format": "prettier --write src tests index.html vite.config.js eslint.config.js package.json"
+    "format": "prettier --write src tests e2e index.html vite.config.js eslint.config.js playwright.config.js package.json public/sw.js",
+    "test:e2e": "playwright test --project=journeys --project=pwa",
+    "test:visual": "playwright test --project=visual"
   },
   "dependencies": {
     "react": "18.3.1",
@@ -19,6 +21,7 @@
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",
+    "@playwright/test": "^1.56.1",
     "@vitejs/plugin-react": "4.7.0",
     "eslint": "9.39.5",
     "eslint-plugin-react-hooks": "5.2.0",

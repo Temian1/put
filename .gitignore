@@ -9,3 +9,6 @@ Desktop.ini
 coverage/
 .verification/
 *.log
+dist-e2e/
+test-results/
+playwright-report/

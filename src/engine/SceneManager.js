@@ -11,11 +11,91 @@ import {
   endlessCfg,
   UPGRADES,
   DECOR,
+  STAFF,
+  BOOSTERS,
+  CUSTOMER_TYPES,
+  MOODS,
+  NAMES,
+  STOCK,
+  FOOD_COST,
+  EVENTS,
+  TIERS,
+  PLACES,
 } from "../game/data.js";
-import { createSave } from "../systems/SaveManager.js";
+import { payroll, removeStaff, UNPAID_LIMIT } from "../game/staff.js";
+import {
+  REP,
+  clampRep,
+  spawnFactor,
+  repTipFactor,
+  tierOf,
+  nextTier,
+  canOpen,
+  openBranch,
+  branchIncome,
+} from "../game/growth.js";
+import {
+  makeOnlineOrder,
+  makeEventOrder,
+  packNeeds,
+  packFill,
+  packComplete,
+  packsFor,
+  portions,
+  orderValue,
+  tickOrders,
+  createRiders,
+  dispatch,
+  tickRiders,
+  PACK_COST,
+} from "../game/deliveries.js";
+import { createSave, migrate } from "../systems/SaveManager.js";
 import { createAudio } from "../systems/AudioManager.js";
-import { scoreOrder } from "../game/scoring.js";
-import { needsFood, fillOrder, orderComplete } from "../game/OrderSystem.js";
+import { createHaptics } from "../systems/Haptics.js";
+import {
+  mergeSaves,
+  encodeBackup,
+  decodeBackup,
+  newPlayerId,
+  createCloudSync,
+} from "../systems/CloudSave.js";
+import { scoreOrder, tipFor } from "../game/scoring.js";
+import {
+  needsFood,
+  blockedFood,
+  fillOrder,
+  orderComplete,
+  baseReady,
+  nextNeeded,
+} from "../game/OrderSystem.js";
+import { buildOrder, toItems } from "../game/recipes.js";
+import {
+  createCooker,
+  tickCooker,
+  tapCooker,
+  hasPortion,
+  takePortion,
+  cookerProgress,
+  createSink,
+  sinkFull,
+  addPlate,
+  tickSink,
+  startWash,
+} from "../game/kitchen.js";
+import {
+  pickCustomerType,
+  pickMood,
+  customerTraits,
+} from "../game/customers.js";
+import {
+  ACHIEVEMENTS,
+  ensureDaily,
+  track,
+  claimable,
+  claim as claimMission,
+  achievementProgress,
+} from "../game/missions.js";
+import { fmtNaira, fmtNairaShort, roundNaira } from "../game/currency.js";
 import { Lifetime } from "./Lifetime.js";
 
 // Procedural geometry, scene choreography and timing are retained from the reference.
@@ -32,6 +112,9 @@ export function mountGame(canvas, host, bridge) {
   const Sound = createAudio(Save);
   const dailyCfg = () => makeDailyCfg(Save.d.unlocked);
   const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const Haptics = createHaptics(Save, navigator, REDUCED);
+  const cloudUrl = import.meta.env.VITE_CLOUD_SAVE_URL;
+  const Cloud = cloudUrl ? createCloudSync({ url: cloudUrl }) : null;
   listen(document, "pointerdown", () => Sound.init(), { capture: true });
   let cleanupScene = () => {};
   const cleanup = () => {
@@ -279,14 +362,6 @@ export function mountGame(canvas, host, bridge) {
       plate(g);
       riceDome(g, "#EDC24A", 0.26, ["#4CAF50", "#FF8A3D", "#F48FB1"]);
     },
-    partyjollof(g) {
-      plate(g);
-      riceDome(g, "#CF3D17", 0.24, ["#5DBB3F", "#FFB347"]);
-      drumstick(g, 0.14, 0.1, 0.6);
-      const s = mesh(sph(0.09, 10, 8), M("#F09A24"), -0.18, 0.1, 0.12);
-      s.scale.set(1, 0.4, 0.6);
-      g.add(s);
-    },
     plantain(g) {
       plate(g);
       for (let i = 0; i < 7; i++) {
@@ -312,7 +387,7 @@ export function mountGame(canvas, host, bridge) {
       c.scale.set(1, 0.42, 0.62);
       g.add(c);
     },
-    drink(g) {
+    zobo(g) {
       g.add(
         mesh(
           cyl(0.13, 0.13, 0.36, 18),
@@ -345,27 +420,323 @@ export function mountGame(canvas, host, bridge) {
       l.scale.set(1.6, 1, 0.4);
       g.add(l);
     },
-    puffpuff(g) {
-      bowl(g, "#D9A35F");
+    whiterice(g) {
+      plate(g);
+      const r = mesh(dome(0.26), M("#F7F3E8", { roughness: 0.95 }), 0, 0.06, 0);
+      r.scale.y = 0.7;
+      g.add(r);
+      const st = mesh(
+        sph(0.17, 16, 10),
+        M("#C1301C", { roughness: 0.35 }),
+        0.03,
+        0.2,
+        0.02,
+      );
+      st.scale.set(1, 0.28, 0.9);
+      g.add(st);
+      sprinkle(g, 0.12, 0.23, 0.01, ["#7A1E0E", "#F08A2C"], 6, 0.03);
+    },
+    beans(g) {
+      bowl(g, "#F2E6CF");
+      g.add(
+        mesh(
+          cyl(0.27, 0.27, 0.03, 24),
+          M("#8B4A2B", { roughness: 0.85 }),
+          0,
+          0.2,
+          0,
+        ),
+      );
+      sprinkle(g, 0.24, 0.21, 0.015, ["#7A3E22", "#9C5631"], 14, 0.04);
+      const s = mesh(
+        sph(0.12, 14, 10),
+        M("#4A140A", { roughness: 0.3 }),
+        0.02,
+        0.24,
+        0.02,
+      );
+      s.scale.set(1, 0.3, 1);
+      g.add(s);
+    },
+    eba(g) {
+      plate(g);
+      const d = mesh(
+        sph(0.21, 20, 14),
+        M("#E8C15A", { roughness: 0.4 }),
+        0,
+        0.13,
+        0,
+      );
+      d.scale.set(1, 0.72, 1);
+      g.add(d);
+    },
+    peppersoup(g) {
+      bowl(g, "#3B2A20");
+      g.add(
+        mesh(
+          cyl(0.27, 0.27, 0.02, 24),
+          M("#A8401C", { roughness: 0.2 }),
+          0,
+          0.2,
+          0,
+        ),
+      );
       [
-        [0, 0],
-        [0.13, 0.05],
-        [-0.12, 0.07],
-        [0.04, -0.13],
-        [-0.06, 0.13],
-        [0.11, -0.1],
+        [0.08, 0.05],
+        [-0.1, 0.02],
+        [0.01, -0.11],
       ].forEach(([x, z], i) => {
-        g.add(
-          mesh(
-            sph(0.1, 12, 10),
-            M(i % 2 ? "#C9772A" : "#B9661E", { roughness: 0.8 }),
-            x,
-            0.25 + (i ? 0 : 0.06),
-            z,
-          ),
+        const m = mesh(
+          box(0.11, 0.08, 0.09),
+          M("#6B3418", { roughness: 0.7 }),
+          x,
+          0.23,
+          z,
         );
+        m.rotation.y = i;
+        g.add(m);
       });
-      sprinkle(g, 0.18, 0.27, 0.08, ["#FFFFFF"], 6, 0.025);
+      sprinkle(g, 0.24, 0.22, 0.005, ["#2E7D32", "#C62828"], 8, 0.03);
+    },
+    efo(g) {
+      bowl(g);
+      g.add(
+        mesh(
+          cyl(0.27, 0.27, 0.03, 24),
+          M("#2E6B26", { roughness: 0.8 }),
+          0,
+          0.205,
+          0,
+        ),
+      );
+      sprinkle(
+        g,
+        0.25,
+        0.22,
+        0.012,
+        ["#1B5E20", "#D84315", "#43A047"],
+        14,
+        0.035,
+      );
+      const m = mesh(box(0.1, 0.08, 0.09), M("#7A3B1A"), -0.05, 0.24, 0.05);
+      m.rotation.y = 0.7;
+      g.add(m);
+    },
+    ewedu(g) {
+      bowl(g);
+      const half = (start) =>
+        G(
+          "half" + start,
+          () =>
+            new T3.CylinderGeometry(
+              0.27,
+              0.27,
+              0.03,
+              20,
+              1,
+              false,
+              start,
+              Math.PI,
+            ),
+        );
+      g.add(mesh(half(0), M("#4F8F2F", { roughness: 0.7 }), 0, 0.205, 0));
+      g.add(mesh(half(Math.PI), M("#C9A15A", { roughness: 0.8 }), 0, 0.205, 0));
+      const st = mesh(
+        sph(0.07, 12, 8),
+        M("#B3261E", { roughness: 0.3 }),
+        0,
+        0.225,
+        0,
+      );
+      st.scale.set(1, 0.3, 1);
+      g.add(st);
+    },
+    beef(g) {
+      plate(g, 0.28);
+      [
+        [-0.08, -0.04, 0.3],
+        [0.09, -0.02, 1.1],
+        [0, 0.1, 2],
+      ].forEach(([x, z, r]) => {
+        const m = mesh(
+          rbox(0.15, 0.11, 0.13, 0.03),
+          M("#6E2F14", { roughness: 0.35 }),
+          x,
+          0.12,
+          z,
+        );
+        m.rotation.y = r;
+        g.add(m);
+      });
+      sprinkle(g, 0.18, 0.18, 0.01, ["#C1301C"], 5, 0.03);
+    },
+    chicken(g) {
+      plate(g);
+      drumstick(g, -0.1, 0.02, 0.5);
+      drumstick(g, 0.1, -0.04, -0.6);
+      const t = mesh(
+        sph(0.11, 12, 10),
+        M("#B8641F", { roughness: 0.55 }),
+        0.02,
+        0.12,
+        0.13,
+      );
+      t.scale.set(1.2, 0.6, 0.9);
+      g.add(t);
+    },
+    fish(g) {
+      plate(g);
+      const f = new T3.Group();
+      const body = mesh(
+        sph(0.2, 18, 12),
+        M("#8A6438", { roughness: 0.5 }),
+        0,
+        0,
+        0,
+      );
+      body.scale.set(1.25, 0.42, 0.55);
+      f.add(body);
+      const tail = mesh(cone(0.1, 0.16, 4), M("#6E4A26"), -0.3, 0, 0);
+      tail.rotation.z = Math.PI / 2;
+      tail.scale.set(1, 1, 0.3);
+      f.add(tail);
+      f.add(mesh(sph(0.025, 8, 6), M("#F4F1E8"), 0.17, 0.04, 0.07));
+      f.position.set(0.03, 0.12, 0);
+      f.rotation.y = 0.4;
+      g.add(f);
+    },
+    egg(g) {
+      plate(g, 0.24);
+      [-0.08, 0.08].forEach((x, i) => {
+        const w = mesh(
+          sph(0.1, 14, 10),
+          M("#FBF8F0", { roughness: 0.3 }),
+          x,
+          0.08,
+          0,
+        );
+        w.scale.set(0.8, 0.5, 1.1);
+        w.rotation.y = i ? 0.4 : -0.4;
+        g.add(w);
+        const y = mesh(
+          sph(0.05, 10, 8),
+          M("#F2B71E", { roughness: 0.5 }),
+          x,
+          0.12,
+          0,
+        );
+        y.scale.set(1, 0.4, 1);
+        g.add(y);
+      });
+    },
+    moimoi(g) {
+      plate(g);
+      const leaf = mesh(
+        sph(0.26, 14, 8),
+        M("#4E8B3A", { roughness: 0.6 }),
+        0,
+        0.07,
+        0,
+      );
+      leaf.scale.set(1, 0.12, 0.8);
+      g.add(leaf);
+      g.add(
+        mesh(
+          cyl(0.15, 0.18, 0.15, 18),
+          M("#E0683A", { roughness: 0.8 }),
+          0,
+          0.15,
+          0,
+        ),
+      );
+      const e = mesh(sph(0.05, 10, 8), M("#FBF8F0"), 0.03, 0.23, 0.02);
+      e.scale.set(1, 0.4, 1);
+      g.add(e);
+    },
+    water(g) {
+      const s = mesh(
+        rbox(0.4, 0.07, 0.3, 0.035),
+        new T3.MeshStandardMaterial({
+          color: "#CDEBFF",
+          roughness: 0.15,
+          transparent: true,
+          opacity: 0.85,
+        }),
+        0,
+        0.05,
+        0,
+      );
+      g.add(s);
+      g.add(mesh(box(0.3, 0.072, 0.07), M("#1E78C8"), 0, 0.055, 0.02, false));
+      g.add(mesh(box(0.3, 0.073, 0.02), M("#E53935"), 0, 0.056, -0.05, false));
+    },
+    mineral(g) {
+      g.add(
+        mesh(
+          cyl(0.11, 0.12, 0.34, 16),
+          M("#C62828", { roughness: 0.15, metalness: 0.1 }),
+          0,
+          0.17,
+          0,
+        ),
+      );
+      g.add(
+        mesh(
+          cyl(0.122, 0.122, 0.11, 16),
+          M("#FFFFFF", { roughness: 0.4 }),
+          0,
+          0.17,
+          0,
+        ),
+      );
+      g.add(
+        mesh(
+          cyl(0.045, 0.1, 0.12, 12),
+          M("#C62828", { roughness: 0.15 }),
+          0,
+          0.4,
+          0,
+        ),
+      );
+      g.add(mesh(cyl(0.05, 0.05, 0.05, 12), M("#B71C1C"), 0, 0.48, 0));
+    },
+    malt(g) {
+      g.add(
+        mesh(
+          cyl(0.11, 0.11, 0.34, 16),
+          M("#3A2210", { roughness: 0.1, metalness: 0.2 }),
+          0,
+          0.17,
+          0,
+        ),
+      );
+      g.add(
+        mesh(
+          cyl(0.113, 0.113, 0.12, 16),
+          M("#C9A227", { roughness: 0.35, metalness: 0.5 }),
+          0,
+          0.16,
+          0,
+        ),
+      );
+      g.add(
+        mesh(
+          cyl(0.04, 0.1, 0.14, 12),
+          M("#3A2210", { roughness: 0.1 }),
+          0,
+          0.41,
+          0,
+        ),
+      );
+      g.add(
+        mesh(
+          cyl(0.048, 0.048, 0.04, 12),
+          M("#E3B341", { metalness: 0.6, roughness: 0.3 }),
+          0,
+          0.49,
+          0,
+        ),
+      );
     },
     amala(g) {
       plate(g);
@@ -389,66 +760,6 @@ export function mountGame(canvas, host, bridge) {
         ),
       );
       g.add(mesh(sph(0.04, 8, 6), M("#D83A1C"), 0.22, 0.16, 0.1));
-    },
-    suya(g) {
-      const p = mesh(box(0.62, 0.02, 0.42), M("#EDE2C8"), 0, 0.01, 0);
-      p.rotation.y = 0.2;
-      g.add(p);
-      for (let k = 0; k < 2; k++) {
-        const s = new T3.Group();
-        s.add(mesh(cyl(0.012, 0.012, 0.64, 6), M("#E2C28A"), 0, 0, 0));
-        for (let i = 0; i < 4; i++) {
-          const c = mesh(
-            box(0.1, 0.09, 0.09),
-            M(i % 2 ? "#7B3416" : "#8E3E19", { roughness: 0.85 }),
-            0,
-            -0.2 + i * 0.12,
-            0,
-          );
-          c.rotation.y = i;
-          s.add(c);
-        }
-        s.rotation.z = Math.PI / 2;
-        s.rotation.y = 0.2;
-        s.position.set(0, 0.08, -0.08 + k * 0.16);
-        g.add(s);
-      }
-      sprinkle(g, 0.25, 0.12, 0.02, ["#C62828", "#E65100"], 8, 0.02);
-      const o = mesh(tor(0.05, 0.015, 6, 14), M("#E9D7F2"), 0.22, 0.04, 0.14);
-      o.rotation.x = Math.PI / 2;
-      g.add(o);
-      g.add(mesh(cyl(0.05, 0.05, 0.02, 12), M("#E53935"), -0.22, 0.03, 0.14));
-    },
-    smallchops(g) {
-      plate(g);
-      [
-        [-0.1, -0.05, 0],
-        [0.06, -0.12, 0.4],
-      ].forEach(([x, z, r]) => {
-        const s = mesh(
-          caps(0.04, 0.16),
-          M("#E5A33A", { roughness: 0.6 }),
-          x,
-          0.1,
-          z,
-        );
-        s.rotation.set(0, r, Math.PI / 2);
-        g.add(s);
-      });
-      [
-        [0.15, 0.08],
-        [-0.15, 0.12],
-      ].forEach(([x, z]) => {
-        const t = mesh(cone(0.09, 0.12, 3), M("#D9922F"), x, 0.12, z);
-        t.rotation.x = Math.PI;
-        g.add(t);
-      });
-      [
-        [0.02, 0.14],
-        [0.18, -0.08],
-      ].forEach(([x, z]) =>
-        g.add(mesh(sph(0.06, 10, 8), M("#B9661E"), x, 0.11, z)),
-      );
     },
     egusi(g) {
       bowl(g);
@@ -505,6 +816,69 @@ export function mountGame(canvas, host, bridge) {
     }
     return FOOD_TPL[id].clone();
   }
+  // Empty plate left behind with smears of stew, waiting to be cleared.
+  function dirtyPlate() {
+    if (!FOOD_TPL.__dirty) {
+      const g = new T3.Group();
+      plate(g, 0.3);
+      [
+        [0.06, 0.04, 0.09],
+        [-0.09, -0.05, 0.06],
+        [0.02, -0.1, 0.05],
+      ].forEach(([x, z, r]) => {
+        const s = mesh(
+          sph(r, 10, 6),
+          M("#B5461F", { roughness: 0.9 }),
+          x,
+          0.065,
+          z,
+          false,
+        );
+        s.scale.y = 0.08;
+        g.add(s);
+      });
+      g.add(mesh(sph(0.03, 6, 4), M("#F7F3E8"), -0.04, 0.075, 0.08, false));
+      FOOD_TPL.__dirty = g;
+    }
+    return FOOD_TPL.__dirty.clone();
+  }
+  // Optional painted UI art: public/ui/manifest.json maps keys such as
+  // "staff:emeka", "online", "event:burial" or "place:yaba" to image files.
+  const ART = {};
+  function loadUiArt() {
+    const base = import.meta.env.BASE_URL + "ui/";
+    return fetch(base + "manifest.json")
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((list) => {
+        for (const [k, file] of Object.entries(list)) ART[k] = base + file;
+      })
+      .catch(() => {});
+  }
+  // Optional painted food art: list files in public/food/manifest.json, e.g.
+  // {"jollof": "jollof.webp"}. Missing entries keep the generated 3D thumbnail.
+  function loadFoodArt() {
+    const base = import.meta.env.BASE_URL + "food/";
+    return fetch(base + "manifest.json")
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((list) =>
+        Promise.all(
+          Object.entries(list).map(
+            ([id, file]) =>
+              FOODS[id] &&
+              new Promise((done) => {
+                const img = new Image();
+                img.onload = () => {
+                  FOODS[id].img = base + file;
+                  done();
+                };
+                img.onerror = done;
+                img.src = base + file;
+              }),
+          ),
+        ),
+      )
+      .catch(() => {});
+  }
 
   /* ================= THUMBNAILS (real 3D renders for buttons and bubbles) ================= */
   function makeThumbs() {
@@ -532,6 +906,7 @@ export function mountGame(canvas, host, bridge) {
       sz = new T3.Vector3(),
       dir = new T3.Vector3(0, 0.85, 1).normalize();
     for (const id in FOODS) {
+      if (FOODS[id].img) continue;
       const m = foodModel(id);
       s.add(m);
       bb.setFromObject(m);
@@ -805,6 +1180,45 @@ export function mountGame(canvas, host, bridge) {
       a.scale.setScalar(0.95);
       head.add(a);
       head.add(mesh(GEO.bun, MAT_HAIR, 0, 0.38, -0.12));
+    } else if (hat === "helmet") {
+      const h = mesh(
+        GEO.afro,
+        M(o.accent, { roughness: 0.25 }),
+        0,
+        0.03,
+        -0.02,
+      );
+      h.rotation.x = -0.35;
+      h.scale.setScalar(1.08);
+      head.add(h);
+      const visor = mesh(
+        box(0.5, 0.05, 0.16),
+        M("#263238", { roughness: 0.2 }),
+        0,
+        0.24,
+        0.3,
+      );
+      visor.rotation.x = 0.35;
+      head.add(visor);
+    } else if (hat === "cap") {
+      const c = mesh(GEO.afro, acc, 0, 0.08, -0.02);
+      c.rotation.x = -0.2;
+      c.scale.set(0.95, 0.8, 0.95);
+      head.add(c);
+      const brim = mesh(cyl(0.2, 0.2, 0.03, 16), acc, 0, 0.21, 0.3);
+      brim.scale.set(1, 1, 0.75);
+      head.add(brim);
+    } else if (hat === "kufi") {
+      head.add(
+        mesh(
+          cyl(0.3, 0.32, 0.18, 18),
+          M("#FFFFFF", { roughness: 0.8 }),
+          0,
+          0.3,
+          -0.02,
+        ),
+      );
+      head.add(mesh(cyl(0.305, 0.305, 0.04, 18), acc, 0, 0.25, -0.02));
     } else if (hat === "chef") {
       const g = new T3.Group();
       g.position.set(0, 0.2, -0.02);
@@ -926,7 +1340,7 @@ export function mountGame(canvas, host, bridge) {
       trim: "#FFC531",
       tray: "#12A99F",
       bench: "#4E4A57",
-      sign: ["LAGOS FOOD COURT", "Mama Put Stall 12"],
+      sign: ["SWALLOW JOINT", "Mama Put Stall 12 • Amala Spot"],
       signBg: "#FF5A5F",
       light: [0.85, 0.95],
     },
@@ -1204,6 +1618,56 @@ export function mountGame(canvas, host, bridge) {
     g.add(k);
     return k;
   }
+  // Dispatch rider: okada with a red delivery box, rider in a helmet.
+  function okada(g) {
+    const k = new T3.Group();
+    [-0.55, 0.55].forEach((x) => {
+      const w = mesh(tor(0.24, 0.07, 8, 16), M("#1E1E1E"), x, 0.3, 0);
+      k.add(w);
+    });
+    k.add(
+      mesh(
+        rbox(1.0, 0.22, 0.26, 0.08),
+        M("#C62828", { roughness: 0.3 }),
+        0,
+        0.55,
+        0,
+      ),
+    );
+    k.add(mesh(rbox(0.5, 0.1, 0.3, 0.05), M("#222222"), -0.12, 0.72, 0));
+    const bar = mesh(
+      cyl(0.025, 0.025, 0.6, 6),
+      M("#9E9E9E", { metalness: 0.6 }),
+      0.5,
+      0.85,
+      0,
+    );
+    bar.rotation.x = Math.PI / 2;
+    k.add(bar);
+    k.add(
+      mesh(
+        rbox(0.42, 0.4, 0.42, 0.05),
+        M("#E53935", { roughness: 0.4 }),
+        -0.5,
+        0.98,
+        0,
+      ),
+    );
+    k.add(mesh(rbox(0.43, 0.08, 0.43, 0.03), M("#FFC531"), -0.5, 0.98, 0));
+    const P = makePerson({
+      skin: pick(SKINS),
+      bodyMat: M("#2FA34F", { roughness: 0.7 }),
+      accent: "#FFC531",
+      hat: "helmet",
+      scale: 0.62,
+    });
+    P.root.position.set(-0.1, 0.3, 0);
+    P.root.rotation.y = Math.PI / 2;
+    P.armL.rotation.x = P.armR.rotation.x = -1.3;
+    k.add(P.root);
+    g.add(k);
+    return k;
+  }
   function danfo(g) {
     const k = new T3.Group();
     k.add(mesh(rbox(3.2, 1.3, 1.4, 0.22), M("#FFC531"), 0, 1.05, 0));
@@ -1391,8 +1855,9 @@ export function mountGame(canvas, host, bridge) {
     );
   }
 
-  function buildEnv(ci) {
-    const decorKey = ci + "|" + Save.d.decor.slice().sort().join();
+  function buildEnv(ci, sign) {
+    const decorKey =
+      ci + "|" + (sign || "") + "|" + Save.d.decor.slice().sort().join();
     if (env && envKey === decorKey) return;
     envKey = decorKey;
     if (env) {
@@ -1402,7 +1867,7 @@ export function mountGame(canvas, host, bridge) {
     dyn.length = 0;
     env = new T3.Group();
     scene.add(env);
-    const t = THEMES[ci];
+    const t = sign ? { ...THEMES[ci], sign } : THEMES[ci];
     scene.background = skyTex(t, ci);
     scene.fog = new T3.Fog(new T3.Color(t.sky[1]), 34, 70);
     hemi.intensity = t.light[0];
@@ -1753,6 +2218,7 @@ export function mountGame(canvas, host, bridge) {
       );
       tr.position.set(0, 1.1, 0.42);
       tr.userData.items = [];
+      tr.userData.pick = { type: "tray", lane: i };
       env.add(tr);
       trays.push(tr);
     }
@@ -1773,7 +2239,7 @@ export function mountGame(canvas, host, bridge) {
       g.add(
         mesh(
           cyl(0.4, 0.34, 0.52, 22),
-          M(id === "partyjollof" ? "#C99A2E" : "#3B3F46", {
+          M(f.kind === "soup" ? "#5A4636" : "#3B3F46", {
             metalness: 0.55,
             roughness: 0.35,
           }),
@@ -1935,13 +2401,60 @@ export function mountGame(canvas, host, bridge) {
       const p = mesh(cyl(0.06, 0.07, 1, 10), M("#C48A52"), 0.08, 0.85, 0);
       p.rotation.z = -0.25;
       g.add(p);
+    } else if (t === "basin") {
+      // Enamel basin of wrapped portions, the way bukas keep swallow and moi moi warm.
+      g.add(
+        mesh(
+          cyl(0.42, 0.3, 0.3, 22),
+          M("#F4F1E8", { roughness: 0.3 }),
+          0,
+          0.15,
+          0,
+        ),
+      );
+      const rim = mesh(
+        tor(0.42, 0.035, 8, 24),
+        M("#1E5AA8", { roughness: 0.3 }),
+        0,
+        0.3,
+        0,
+      );
+      rim.rotation.x = Math.PI / 2;
+      g.add(rim);
+      for (let i = 0; i < 4; i++) {
+        const a = (i / 4) * Math.PI * 2 + 0.4;
+        const w = mesh(
+          sph(0.13, 12, 8),
+          M(col, { roughness: 0.6 }),
+          Math.cos(a) * 0.16,
+          0.33,
+          Math.sin(a) * 0.16,
+        );
+        w.scale.y = 0.7;
+        g.add(w);
+      }
     }
     const dish = foodModel(id);
     dish.position.set(0, 0, 0.48);
     dish.scale.setScalar(0.95);
     g.add(dish);
+    if (f.cook) {
+      // Charred lump shown on the counter plate when a batch burns.
+      const ch = mesh(
+        sph(0.2, 12, 8),
+        M("#1E1A17", { roughness: 1 }),
+        0,
+        0.12,
+        0.48,
+      );
+      ch.scale.set(1.1, 0.45, 0.9);
+      ch.visible = false;
+      g.add(ch);
+      g.userData.char = ch;
+    }
     g.userData.pick = { type: "station", id };
     g.userData.steam = steam;
+    g.userData.steam0 = steam;
     g.userData.dish = dish;
     return g;
   }
@@ -1974,7 +2487,11 @@ export function mountGame(canvas, host, bridge) {
     "#12A99F",
     "#FF5A5F",
     "#7DF09A",
+    "#2B2420",
+    "#9FE3FF",
   ].map((c) => new T3.MeshBasicMaterial({ color: c }));
+  const SMOKE = [6, 6, 2],
+    ICE = [7, 2, 7];
   for (let i = 0; i < 70; i++) {
     const m = new T3.Mesh(pGeo, pMats[i % pMats.length]);
     m.visible = false;
@@ -2175,6 +2692,16 @@ export function mountGame(canvas, host, bridge) {
   let custSeq = 0;
   function lookFor(opts) {
     const skin = pick(SKINS);
+    const type = CUSTOMER_TYPES[opts.type];
+    if (type && type.body && !opts.vip && !opts.guest)
+      return {
+        skin,
+        bodyMat: M(type.body, { roughness: 0.7 }),
+        accent: type.accent,
+        hat: type.hat,
+        vip: false,
+        scale: type.scale ? type.scale * rnd(0.97, 1.03) : rnd(0.92, 1.04),
+      };
     if (opts.guest)
       return {
         skin,
@@ -2214,9 +2741,20 @@ export function mountGame(canvas, host, bridge) {
     constructor(lane, order, o) {
       this.id = ++custSeq;
       this.lane = lane;
-      this.order = order.map((f) => ({ f, done: false }));
+      this.order = toItems(order, o.assembly);
       this.vip = !!o.vip;
       this.guest = !!o.guest;
+      this.type = o.type || "regular";
+      this.mood = o.mood || null;
+      this.traits = customerTraits(this.type, this.mood);
+      const first = pick(NAMES);
+      this.name = o.vip
+        ? "Chief " + first
+        : this.type === "alhaji"
+          ? "Alhaji " + first
+          : this.type === "odogwu"
+            ? "Odogwu " + first
+            : first;
       this.max = o.patience;
       this.p = this.max;
       this.speed = o.speed || 3.6;
@@ -2241,19 +2779,33 @@ export function mountGame(canvas, host, bridge) {
         Game.cfg.lanes >= 3 || this.order.length === 4
           ? 2
           : Math.min(this.order.length, 3);
-      this.el = bridge.bubble(this, cols, FOODS, () => Game.select(this));
+      this.el = bridge.bubble(this, cols, FOODS, MOODS, () =>
+        Game.select(this),
+      );
       this.items = [...this.el.querySelectorAll(".it")];
       this.patEl = this.el.querySelector(".pat b");
       this.sayEl = this.el.querySelector(".say");
       this.sayT = 0;
+      this.refreshItems();
     }
     needs(f) {
       return needsFood(this.state, this.order, f);
     }
+    blocks(f) {
+      return blockedFood(this.state, this.order, f);
+    }
     fill(f) {
       const { index, slot } = fillOrder(this.order, f);
       if (index >= 0) this.items[index].classList.add("done");
+      this.refreshItems();
       return slot;
+    }
+    // Toppings stay greyed out until the main on the plate has been dished.
+    refreshItems() {
+      const ready = baseReady(this.order);
+      this.order.forEach((o, i) =>
+        this.items[i].classList.toggle("wait", o.layer === 1 && !ready),
+      );
     }
     complete() {
       return orderComplete(this.order);
@@ -2318,7 +2870,8 @@ export function mountGame(canvas, host, bridge) {
       r.rotation.y += dr * Math.min(1, dt * 10);
       const ratio = this.p / this.max;
       if (this.state === "wait") {
-        this.p -= dt * Game.patienceRate();
+        // Waiting on food that has finished wears patience down faster.
+        this.p -= dt * Game.patienceRate() * (this.starved ? 1.4 : 1);
         if (ratio < 0.3) {
           if (!this.angry) {
             this.angry = true;
@@ -2392,6 +2945,140 @@ export function mountGame(canvas, host, bridge) {
       bridge.remove("bubble-" + this.id);
     }
   }
+  /* ================= HELPERS (hired staff behind the counter) ================= */
+  const HELPER_X = [-3.3, 3.3, -2.6, 2.6];
+  class Helper {
+    constructor(spec, slot) {
+      this.spec = spec;
+      this.home = HELPER_X[slot % HELPER_X.length];
+      this.tx = this.home;
+      this.t = spec.interval * rnd(0.4, 1);
+      this.anim = Math.random() * 5;
+      this.busy = 0;
+      const mat = new T3.MeshStandardMaterial({
+        map: ankaraTex([spec.a, spec.b, "#FFF4DE"], 1),
+        roughness: 0.7,
+      });
+      this.P = makePerson({
+        skin: SKINS[spec.skin],
+        bodyMat: mat,
+        accent: spec.b,
+        hat: spec.hat || "chef",
+        scale: 0.78,
+      });
+      this.root = this.P.root;
+      this.root.position.set(this.home, 0, 1.45);
+      this.root.visible = spec.role !== "rider";
+      world.add(this.root);
+      setFace(this.P, "happy");
+    }
+    // Each role does one job per beat; serving goes through the same path as the player.
+    act() {
+      const role = this.spec.role;
+      if (role === "server") {
+        const waiting = Game.customers
+          .filter((c) => c.state === "wait")
+          .sort((a, b) => a.p / a.max - b.p / b.max);
+        for (const c of waiting)
+          for (const it of nextNeeded(c.order)) {
+            const ck = Game.cookers[it.f];
+            if (ck && !hasPortion(ck)) continue;
+            if (ck) takePortion(ck);
+            const st = stations[it.f];
+            if (st) this.tx = clamp(st.position.x, -3.4, 3.4);
+            Game.deliver(c, it.f, this.root.position.clone().setY(1.4));
+            return true;
+          }
+        // Nobody at the counter needs anything: pack items for an order instead.
+        for (const o of Game.orders)
+          for (const it of o.items) {
+            if (!packNeeds(o, it.f)) continue;
+            const ck = Game.cookers[it.f];
+            if (ck && !hasPortion(ck)) continue;
+            if (ck) takePortion(ck);
+            Game.fillPack(o, it.f);
+            return true;
+          }
+      } else if (role === "rider") {
+        const o = Game.orders.find((x) => packComplete(x) && !x.packing);
+        if (
+          o &&
+          Game.riders.some((r) => r.id === this.spec.id && r.away <= 0)
+        ) {
+          Game.sendOrder(o.id, true);
+          return true;
+        }
+      } else if (role === "errand") {
+        for (const id in Game.cookers) {
+          const ck = Game.cookers[id];
+          if (FOODS[id].station === "cooler" && ck.stage === "raw") {
+            Game.tapCookerFor(id, true);
+            return true;
+          }
+        }
+      } else if (role === "cleaner") {
+        const lane = Game.dirty.findIndex((d, i) => d && i < Game.laneX.length);
+        if (lane >= 0 && Game.clearTable(lane, true)) {
+          this.tx = Game.laneX[lane];
+          return true;
+        }
+        if (Game.sink.plates >= 2 || (Game.sink.plates && lane < 0))
+          return Game.wash(true);
+      } else if (role === "cook") {
+        for (const id in Game.cookers) {
+          if (FOODS[id].station === "cooler") continue;
+          const ck = Game.cookers[id],
+            wanted =
+              Game.customers.some(
+                (c) =>
+                  (c.state === "wait" || c.state === "enter") &&
+                  c.order.some((o) => o.f === id && !o.done),
+              ) || Game.orders.some((o) => packNeeds(o, id));
+          if (ck.stage === "burnt" || (ck.stage === "raw" && wanted)) {
+            this.tx = clamp(stations[id].position.x, -3.4, 3.4);
+            Game.tapCookerFor(id, true);
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+    update(dt) {
+      this.anim += dt;
+      if (Game.state === "playing") {
+        this.t -= dt * (1 + 0.05 * Save.d.up.fast);
+        if (this.t <= 0) {
+          this.t = this.spec.interval;
+          if (this.act()) this.busy = 0.8;
+        }
+      }
+      if (this.busy > 0) {
+        this.busy -= dt;
+        if (this.busy <= 0) this.tx = this.home;
+      }
+      const P = this.P,
+        x = P.root.position.x,
+        nx = lerp(x, this.tx, Math.min(1, dt * 6));
+      P.root.position.x = nx;
+      const moving = Math.abs(this.tx - nx) > 0.05;
+      P.inner.position.y = moving
+        ? Math.abs(Math.sin(this.anim * 14)) * 0.07
+        : 0;
+      P.armR.rotation.x =
+        this.busy > 0
+          ? -1.1 + Math.sin(this.anim * 20) * 0.3
+          : lerp(P.armR.rotation.x, 0, dt * 6);
+      P.root.rotation.y = moving
+        ? this.tx > nx
+          ? 0.5
+          : -0.5
+        : Math.sin(this.anim * 0.9) * 0.1;
+    }
+    dispose() {
+      retainResources(this.root);
+      world.remove(this.root);
+    }
+  }
   class Stroller {
     constructor() {
       const side = Math.random() < 0.5 ? -1 : 1;
@@ -2446,9 +3133,16 @@ export function mountGame(canvas, host, bridge) {
       this.tt = setTimeout(() => t.classList.remove("show"), 2200);
     },
     coins() {
-      ["#menuCoins", "#mapCoins", "#shopCoins"].forEach(
-        (s) => ($(s).textContent = Save.d.coins.toLocaleString()),
+      ["#menuCoins", "#mapCoins", "#shopCoins", "#missionCoins"].forEach(
+        (s) => ($(s).textContent = fmtNaira(Save.d.coins)),
       );
+      $("#menuRep").textContent = Math.round(Save.d.reputation);
+      $("#repPill").title = "Reputation · " + TIERS[tierOf(Save.d)].name;
+      $("#growCoins").textContent = fmtNaira(Save.d.coins);
+      const n = claimable(Save.d).count,
+        b = $("#missionBadge");
+      b.hidden = !n;
+      b.textContent = n;
     },
     pop(el) {
       el.classList.remove("pop");
@@ -2462,24 +3156,24 @@ export function mountGame(canvas, host, bridge) {
     listen(d, "animationend", () => bridge.remove(id));
     setTimeout(() => bridge.remove(id), 1600);
   }
-  function coinBurst(x, y, n, targetSel, onFirst) {
+  function cashBurst(x, y, n, targetSel, onFirst) {
     const tgt = $(targetSel).getBoundingClientRect();
     const tx = tgt.left + tgt.width / 2,
       ty = tgt.top + tgt.height / 2;
     for (let i = 0; i < n; i++) {
-      const { id, element: c } = bridge.effect("coin", { x, y });
+      const { id, element: c } = bridge.effect("note", { x, y });
       const dx = rnd(-46, 46),
         dy = rnd(-60, -10);
       const a = c.animate(
         [
-          { transform: "translate(-50%,-50%) scale(.3)", opacity: 0 },
+          { transform: "translate(-50%,-50%) scale(.3) rotate(0)", opacity: 0 },
           {
-            transform: `translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px)) scale(1.15)`,
+            transform: `translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px)) scale(1.15) rotate(${dx * 2}deg)`,
             opacity: 1,
             offset: 0.3,
           },
           {
-            transform: `translate(calc(-50% + ${tx - x}px),calc(-50% + ${ty - y}px)) scale(.7)`,
+            transform: `translate(calc(-50% + ${tx - x}px),calc(-50% + ${ty - y}px)) scale(.7) rotate(-8deg)`,
             opacity: 1,
           },
         ],
@@ -2573,22 +3267,51 @@ export function mountGame(canvas, host, bridge) {
   }
 
   /* ================= GAME MANAGER ================= */
+  const WASH_TIME = 0.5;
+  const BOOST_BTN = { freeze: "#bFreeze", auto: "#bAuto", calm: "#bCalm" };
   const Game = {
     state: "menu",
     cfg: null,
     customers: [],
     strollers: [],
+    helpers: [],
     laneX: [0],
     selected: null,
     cooldown: {},
+    cookers: {},
+    dirty: [false, false, false],
+    plates: [null, null, null],
+    chips: [null, null, null],
+    sink: createSink(),
+    freezeT: 0,
+    orders: [],
+    riders: [],
+    packSel: null,
+    bikes: [],
     patienceRate() {
-      return 1;
+      return this.freezeT > 0 ? 0 : 1;
     },
     prepTime() {
       return Math.max(0.08, 0.32 - 0.045 * Save.d.up.fast);
     },
+    cookSpeed() {
+      return 1 + 0.08 * Save.d.up.fast;
+    },
+    track(ev, n) {
+      track(Save.d, ev, n, today());
+    },
+    // Reputation moves live during a shift and is saved at the end.
+    rep(delta) {
+      this.repNow = clampRep(this.repNow + delta);
+    },
+    staffOnDuty(role) {
+      return this.helpers.some((h) => h.spec.role === role);
+    },
     start(cfg) {
       this.clear();
+      ["ovReward", "ovDaily", "ovShop", "ovMissions"].forEach((id) =>
+        UI.close(id),
+      );
       this.cfg = cfg;
       buildEnv(cfg.ci);
       setupStations(cfg.foods);
@@ -2622,11 +3345,52 @@ export function mountGame(canvas, host, bridge) {
       this.dispScore = 0;
       this.dispCoins = 0;
       this.hintT = 0;
+      this.toolsT = 0;
+      this.freezeT = 0;
+      this.handActs = 0;
+      this.teaching =
+        cfg.tutorial || (!!cfg.teach && !Save.d.taught.includes(cfg.teach));
+      // Fried food starts raw. From the stock unlock, every pot, basin and
+      // cooler also holds a batch that finishes and must be cooked again.
+      this.cookers = {};
+      cfg.foods.forEach((f) => {
+        if (cfg.cooking && FOODS[f].cook)
+          this.cookers[f] = createCooker(FOODS[f].cook);
+        else if (cfg.stock && STOCK[FOODS[f].station])
+          this.cookers[f] = createCooker(STOCK[FOODS[f].station], true);
+      });
+      this.sink = createSink(4);
+      this.foodCost = 0;
+      this.packCost = 0;
+      this.riderFees = 0;
+      this.repStart = this.repNow = Save.d.reputation;
+      this.orders = [];
+      this.packSel = null;
+      this.orderT = cfg.online ? rnd(9, 14) : Infinity;
+      this.eventT = cfg.event
+        ? cfg.event === "random"
+          ? 60
+          : rnd(6, 10)
+        : Infinity;
+      this.eventsDone = this.eventsFailed = 0;
+      this.toldEvent = false;
+      this.starveT = 0;
+      this.bikes.forEach((b) => world.remove(b.o));
+      this.bikes = [];
       chefState.tx = 0;
       chefState.x = 0;
       buildFoodButtons(cfg.foods);
-      bridge.caption(cfg, Save.d.endlessBest);
+      this.helpers = STAFF.filter(
+        (s) => Save.d.staff.includes(s.id) && !Save.d.staffOff.includes(s.id),
+      ).map((s, i) => new Helper(s, i));
+      this.riders = createRiders(
+        this.helpers.filter((h) => h.spec.role === "rider").map((h) => h.spec),
+      );
+      this.renderOrders();
+      $("#notify").classList.remove("show");
+      bridge.caption(cfg, fmtNairaShort(Save.d.endlessBest));
       $("#hudTimer").hidden = !isFinite(this.time);
+      $("#btnWash").hidden = !cfg.dishes;
       const sb = $("#hudSbar").querySelectorAll("i");
       if (cfg.mode === "endless") {
         $("#hudSbar").parentElement.hidden = true;
@@ -2637,6 +3401,8 @@ export function mountGame(canvas, host, bridge) {
           sb[i].classList.remove("on");
         });
       }
+      this.syncStations();
+      this.updateTools();
       this.updateHUD(true);
       UI.show("scrGame");
       camMode("game");
@@ -2661,16 +3427,33 @@ export function mountGame(canvas, host, bridge) {
       this.customers = [];
       this.strollers.forEach((s) => s.dispose());
       this.strollers = [];
+      this.helpers.forEach((h) => h.dispose());
+      this.helpers = [];
       selRing.visible = false;
       flyers.forEach((f) => world.remove(f.obj));
       flyers.length = 0;
       trays.forEach((t, i) => this.clearTray(i));
+      for (let i = 0; i < 3; i++) this.clearDirty(i);
+      this.freezeT = 0;
+      $("#freezeFx").classList.remove("on");
+      $("#hand").hidden = true;
+      this.orders = [];
+      this.packSel = null;
+      this.bikes.forEach((b) => world.remove(b.o));
+      this.bikes = [];
+      this.renderOrders();
     },
     clearTray(i) {
       const t = trays[i];
       if (!t) return;
       t.userData.items.forEach((o) => t.remove(o));
       t.userData.items = [];
+    },
+    clearDirty(i) {
+      if (this.plates[i]) this.plates[i].parent?.remove(this.plates[i]);
+      if (this.chips[i]) bridge.remove("chip-" + i);
+      this.plates[i] = this.chips[i] = null;
+      this.dirty[i] = false;
     },
     diff() {
       // live difficulty for endless
@@ -2689,7 +3472,8 @@ export function mountGame(canvas, host, bridge) {
     spawn() {
       const c = this.diff();
       const free = [];
-      for (let i = 0; i < c.lanes; i++) if (!this.laneBusy[i]) free.push(i);
+      for (let i = 0; i < c.lanes; i++)
+        if (!this.laneBusy[i] && !this.dirty[i]) free.push(i);
       if (!free.length) return false;
       if (c.mode === "endless" && c.lanes === 3 && this.laneX.length < 3) {
         this.laneX = [-2.05, 0, 2.05];
@@ -2699,6 +3483,11 @@ export function mountGame(canvas, host, bridge) {
         });
       }
       const lane = pick(free);
+      const vip = Math.random() < c.vip && !c.tutorial,
+        guest = c.guests && !vip && Math.random() < 0.75,
+        type = vip || guest ? "regular" : pickCustomerType(c),
+        kind = CUSTOMER_TYPES[type],
+        mood = vip || guest ? null : pickMood(c);
       let k = c.imin;
       if (c.imax > c.imin)
         k =
@@ -2707,24 +3496,35 @@ export function mountGame(canvas, host, bridge) {
               ? c.imax
               : c.imin
             : ri(c.imin, c.imax);
-      k = Math.min(k, c.foods.length);
+      if (kind.extraItem) k++;
+      if (kind.maxItems) k = Math.min(k, kind.maxItems);
+      k = Math.min(k, c.foods.length, 4);
       if (c.tutorial && this.served < 2) k = 1;
-      const pool = c.foods.slice(),
+      let order;
+      if (c.assembly) order = buildOrder(c.foods, k, { likes: kind.likes });
+      else {
+        const pool = c.foods.slice();
         order = [];
-      for (let i = 0; i < k; i++)
-        order.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
-      const vip = Math.random() < c.vip && !c.tutorial;
-      const items = k;
+        for (let i = 0; i < k; i++)
+          order.push(
+            pool.splice(Math.floor(Math.random() * pool.length), 1)[0],
+          );
+      }
+      const traits = customerTraits(type, mood);
       const pat =
-        (c.patience + items * 2.6) *
+        (c.patience + order.length * 2.6) *
         (1 + 0.1 * Save.d.up.patience) *
         (vip ? 0.85 : 1) *
-        (c.tutorial ? 1.5 : 1);
+        (c.tutorial ? 1.5 : 1) *
+        traits.patience;
       const cu = new Customer(lane, order, {
         vip,
-        guest: c.guests && !vip && Math.random() < 0.75,
+        guest,
+        type,
+        mood,
+        assembly: c.assembly,
         patience: pat,
-        speed: c.fast ? 4.8 : 3.6,
+        speed: c.fast ? 4.8 : type === "okada" ? 4.4 : 3.6,
       });
       this.laneBusy[lane] = cu;
       this.customers.push(cu);
@@ -2736,6 +3536,7 @@ export function mountGame(canvas, host, bridge) {
       c.order.forEach((o) => {
         if (LINES[o.f]) pool = pool.concat(LINES[o.f], LINES[o.f]);
       });
+      if (LINES[c.type]) pool = pool.concat(LINES[c.type], LINES[c.type]);
       if (c.guest) pool = pool.concat(LINES.guest, LINES.guest);
       if (c.vip) pool = LINES.vip;
       c.say(pick(pool), 2);
@@ -2745,9 +3546,21 @@ export function mountGame(canvas, host, bridge) {
       this.selected = this.selected === c ? null : c;
       Sound.play("click");
     },
+    // A level's teaching hand retires after a few correct actions.
+    noteAction() {
+      if (!this.teaching || this.cfg.tutorial || ++this.handActs < 6) return;
+      this.teaching = false;
+      if (!Save.d.taught.includes(this.cfg.teach))
+        Save.d.taught.push(this.cfg.teach);
+    },
     tapFood(id, btn) {
       if (this.state !== "playing") return;
       btn = btn || document.querySelector(`.food[data-id="${id}"]`);
+      const ck = this.cookers[id];
+      if (ck && !hasPortion(ck)) {
+        this.tapCookerFor(id, false);
+        return;
+      }
       if ((this.cooldown[id] || 0) > 0) return;
       this.cooldown[id] = this.prepTime();
       if (btn) {
@@ -2763,6 +3576,7 @@ export function mountGame(canvas, host, bridge) {
         cd.style.height = "0";
       }
       Sound.play("tap");
+      Haptics.play("tap");
       const st = stations[id];
       if (st) {
         st.userData.bounce = 1;
@@ -2770,10 +3584,43 @@ export function mountGame(canvas, host, bridge) {
         chefState.stir = 0.3;
       }
       const cand = this.customers.filter((c) => c.needs(id));
+      const selPack = this.orders.find((o) => o.id === this.packSel);
+      const pack =
+        selPack && packNeeds(selPack, id)
+          ? selPack
+          : !cand.length && this.orders.find((o) => packNeeds(o, id));
+      if (pack && !cand.includes(this.selected)) {
+        if (ck) takePortion(ck);
+        this.fillPack(pack, id);
+        this.noteAction();
+        this.syncStations();
+        return;
+      }
       if (!cand.length) {
+        // Right food, wrong moment: the main has to go on the plate first.
+        const blocked = this.customers.find((c) => c.blocks(id));
+        if (blocked) {
+          Sound.play("wrong");
+          const main = blocked.order.find(
+            (o) => o.layer === 0 && !o.drink && !o.done,
+          );
+          blocked.wrongT = 0.4;
+          const sp = screenPos(
+            _v.set(blocked.root.position.x, 2.4, blocked.root.position.z),
+          );
+          floatText(
+            sp.x,
+            sp.y,
+            (main ? FOODS[main.f].short : "Main") + " first!",
+            "bad small",
+          );
+          return;
+        }
         this.mistakes++;
         this.combo = 0;
+        this.rep(REP.wrong);
         Sound.play("wrong");
+        Haptics.play("wrong");
         if (btn) {
           btn.classList.remove("wrong");
           void btn.offsetWidth;
@@ -2783,7 +3630,7 @@ export function mountGame(canvas, host, bridge) {
           .filter((c) => c.state === "wait")
           .sort((a, b) => a.p / a.max - b.p / b.max)[0];
         if (w) {
-          w.p = Math.max(0.5, w.p - w.max * 0.08);
+          w.p = Math.max(0.5, w.p - w.max * 0.08 * w.traits.wrong);
           w.say(pick(LINES.wrong), 1.4);
           w.wrongT = 0.5;
           const sp = screenPos(
@@ -2797,17 +3644,28 @@ export function mountGame(canvas, host, bridge) {
         chefReact("wow", 0.6);
         return;
       }
-      let c = cand.includes(this.selected)
+      const c = cand.includes(this.selected)
         ? this.selected
         : cand.sort((a, b) => a.p / a.max - b.p / b.max)[0];
+      if (ck) takePortion(ck);
+      this.deliver(
+        c,
+        id,
+        st
+          ? st.getWorldPosition(new T3.Vector3()).add(new T3.Vector3(0, 0.4, 0))
+          : null,
+      );
+      this.noteAction();
+      this.syncStations();
+    },
+    // Moves one item onto a customer's tray. Shared by the player, staff and Auto-Serve.
+    deliver(c, id, from) {
       const slot = c.fill(id);
       const n = c.order.length;
       const tray = trays[c.lane];
       const item = foodModel(id);
       item.scale.setScalar(n > 2 ? 0.5 : 0.6);
-      const from = st
-        ? st.getWorldPosition(new T3.Vector3()).add(new T3.Vector3(0, 0.4, 0))
-        : new T3.Vector3(0, 1.4, 2);
+      from = from || new T3.Vector3(0, 1.4, 2);
       const spacing = n > 2 ? 0.34 : 0.5;
       const local = new T3.Vector3((slot - (n - 1) / 2) * spacing, 0.04, 0);
       const to = tray.localToWorld(local.clone());
@@ -2826,6 +3684,7 @@ export function mountGame(canvas, host, bridge) {
         this.laneBusy[c.lane] = null;
         if (this.selected === c) this.selected = null;
       }
+      this.track("food:" + id);
       fly(item, from, to, 0.28, 0.9, (o) => {
         world.remove(o);
         o.position.copy(local);
@@ -2851,11 +3710,25 @@ export function mountGame(canvas, host, bridge) {
         tips: Save.d.up.tips,
         coinMult: this.cfg.coinMult,
       });
+      const big = CUSTOMER_TYPES[c.type].bigTip;
+      const tip = big
+        ? roundNaira(rnd(big[0], big[1]), 500)
+        : tipFor({
+            base,
+            patienceRatio: ratio,
+            tipFactor: c.traits.tip * repTipFactor(this.repNow),
+          });
+      this.rep(fast ? REP.serveFast : REP.serve);
+      if (big) setTimeout(() => c.say(pick(LINES.change), 1.6), 400);
       this.score += pts;
-      this.coinsEarned += coins;
+      this.coinsEarned += coins + tip;
       this.combo++;
       this.bestCombo = Math.max(this.bestCombo, this.combo);
       this.served++;
+      this.track("serve");
+      this.track("earn", coins + tip);
+      this.track("combo", this.combo);
+      if (tip) this.track("tip");
       c.state = "happy";
       c.st = 0;
       setFace(c.P, "happy");
@@ -2869,10 +3742,12 @@ export function mountGame(canvas, host, bridge) {
         fly(o, w, head, 0.25 + i * 0.05, 0.4, (ob) => world.remove(ob));
       });
       tray.userData.items = [];
+      if (this.cfg.dishes) this.leaveDirty(c.lane);
       Sound.play("serve");
+      Haptics.play("serve");
       chefReact("happy", 0.9);
       const sp = screenPos(_v.set(c.root.position.x, 2.6, c.root.position.z));
-      floatText(sp.x, sp.y, "+" + pts);
+      floatText(sp.x, sp.y, "+" + fmtNaira(pts));
       if (fast)
         setTimeout(
           () => floatText(sp.x, sp.y + 34, "FAST!", "green small"),
@@ -2880,10 +3755,21 @@ export function mountGame(canvas, host, bridge) {
         );
       if (c.vip)
         setTimeout(() => floatText(sp.x, sp.y + 60, "VIP x2", "small"), 220);
-      coinBurst(
+      if (tip)
+        setTimeout(
+          () =>
+            floatText(
+              sp.x,
+              sp.y + (c.vip ? 86 : 60),
+              "Tip " + fmtNaira(tip),
+              "green small",
+            ),
+          320,
+        );
+      cashBurst(
         sp.x,
         sp.y + 20,
-        Math.min(8, 3 + Math.floor(coins / 40)),
+        Math.min(8, 3 + Math.floor(coins / 1000)),
         "#hudCoins",
         () => {
           Sound.play("coin");
@@ -2901,8 +3787,16 @@ export function mountGame(canvas, host, bridge) {
         }
       }
       this.updateHUD();
-      if (this.cfg.mode !== "endless" && this.served >= this.cfg.goal)
-        this.finish(true);
+      this.checkGoal();
+    },
+    // The shop closes once the goal is met and no catering order is still open.
+    checkGoal() {
+      if (this.cfg.mode === "endless" || this.served < this.cfg.goal) return;
+      if (!this.orders.some((o) => o.kind === "event")) this.finish(true);
+      else if (!this.toldEvent) {
+        this.toldEvent = true;
+        this.notify("🍲", "Deliver the catering order to close for the day!");
+      }
     },
     onLost(c) {
       c.state = "sad";
@@ -2916,7 +3810,9 @@ export function mountGame(canvas, host, bridge) {
       this.lives--;
       this.lost++;
       this.combo = 0;
+      this.rep(REP.lost);
       Sound.play("lose");
+      Haptics.play("lost");
       const l = $("#hudLives");
       l.classList.remove("hit");
       void l.offsetWidth;
@@ -2927,12 +3823,507 @@ export function mountGame(canvas, host, bridge) {
       this.updateHUD();
       if (this.lives <= 0) this.finish(false, "lives");
     },
+    /* ---- cooking stages ---- */
+    tapCookerFor(id, byHelper) {
+      const ck = this.cookers[id],
+        st = stations[id],
+        r = tapCooker(ck),
+        sp = st && screenPos(st.getWorldPosition(new T3.Vector3()));
+      if (r === "start") {
+        // Ingredients are bought for the whole batch; the market errand haggles 20% off.
+        const cost = roundNaira(
+          FOODS[id].price *
+            ck.spec.batch *
+            FOOD_COST *
+            (this.staffOnDuty("errand") ? 0.8 : 1),
+          10,
+        );
+        this.foodCost += cost;
+        Sound.play("tap");
+        if (st) st.userData.bounce = 1;
+        if (!byHelper) {
+          Haptics.play("tap");
+          if (st) chefState.tx = clamp(st.position.x, -3, 3);
+          chefState.stir = ck.spec.time;
+          this.noteAction();
+          if (sp)
+            floatText(
+              sp.x,
+              sp.y - 40,
+              `${ck.spec.verb}ing… -${fmtNaira(cost)}`,
+              "small",
+            );
+        }
+      } else if (r === "busy") {
+        Sound.play("click");
+        if (sp)
+          floatText(
+            sp.x,
+            sp.y - 40,
+            `Still ${ck.spec.verb.toLowerCase()}ing!`,
+            "small",
+          );
+      } else if (r === "clear") {
+        Sound.play("place");
+        if (st)
+          burst(st.getWorldPosition(new T3.Vector3()).setY(1.6), 8, 0.8, SMOKE);
+        if (!byHelper) {
+          this.noteAction();
+          if (sp) floatText(sp.x, sp.y - 40, "Thrown away", "bad small");
+        }
+      }
+      this.syncStations();
+    },
+    onCooker(id, ev) {
+      const st = stations[id],
+        pos = st && st.getWorldPosition(new T3.Vector3());
+      if (ev === "ready") {
+        Sound.play("place");
+        if (pos) burst(pos.clone().setY(1.5), 8, 0.9, [0, 1, 2]);
+        this.track("cook");
+      } else if (ev === "burnt") {
+        Sound.play("wrong");
+        Haptics.play("burnt");
+        if (pos) {
+          burst(pos.clone().setY(1.5), 14, 0.7, SMOKE);
+          const sp = screenPos(pos);
+          floatText(sp.x, sp.y - 40, "Burnt!", "bad small");
+        }
+      }
+      this.syncStations();
+    },
+    // Mirrors each pan's stage onto its food button and 3D station.
+    syncStations() {
+      for (const id in this.cookers) {
+        const ck = this.cookers[id],
+          btn = $(`.food[data-id="${id}"]`),
+          st = stations[id];
+        if (btn) {
+          const k = cookerProgress(ck);
+          btn.dataset.stage = ck.stage;
+          btn.style.setProperty("--k", k.toFixed(3));
+          btn.classList.toggle(
+            "hot",
+            ck.stage === "ready" && ck.spec.hold !== Infinity && k < 0.35,
+          );
+          btn.querySelector(".lbl").textContent =
+            ck.stage === "raw"
+              ? ck.spec.hold === Infinity
+                ? "Finished!"
+                : "Tap: " + ck.spec.verb
+              : ck.stage === "cooking"
+                ? ck.spec.verb + "ing"
+                : ck.stage === "burnt"
+                  ? "Burnt!"
+                  : "";
+          btn.querySelector(".stock").textContent = "x" + ck.stock;
+          btn.classList.toggle(
+            "low",
+            ck.stage === "ready" && ck.spec.hold === Infinity && ck.stock <= 2,
+          );
+        }
+        if (st) {
+          st.userData.dish.visible = ck.stage === "ready";
+          if (st.userData.char) st.userData.char.visible = ck.stage === "burnt";
+          st.userData.steam =
+            ck.stage === "cooking" || ck.stage === "ready"
+              ? st.userData.steam0
+              : [];
+        }
+      }
+    },
+    /* ---- online and catering orders ---- */
+    renderOrders() {
+      bridge.orders({
+        orders: this.orders,
+        foods: FOODS,
+        events: EVENTS,
+        art: ART,
+        selected: this.packSel,
+        select: (id) => {
+          if (this.state !== "playing") return;
+          this.packSel = this.packSel === id ? null : id;
+          this.selected = null;
+          Sound.play("click");
+          this.renderOrders();
+        },
+        send: (id) => this.sendOrder(id),
+      });
+      $("#orders").classList.toggle("has", this.orders.length > 0);
+    },
+    notify(icon, text) {
+      const n = $("#notify");
+      n.textContent = icon + " " + text;
+      n.classList.remove("show");
+      void n.offsetWidth;
+      n.classList.add("show");
+      Sound.play("arrive");
+      Haptics.play("serve");
+    },
+    addOrder(o) {
+      this.orders.push(o);
+      if (o.kind === "event") {
+        const ev = EVENTS[o.event];
+        this.notify(
+          ev.icon,
+          `${ev.name} order! ${portions(o)} portions for ${o.where}`,
+        );
+      } else this.notify("📱", `Online order from ${o.who} in ${o.where}`);
+      this.renderOrders();
+    },
+    fillPack(o, id) {
+      packFill(o, id);
+      this.track("food:" + id);
+      Sound.play("place");
+      const st = stations[id];
+      if (st) {
+        st.userData.bounce = 1;
+        burst(st.getWorldPosition(new T3.Vector3()).setY(1.5), 5, 0.6, [0, 2]);
+      }
+      if (packComplete(o) && this.packSel === o.id) this.packSel = null;
+      this.renderOrders();
+    },
+    // Packs a finished order (₦150 per pack/cooler) and hands it to a rider.
+    sendOrder(id, byRider) {
+      const o = this.orders.find((x) => x.id === id);
+      if (!o || o.packing || !packComplete(o) || this.state !== "playing")
+        return;
+      o.packing = 1;
+      this.renderOrders();
+      Sound.play("click");
+      setTimeout(
+        () => {
+          if (!this.orders.includes(o) || this.state !== "playing") return;
+          const { rider, fee, trip } = dispatch(this.riders),
+            value = orderValue(o),
+            packs = packsFor(o) * PACK_COST;
+          this.packCost += packs;
+          this.riderFees += fee;
+          this.coinsEarned += value;
+          this.score += value;
+          this.served++;
+          this.track("serve");
+          this.track("earn", value);
+          this.rep(o.kind === "event" ? REP.eventDone : REP.delivered);
+          if (o.kind === "event") this.eventsDone++;
+          this.orders.splice(this.orders.indexOf(o), 1);
+          this.renderOrders();
+          this.rideOut(trip);
+          Sound.play("serve");
+          comboText(o.kind === "event" ? "CATERING DELIVERED!" : "DELIVERED!");
+          const r = $("#orders").getBoundingClientRect();
+          floatText(
+            r.left + 80,
+            r.top - 10,
+            `+${fmtNaira(value)}${fee ? ` · rider -${fmtNaira(fee)}` : ""}`,
+            "green small",
+          );
+          if (!rider && !byRider && !this.toldOnCall) {
+            this.toldOnCall = true;
+            UI.toast(
+              "No dispatch rider on duty, so an outside rider was called. Hire Emeka to save the fee",
+            );
+          }
+          this.updateHUD();
+          this.checkGoal();
+        },
+        o.kind === "event" ? 1400 : 800,
+      );
+    },
+    rideOut(trip) {
+      const g = new T3.Group();
+      const bike = okada(g);
+      bike.rotation.y = 0;
+      g.position.set(3.6, 0, STREET_Z - 0.6);
+      world.add(g);
+      this.bikes.push({ o: g, t: 0, trip });
+    },
+    updateOrders(dt) {
+      tickRiders(this.riders, dt);
+      for (let i = this.bikes.length - 1; i >= 0; i--) {
+        const b = this.bikes[i];
+        b.t += dt;
+        b.o.position.x = 3.6 + b.t * b.t * 3;
+        b.o.position.y = Math.abs(Math.sin(b.t * 18)) * 0.03;
+        if (b.o.position.x > 18) {
+          world.remove(b.o);
+          this.bikes.splice(i, 1);
+        }
+      }
+      for (const o of tickOrders(this.orders, dt)) {
+        this.orders.splice(this.orders.indexOf(o), 1);
+        if (this.packSel === o.id) this.packSel = null;
+        this.rep(o.kind === "event" ? REP.eventFailed : REP.late);
+        if (o.kind === "event") {
+          this.eventsFailed++;
+          setTimeout(() => this.state === "playing" && this.checkGoal(), 50);
+        }
+        Sound.play("lose");
+        UI.toast(
+          o.kind === "event"
+            ? `${EVENTS[o.event].name} cancelled. Your name don spoil small.`
+            : `${o.who} cancelled the online order. Too slow!`,
+        );
+        this.renderOrders();
+      }
+      for (const o of this.orders) {
+        const bar = $(`[data-order="${o.id}"] .otime b`);
+        if (bar) {
+          const k = Math.max(0, o.t / o.max);
+          bar.style.width = (k * 100).toFixed(1) + "%";
+          bar.style.background =
+            k > 0.5 ? "#2FA34F" : k > 0.25 ? "#FFB020" : "#E5343A";
+        }
+      }
+      const c = this.cfg,
+        open = this.orders.filter((o) => o.kind === "online").length,
+        budget = c.mode === "endless" || this.served + this.pending() < c.goal;
+      this.orderT -= dt;
+      if (this.orderT <= 0) {
+        this.orderT = rnd(14, 22) * spawnFactor(this.repNow);
+        if (open < 2 && budget) this.addOrder(makeOnlineOrder(c.foods));
+      }
+      this.eventT -= dt;
+      if (this.eventT <= 0) {
+        this.eventT = c.event === "random" ? rnd(80, 120) : Infinity;
+        if (budget || c.mode === "endless") {
+          const id = c.event === "random" ? pick(Object.keys(EVENTS)) : c.event;
+          this.addOrder(makeEventOrder(id, c.foods));
+        }
+      }
+    },
+    pending() {
+      return (
+        this.orders.length +
+        this.customers.filter((x) => x.state === "enter" || x.state === "wait")
+          .length
+      );
+    },
+    // Customers waiting only on finished food complain and lose patience faster.
+    checkStarving(dt) {
+      this.starveT -= dt;
+      const check = this.starveT <= 0;
+      if (check) this.starveT = 0.5;
+      for (const c of this.customers) {
+        if (c.state !== "wait") {
+          c.starved = false;
+          continue;
+        }
+        const need = nextNeeded(c.order);
+        c.starved =
+          need.length > 0 &&
+          need.every((it) => {
+            const ck = this.cookers[it.f];
+            return ck && ck.stage !== "ready";
+          });
+        if (
+          c.starved &&
+          check &&
+          (c.complainT = (c.complainT || 0) - 0.5) <= 0
+        ) {
+          c.complainT = 5;
+          c.say(pick(LINES.complain), 1.8);
+          this.rep(REP.complain);
+        }
+      }
+    },
+    /* ---- tables and the sink ---- */
+    leaveDirty(lane) {
+      const p = dirtyPlate();
+      p.scale.setScalar(0.9);
+      p.position.set(0, 0.04, 0);
+      trays[lane].add(p);
+      this.plates[lane] = p;
+      this.dirty[lane] = true;
+      this.chips[lane] = bridge.chip("chip-" + lane, () =>
+        this.clearTable(lane),
+      );
+    },
+    clearTable(lane, byHelper) {
+      if (!this.dirty[lane] || this.state !== "playing") return false;
+      if (sinkFull(this.sink)) {
+        if (!byHelper) {
+          Sound.play("wrong");
+          UI.toast("Sink full! Wash the plates first");
+          UI.pop($("#btnWash"));
+        }
+        return false;
+      }
+      addPlate(this.sink);
+      const p = this.plates[lane],
+        w = p.getWorldPosition(new T3.Vector3());
+      p.parent.remove(p);
+      fly(p, w, new T3.Vector3(-4.6, 1.2, 2.2), 0.35, 0.8, (o) =>
+        world.remove(o),
+      );
+      this.plates[lane] = null;
+      this.clearDirty(lane);
+      Sound.play("place");
+      if (!byHelper) {
+        Haptics.play("tap");
+        this.noteAction();
+      }
+      this.updateTools();
+      return true;
+    },
+    wash(byHelper) {
+      if (this.state !== "playing") return false;
+      if (!startWash(this.sink)) {
+        if (!byHelper && !this.sink.plates) UI.toast("No plates to wash yet");
+        return false;
+      }
+      Sound.play("click");
+      if (!byHelper) this.noteAction();
+      this.updateTools();
+      return true;
+    },
+    /* ---- boosters ---- */
+    fireBooster(id) {
+      if (this.state !== "playing") return;
+      if (!(Save.d.boosters[id] > 0)) {
+        Sound.play("wrong");
+        UI.toast("No boosters left. Buy more in the shop!");
+        return;
+      }
+      const waiting = this.customers
+        .filter((c) => c.state === "wait")
+        .sort((a, b) => a.p / a.max - b.p / b.max);
+      if (id !== "freeze" && !waiting.length) {
+        UI.toast("Nobody is waiting yet");
+        return;
+      }
+      if (id === "freeze" && this.freezeT > 0) return;
+      Save.d.boosters[id]--;
+      this.track("booster");
+      Sound.play("combo");
+      Haptics.play("serve");
+      if (id === "freeze") {
+        this.freezeT = BOOSTERS.find((b) => b.id === "freeze").duration;
+        $("#freezeFx").classList.add("on");
+        comboText("FREEZE!");
+        this.customers.forEach((c) =>
+          burst(c.root.position.clone().setY(2), 6, 0.8, ICE),
+        );
+      } else if (id === "auto") {
+        const c = waiting[0];
+        for (let guard = 0; c.state === "wait" && guard < 8; guard++) {
+          const next = nextNeeded(c.order)[0];
+          if (!next) break;
+          const st = stations[next.f];
+          this.deliver(
+            c,
+            next.f,
+            st && st.getWorldPosition(new T3.Vector3()).setY(1.4),
+          );
+        }
+        comboText("AUTO-SERVE!");
+      } else {
+        waiting.forEach((c) => {
+          c.p = c.max;
+          const sp = screenPos(
+            _v.set(c.root.position.x, 2.4, c.root.position.z),
+          );
+          floatText(sp.x, sp.y, "Patience full!", "green small");
+        });
+        comboText("PATIENCE BOOST!");
+      }
+      this.updateTools();
+    },
+    updateTools() {
+      if (this.cfg?.dishes) {
+        const s = this.sink;
+        $("#washTxt").textContent = s.washing
+          ? "…"
+          : `${s.plates}/${s.capacity}`;
+        $("#btnWash").classList.toggle("full", sinkFull(s));
+        $("#washBar").style.width = s.washing
+          ? Math.min(100, (s.washing / WASH_TIME) * 100).toFixed(0) + "%"
+          : "0";
+      }
+      BOOSTERS.forEach((b) => {
+        const el = $(BOOST_BTN[b.id]),
+          n = Save.d.boosters[b.id] || 0;
+        el.querySelector("b").textContent = n;
+        el.classList.toggle("empty", !n);
+      });
+      $("#bFreeze").classList.toggle("active", this.freezeT > 0);
+    },
+    wageBill() {
+      return this.helpers.reduce((s, h) => s + h.spec.wage, 0);
+    },
+    // Settles the shift: costs and salaries are paid from the takings, then
+    // savings. Unpaid staff get a strike and quit at the limit.
+    settle(sales, extra) {
+      const branches = branchIncome(Save.d),
+        costs = this.foodCost + this.packCost + this.riderFees,
+        net = sales + extra + branches - costs;
+      const pay = payroll(Save.d, STAFF, Save.d.coins + net);
+      Save.d.coins = Math.max(0, Save.d.coins + net - pay.paid);
+      const repBefore = this.repStart;
+      Save.d.reputation = Math.round(this.repNow * 10) / 10;
+      const rows = [];
+      if (this.foodCost)
+        rows.push({
+          label: "Ingredients",
+          value: "-" + fmtNaira(this.foodCost),
+          cls: "neg",
+        });
+      if (this.packCost)
+        rows.push({
+          label: "Takeaway packs",
+          value: "-" + fmtNaira(this.packCost),
+          cls: "neg",
+        });
+      if (this.riderFees)
+        rows.push({
+          label: "Outside riders",
+          value: "-" + fmtNaira(this.riderFees),
+          cls: "neg",
+        });
+      if (pay.bill)
+        rows.push({
+          label: "Staff salaries",
+          value: "-" + fmtNaira(pay.paid),
+          cls: "neg",
+        });
+      if (branches)
+        rows.push({
+          label: "Branch income",
+          value: "+" + fmtNaira(branches),
+          cls: "pos",
+        });
+      const dRep = Math.round((Save.d.reputation - repBefore) * 10) / 10;
+      rows.push({
+        label: "Reputation",
+        value: `★ ${Math.round(Save.d.reputation)} (${dRep >= 0 ? "+" : ""}${dRep})`,
+        cls: dRep >= 0 ? "pos" : "neg",
+      });
+      const name = (id) => STAFF.find((x) => x.id === id).name;
+      pay.unpaid
+        .filter((id) => !pay.quit.includes(id))
+        .forEach((id) =>
+          rows.push({
+            label: `${name(id)} not paid`,
+            value: `${Save.d.unpaid[id]}/${UNPAID_LIMIT}`,
+            cls: "warn",
+          }),
+        );
+      pay.quit.forEach((id) =>
+        rows.push({
+          label: `${name(id)} quit: unpaid`,
+          value: "Gone",
+          cls: "warn",
+        }),
+      );
+      return { net: net - pay.paid, rows, quit: pay.quit };
+    },
     finish(won, why) {
       if (this.state !== "playing") return;
       this.state = "ending";
       this.endT = won ? 1.3 : 1.1;
       this.won = won;
       this.why = why;
+      $("#hand").hidden = true;
       if (won) {
         banner("Well Done!", "Kitchen don close for today", "", false);
       } else if (this.cfg.mode === "endless") {
@@ -2950,21 +4341,24 @@ export function mountGame(canvas, host, bridge) {
     showEnd() {
       this.state = "over";
       const cfg = this.cfg;
+      this.orders = [];
+      this.renderOrders();
       if (cfg.mode === "endless") {
-        const coins = Math.round(this.coinsEarned * 0.6);
-        Save.d.coins += coins;
+        const shift = this.settle(roundNaira(this.coinsEarned * 0.6), 0),
+          coins = shift.net;
+        bridge.ledger("winLedger", shift.rows);
         const nb = this.score > Save.d.endlessBest;
         if (nb) Save.d.endlessBest = this.score;
         Save.save();
         $("#winTitle").textContent = nb ? "New Best!" : "Rush Over!";
         $("#winSub").textContent =
-          `You served ${this.served} customers. Personal best: ${Save.d.endlessBest}`;
+          `You served ${this.served} customers. Personal best: ${fmtNaira(Save.d.endlessBest)}`;
         document
           .querySelectorAll("#ovWin .bigstar")
           .forEach((s) => s.classList.remove("on"));
         $("#ovWin .bigstars").hidden = true;
-        $("#winScore").textContent = this.score;
-        $("#winCoins").textContent = coins;
+        $("#winScore").textContent = fmtNaira(this.score);
+        $("#winCoins").textContent = fmtNaira(coins);
         $("#winL3").textContent = "Best combo";
         $("#winCombo").textContent = "x" + this.bestCombo;
         $("#winNext").hidden = true;
@@ -2974,7 +4368,7 @@ export function mountGame(canvas, host, bridge) {
         return;
       }
       if (this.won) {
-        const timeBonus = isFinite(this.time) ? Math.floor(this.time) * 3 : 0;
+        const timeBonus = isFinite(this.time) ? Math.floor(this.time) * 50 : 0;
         this.score += timeBonus;
         this.coinsEarned += timeBonus;
         let stars = 1;
@@ -2987,12 +4381,15 @@ export function mountGame(canvas, host, bridge) {
           Save.d.best[k] = Math.max(Save.d.best[k] || 0, this.score);
           if (Save.d.unlocked <= k) Save.d.unlocked = Math.min(51, k + 1);
         } else if (cfg.mode === "daily" && Save.d.dailyDone !== today()) {
-          bonus = 250;
+          bonus = 6000;
           Save.d.dailyDone = today();
         }
-        const total = this.coinsEarned + bonus;
-        Save.d.coins += total;
+        const shift = this.settle(this.coinsEarned, bonus),
+          total = shift.net;
+        bridge.ledger("winLedger", shift.rows);
         Save.d.tutorialDone = true;
+        this.track("win");
+        if (!this.lost) this.track("perfect");
         Save.save();
         $("#winTitle").textContent =
           cfg.mode === "daily"
@@ -3007,13 +4404,13 @@ export function mountGame(canvas, host, bridge) {
             "Ah! Na correct food be this!",
             "Mama Put no dey disappoint!",
           ]) +
-          (timeBonus ? ` Time bonus +${timeBonus}` : "") +
-          (bonus ? ` · Daily bonus +${bonus}` : "");
+          (timeBonus ? ` Time bonus +${fmtNaira(timeBonus)}` : "") +
+          (bonus ? ` · Daily bonus +${fmtNaira(bonus)}` : "");
         $("#ovWin .bigstars").hidden = false;
         const st = document.querySelectorAll("#ovWin .bigstar");
         st.forEach((s) => s.classList.remove("on"));
-        $("#winScore").textContent = "0";
-        $("#winCoins").textContent = "0";
+        $("#winScore").textContent = fmtNaira(0);
+        $("#winCoins").textContent = fmtNaira(0);
         $("#winL3").textContent = "Best combo";
         $("#winCombo").textContent = "x" + this.bestCombo;
         $("#winNext").hidden = cfg.mode !== "level";
@@ -3021,6 +4418,7 @@ export function mountGame(canvas, host, bridge) {
           cfg.n >= 50 ? "Endless!" : "Next";
         UI.open("ovWin");
         Sound.play("win");
+        Haptics.play("win");
         confetti(200);
         for (let i = 0; i < stars; i++)
           setTimeout(
@@ -3044,9 +4442,20 @@ export function mountGame(canvas, host, bridge) {
             },
             500 + i * 420,
           );
-        countUp($("#winScore"), this.score, 900);
-        countUp($("#winCoins"), total, 1100);
+        countUp($("#winScore"), this.score, 900, fmtNaira);
+        countUp($("#winCoins"), total, 1100, fmtNaira);
       } else {
+        // Customers who were served still paid; the bills still come due.
+        const shift = this.settle(this.coinsEarned, 0);
+        bridge.ledger("failLedger", [
+          { label: "Sales", value: fmtNaira(this.coinsEarned) },
+          ...shift.rows,
+          {
+            label: "Cash in hand",
+            value: (shift.net < 0 ? "-" : "") + fmtNaira(Math.abs(shift.net)),
+            cls: shift.net < 0 ? "neg" : "pos",
+          },
+        ]);
         Save.save();
         $("#failTitle").textContent =
           this.why === "time" ? "Time Don Finish!" : "Ah! Customers Vex!";
@@ -3085,7 +4494,13 @@ export function mountGame(canvas, host, bridge) {
       }
       if (this.state === "playing") {
         for (const k in this.cooldown) this.cooldown[k] -= dt;
-        if (isFinite(this.time)) {
+        if (this.freezeT > 0) {
+          this.freezeT -= dt;
+          if (this.freezeT <= 0) {
+            $("#freezeFx").classList.remove("on");
+            this.updateTools();
+          }
+        } else if (isFinite(this.time)) {
           this.time -= dt;
           if (this.time <= 10 && Math.ceil(this.time) !== this.lastTick) {
             this.lastTick = Math.ceil(this.time);
@@ -3096,18 +4511,33 @@ export function mountGame(canvas, host, bridge) {
             this.finish(false, "time");
           }
         }
+        for (const id in this.cookers) {
+          const ev = tickCooker(this.cookers[id], dt, this.cookSpeed());
+          if (ev) this.onCooker(id, ev);
+        }
+        this.updateOrders(dt);
+        this.checkStarving(dt);
+        const washed = tickSink(this.sink, dt, WASH_TIME);
+        if (washed) {
+          Sound.play("place");
+          this.track("wash", washed);
+        }
+        this.toolsT -= dt;
+        if (this.toolsT <= 0) {
+          this.toolsT = 0.1;
+          this.syncStations();
+          this.updateTools();
+          this.updateHand();
+        }
         this.spawnT -= dt;
-        const c = this.cfg,
-          active = this.customers.filter(
-            (x) => x.state === "enter" || x.state === "wait",
-          ).length;
+        const c = this.cfg;
         if (
           this.spawnT <= 0 &&
-          (c.mode === "endless" || this.served + active < c.goal)
+          (c.mode === "endless" || this.served + this.pending() < c.goal)
         ) {
           if (this.spawn()) {
             const g = this.diff().gap;
-            this.spawnT = rnd(g[0], g[1]);
+            this.spawnT = rnd(g[0], g[1]) * spawnFactor(this.repNow);
           } else this.spawnT = 0.25;
         }
         this.hintT -= dt;
@@ -3133,6 +4563,7 @@ export function mountGame(canvas, host, bridge) {
             this.customers.splice(i, 1);
           }
         }
+        this.helpers.forEach((h) => h.update(dt));
         this.updateHUD();
       }
       if (this.selected && this.selected.state === "wait") {
@@ -3152,12 +4583,47 @@ export function mountGame(canvas, host, bridge) {
       const w = this.customers
         .filter((c) => c.state === "wait")
         .sort((a, b) => a.p / a.max - b.p / b.max)[0];
-      const need = w ? w.order.filter((o) => !o.done).map((o) => o.f) : [];
+      const need = w ? nextNeeded(w.order).map((o) => o.f) : [];
       document
         .querySelectorAll(".food")
         .forEach((b) =>
           b.classList.toggle("hint", need.includes(b.dataset.id)),
         );
+    },
+    // Pointing hand for first-time players and for each newly unlocked mechanic.
+    updateHand() {
+      const hand = $("#hand");
+      let el = null;
+      if (this.teaching) {
+        const lane = this.dirty.findIndex(Boolean),
+          w = this.customers
+            .filter((c) => c.state === "wait")
+            .sort((a, b) => a.p / a.max - b.p / b.max)[0],
+          need = w && nextNeeded(w.order)[0];
+        const finished = Object.keys(this.cookers).find(
+            (id) =>
+              this.cookers[id].stage === "raw" ||
+              this.cookers[id].stage === "burnt",
+          ),
+          order = this.orders[0];
+        if (this.cfg.dishes && sinkFull(this.sink)) el = $("#btnWash");
+        else if (lane >= 0 && this.chips[lane]) el = this.chips[lane];
+        else if (order && packComplete(order))
+          el = $(`[data-order="${order.id}"] .osend`);
+        else if (need) el = $(`.food[data-id="${need.f}"]`);
+        else if (order) {
+          const it = order.items.find((x) => x.got < x.need);
+          el = it && $(`.food[data-id="${it.f}"]`);
+        } else if (finished && this.cfg.teach === "stock")
+          el = $(`.food[data-id="${finished}"]`);
+      }
+      if (!el) {
+        hand.hidden = true;
+        return;
+      }
+      const r = el.getBoundingClientRect();
+      hand.hidden = false;
+      hand.style.transform = `translate(${(r.left + r.width * 0.5).toFixed(0)}px,${(r.top + r.height * 0.5).toFixed(0)}px)`;
     },
     updateHUD(force) {
       const c = this.cfg;
@@ -3172,8 +4638,8 @@ export function mountGame(canvas, host, bridge) {
         this.dispScore = this.score;
       if (Math.abs(this.dispCoins - this.coinsEarned) < 1)
         this.dispCoins = this.coinsEarned;
-      $("#hudScore").textContent = Math.round(this.dispScore);
-      $("#hudCoins").textContent = Math.round(this.dispCoins);
+      $("#hudScore").textContent = fmtNairaShort(this.dispScore);
+      $("#hudCoins").textContent = fmtNairaShort(this.dispCoins);
       const now = performance.now();
       if (!force && now - (this.hudAt || 0) < 100) return;
       this.hudAt = now;
@@ -3181,7 +4647,7 @@ export function mountGame(canvas, host, bridge) {
         $("#hudProg").style.width =
           Math.min(100, (this.served % 10) * 10) + "%";
         $("#hudProgTxt").textContent =
-          `${this.served} served · score ${this.score}`;
+          `${this.served} served · ${fmtNairaShort(this.score)}`;
       } else {
         $("#hudProg").style.width =
           Math.min(100, (this.served / c.goal) * 100) + "%";
@@ -3203,13 +4669,11 @@ export function mountGame(canvas, host, bridge) {
         .forEach((h, i) => h.classList.toggle("off", i >= this.lives));
     },
   };
-  function countUp(el, to, dur) {
+  function countUp(el, to, dur, fmt = (v) => v.toLocaleString()) {
     const t0 = performance.now();
     const f = (now) => {
       const k = Math.min(1, (now - t0) / dur);
-      el.textContent = Math.round(
-        to * (1 - Math.pow(1 - k, 3)),
-      ).toLocaleString();
+      el.textContent = fmt(Math.round(to * (1 - Math.pow(1 - k, 3))));
       if (k < 1) requestAnimationFrame(f);
     };
     requestAnimationFrame(f);
@@ -3226,7 +4690,8 @@ export function mountGame(canvas, host, bridge) {
   const ray = new T3.Raycaster(),
     ndc = new T3.Vector2();
   listen(canvas, "pointerdown", (e) => {
-    if (Game.state !== "playing") return;
+    // A second finger is a pinch, not a tap.
+    if (Game.state !== "playing" || e.isPrimary === false) return;
     const r = canvas.getBoundingClientRect();
     ndc.set(
       ((e.clientX - r.left) / r.width) * 2 - 1,
@@ -3236,6 +4701,7 @@ export function mountGame(canvas, host, bridge) {
     const objs = [
       ...stationGroup.children,
       ...Game.customers.map((c) => c.root),
+      ...trays.filter((t, i) => Game.dirty[i]),
     ];
     const hits = ray.intersectObjects(objs, true);
     for (const h of hits) {
@@ -3244,6 +4710,7 @@ export function mountGame(canvas, host, bridge) {
       if (o) {
         const p = o.userData.pick;
         if (p.type === "station") Game.tapFood(p.id);
+        else if (p.type === "tray") Game.clearTable(p.lane);
         else Game.select(p.c);
         break;
       }
@@ -3255,6 +4722,8 @@ export function mountGame(canvas, host, bridge) {
       if (Game.state === "paused") Game.resume();
       else Game.pause();
     }
+    if (e.target.closest?.("textarea")) return;
+    if ((e.key === "w" || e.key === "W") && Game.cfg?.dishes) Game.wash();
     const i = KEYS.indexOf(e.key);
     if (i >= 0 && Game.cfg && Game.cfg.foods[i] && Game.state === "playing") {
       Game.tapFood(Game.cfg.foods[i]);
@@ -3287,6 +4756,8 @@ export function mountGame(canvas, host, bridge) {
     tz: 0.2,
     offY: 0,
     tgt: { dist: 14, el: 0.72, yaw: 0, offY: 0, ty: 1.1, tz: 0.2 },
+    zoom: 1,
+    z: 1,
   };
   function camMode(m) {
     cam.mode = m;
@@ -3302,6 +4773,8 @@ export function mountGame(canvas, host, bridge) {
     if (cam.mode === "game") {
       hudH = $("#hudTop").offsetHeight + 10;
       btnH = $("#foodBar").offsetHeight;
+      $("#scrGame").style.setProperty("--hudH", hudH + "px");
+      $("#scrGame").style.setProperty("--barH", btnH + "px");
       sw = 7.6;
       sh = 6.2;
     } else {
@@ -3337,11 +4810,13 @@ export function mountGame(canvas, host, bridge) {
     const H = innerHeight,
       W = innerWidth;
     camera.setViewOffset(W, H, 0, cam.offY, W, H);
-    const ce = Math.cos(cam.el);
+    cam.z = lerp(cam.z, cam.zoom, k);
+    const ce = Math.cos(cam.el),
+      dist = cam.dist * cam.z;
     camera.position.set(
-      Math.sin(cam.yaw) * ce * cam.dist,
-      cam.ty + Math.sin(cam.el) * cam.dist,
-      cam.tz + Math.cos(cam.yaw) * ce * cam.dist,
+      Math.sin(cam.yaw) * ce * dist,
+      cam.ty + Math.sin(cam.el) * dist,
+      cam.tz + Math.cos(cam.yaw) * ce * dist,
     );
     camera.lookAt(0, cam.ty, cam.tz);
     if (shake > 0 && !REDUCED) {
@@ -3354,6 +4829,43 @@ export function mountGame(canvas, host, bridge) {
     fitCamera();
   });
   listen(window, "orientationchange", () => setTimeout(fitCamera, 250));
+  // Zoom: buttons on the rail, mouse wheel, or two-finger pinch on the scene.
+  const ZOOM = [0.6, 1.5];
+  const setZoom = (z) => (cam.zoom = clamp(z, ZOOM[0], ZOOM[1]));
+  listen(
+    canvas,
+    "wheel",
+    (e) => {
+      e.preventDefault();
+      setZoom(cam.zoom * (e.deltaY > 0 ? 1.08 : 0.93));
+    },
+    { passive: false },
+  );
+  const touches = new Map();
+  let pinch0 = 0,
+    zoom0 = 1;
+  const spread = () => {
+    const [a, b] = [...touches.values()];
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  };
+  listen(canvas, "pointerdown", (e) => {
+    touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (touches.size === 2) {
+      pinch0 = spread();
+      zoom0 = cam.zoom;
+    }
+  });
+  listen(window, "pointermove", (e) => {
+    if (!touches.has(e.pointerId)) return;
+    touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (touches.size === 2 && pinch0) setZoom(zoom0 * (pinch0 / spread()));
+  });
+  const lift = (e) => {
+    touches.delete(e.pointerId);
+    if (touches.size < 2) pinch0 = 0;
+  };
+  listen(window, "pointerup", lift);
+  listen(window, "pointercancel", lift);
 
   /* ================= MENUS: MAP / SHOP / SETTINGS / DAILY ================= */
   function buildMap() {
@@ -3393,7 +4905,7 @@ export function mountGame(canvas, host, bridge) {
     UI.close("ovWin");
     UI.close("ovFail");
     UI.close("ovPause");
-    buildEnv(Math.min(4, chapterOf(Math.min(50, Save.d.unlocked))));
+    menuEnv();
     setupStations(
       CHAPTERS[Math.min(4, chapterOf(Math.min(50, Save.d.unlocked)))].foods,
     );
@@ -3401,6 +4913,7 @@ export function mountGame(canvas, host, bridge) {
     [-2.05, 0, 2.05].forEach((x, i) => {
       trays[i].position.x = x;
     });
+    ensureDaily(Save.d, today());
     UI.coins();
     UI.show("scrMenu");
     camMode("menu");
@@ -3418,6 +4931,45 @@ export function mountGame(canvas, host, bridge) {
       upgrades: UPGRADES,
       outfits: OUTFITS,
       decor: DECOR,
+      staff: STAFF,
+      boosters: BOOSTERS,
+      hireStaff: (s, card, e) =>
+        buy(
+          s.cost,
+          () => {
+            Save.d.staff.push(s.id);
+            Game.track("hire");
+            UI.toast(`${s.name} don join your buka!`);
+          },
+          card,
+          e,
+        ),
+      art: ART,
+      unpaidLimit: UNPAID_LIMIT,
+      sackStaff: (s) => {
+        removeStaff(Save.d, s.id);
+        Save.save();
+        Sound.play("wrong");
+        UI.toast(`${s.name} has been sacked. No more salary.`);
+        buildShop();
+      },
+      toggleStaff: (s) => {
+        const off = Save.d.staffOff;
+        if (off.includes(s.id)) off.splice(off.indexOf(s.id), 1);
+        else off.push(s.id);
+        Save.save();
+        Sound.play("click");
+        buildShop();
+      },
+      buyBooster: (b, card, e) =>
+        buy(
+          b.cost,
+          () => {
+            Save.d.boosters[b.id] = (Save.d.boosters[b.id] || 0) + 1;
+          },
+          card,
+          e,
+        ),
       buyUpgrade: (u, card, e) =>
         buy(
           u.costs[Save.d.up[u.id]],
@@ -3460,16 +5012,20 @@ export function mountGame(canvas, host, bridge) {
     });
   }
   function showMenuEnvRefresh() {
-    if (Game.state === "menu" || Game.state === "map") {
-      const ci = Math.min(4, chapterOf(Math.min(50, Save.d.unlocked)));
-      buildEnv(ci);
-    }
+    if (Game.state === "menu" || Game.state === "map") menuEnv();
+  }
+  // The menu shows home (grown with your chapter) or the branch you are visiting.
+  function menuEnv() {
+    const pl = PLACES.find((x) => x.id === Save.d.place);
+    if (!pl || pl.id === "ojuelegba" || !Save.d.branches.includes(pl.id))
+      buildEnv(Math.min(4, chapterOf(Math.min(50, Save.d.unlocked))));
+    else buildEnv(pl.ci, [pl.name.toUpperCase(), "Mama Put • " + pl.area]);
   }
   function buy(cost, fn, card, e) {
     if (Save.d.coins < cost) {
       Sound.play("wrong");
       UI.toast(
-        `You need ${cost - Save.d.coins} more coins. Play levels to earn them!`,
+        `You need ${fmtNaira(cost - Save.d.coins)} more. Play levels to earn it!`,
       );
       card.classList.remove("bought");
       void card.offsetWidth;
@@ -3505,16 +5061,19 @@ export function mountGame(canvas, host, bridge) {
       $(s).classList.toggle("on", Save.d.music),
     );
     $("#sQuality").classList.toggle("on", HQ());
+    $("#sHaptics").classList.toggle("on", Save.d.haptics && Haptics.supported);
   }
   function openReward() {
+    // The reward is queued from the menu; never pop it over a level in progress.
+    if (Game.state !== "menu" && Game.state !== "map") return;
     const streak =
       Save.d.lastClaim && isYesterday(Save.d.lastClaim)
         ? Math.min(7, Save.d.streak + 1)
         : 1;
-    const amt = 40 + streak * 20;
+    const amt = 1000 + streak * 500;
     $("#rewardSub").textContent =
       `Welcome back! Day ${streak} of your streak. Come back tomorrow for more.`;
-    $("#rewardAmt").textContent = amt;
+    $("#rewardAmt").textContent = fmtNaira(amt);
     UI.open("ovReward");
     bridge.bind("#rewardClaim", (e) => {
       Save.d.lastClaim = today();
@@ -3526,7 +5085,7 @@ export function mountGame(canvas, host, bridge) {
       UI.close("ovReward");
       setTimeout(
         () =>
-          coinBurst(r.left + r.width / 2, r.top, 10, "#menuCoins", () => {
+          cashBurst(r.left + r.width / 2, r.top, 10, "#menuCoins", () => {
             Sound.play("coin");
             UI.coins();
             UI.pop($("#menuCoinPill"));
@@ -3543,7 +5102,7 @@ export function mountGame(canvas, host, bridge) {
   function openDaily() {
     const c = dailyCfg();
     $("#dailySub").textContent =
-      `Level ${c.n} with a twist. Serve ${c.goal} customers.${Save.d.dailyDone === today() ? " Bonus already collected today." : " Win for +250 bonus coins!"}`;
+      `Level ${c.n} with a twist. Serve ${c.goal} customers.${Save.d.dailyDone === today() ? " Bonus already collected today." : ` Win for a ${fmtNaira(6000)} bonus!`}`;
     bridge.dailyMods(c.mods);
     UI.open("ovDaily");
     bridge.bind("#dailyGo", () => {
@@ -3568,25 +5127,128 @@ export function mountGame(canvas, host, bridge) {
   });
   on("#btnShop", () => {
     Sound.play("click");
-    buildShop();
+    openShop("up");
     UI.open("ovShop");
   });
   on("#shopClose", () => {
     UI.close("ovShop");
     UI.coins();
   });
-  on("#tabUp", () => {
-    shopTab = "up";
-    $("#tabUp").classList.add("on");
-    $("#tabStyle").classList.remove("on");
+  const SHOP_TABS = {
+    up: "#tabUp",
+    staff: "#tabStaff",
+    boost: "#tabBoost",
+    style: "#tabStyle",
+  };
+  function openShop(tab) {
+    shopTab = tab;
+    for (const k in SHOP_TABS)
+      $(SHOP_TABS[k]).classList.toggle("on", k === tab);
     buildShop();
+    $("#shopList").scrollTop = 0;
+  }
+  for (const k in SHOP_TABS) on(SHOP_TABS[k], () => openShop(k));
+  // Growth: business size and branches in other places.
+  function buildGrow() {
+    UI.coins();
+    bridge.grow({
+      save: Save.d,
+      tier: tierOf(Save.d),
+      tiers: TIERS,
+      next: nextTier(Save.d),
+      earned: Save.d.stats.earn,
+      places: PLACES,
+      art: ART,
+      check: (pl) => canOpen(Save.d, pl),
+      open: (pl, card, e) => {
+        const c = canOpen(Save.d, pl);
+        if (!c.ok) {
+          Sound.play("wrong");
+          UI.toast(
+            c.why === "Not enough money"
+              ? `You need ${fmtNaira(pl.cost - Save.d.coins)} more`
+              : c.why + " first",
+          );
+          return;
+        }
+        openBranch(Save.d, pl);
+        Save.save();
+        Sound.play("buy");
+        card?.classList.add("bought");
+        void e;
+        UI.toast(`${pl.name} branch is open!`);
+        buildGrow();
+      },
+      visit: (pl) => {
+        Save.d.place = pl.id;
+        Save.save();
+        Sound.play("click");
+        UI.close("ovGrow");
+        showMenuEnvRefresh();
+        UI.toast(`Welcome to ${pl.name}, ${pl.area}`);
+      },
+    });
+  }
+  on("#btnGrow", () => {
+    Sound.play("click");
+    buildGrow();
+    UI.open("ovGrow");
   });
-  on("#tabStyle", () => {
-    shopTab = "style";
-    $("#tabStyle").classList.add("on");
-    $("#tabUp").classList.remove("on");
-    buildShop();
+  on("#growClose", () => UI.close("ovGrow"));
+  on("#zoomIn", () => setZoom(cam.zoom * 0.85));
+  on("#zoomOut", () => setZoom(cam.zoom * 1.18));
+  on("#btnStaff", () => {
+    Sound.play("click");
+    openShop("staff");
+    UI.open("ovShop");
   });
+  // Missions and achievements
+  let missionTab = "daily";
+  function buildMissions() {
+    UI.coins();
+    bridge.missions({
+      tab: missionTab,
+      daily: ensureDaily(Save.d, today()),
+      achievements: ACHIEVEMENTS,
+      save: Save.d,
+      progressOf: (a) => achievementProgress(Save.d, a),
+      claim: (id, e) => {
+        const amt = claimMission(Save.d, id);
+        if (!amt) return;
+        Save.save();
+        Sound.play("buy");
+        const r = e.currentTarget.getBoundingClientRect();
+        cashBurst(r.left + r.width / 2, r.top, 8, "#missionCoins", () => {
+          Sound.play("coin");
+          UI.coins();
+        });
+        UI.toast("+" + fmtNaira(amt));
+        buildMissions();
+      },
+    });
+  }
+  const openMissionTab = (t) => {
+    missionTab = t;
+    $("#tabDailyM").classList.toggle("on", t === "daily");
+    $("#tabAch").classList.toggle("on", t === "ach");
+    buildMissions();
+  };
+  on("#btnMissions", () => {
+    Sound.play("click");
+    openMissionTab("daily");
+    UI.open("ovMissions");
+  });
+  on("#tabDailyM", () => openMissionTab("daily"));
+  on("#tabAch", () => openMissionTab("ach"));
+  on("#missionsClose", () => {
+    UI.close("ovMissions");
+    UI.coins();
+  });
+  // In-game tools
+  on("#bFreeze", () => Game.fireBooster("freeze"));
+  on("#bAuto", () => Game.fireBooster("auto"));
+  on("#bCalm", () => Game.fireBooster("calm"));
+  on("#btnWash", () => Game.wash());
   on("#btnSettings", () => {
     syncToggles();
     $("#sReset .buttonLabel").textContent = "Reset progress";
@@ -3619,6 +5281,7 @@ export function mountGame(canvas, host, bridge) {
   });
   on("#pMenu", () => {
     UI.close("ovPause");
+    Save.save();
     Game.cfg.mode === "level" ? (Game.clear(), openMap()) : showMenu();
   });
   const toggleSound = () => {
@@ -3633,6 +5296,72 @@ export function mountGame(canvas, host, bridge) {
     syncToggles();
     Sound.setMusic(Save.d.music);
   };
+  on("#sHaptics", () => {
+    if (!Haptics.supported) {
+      UI.toast("This device cannot vibrate");
+      return;
+    }
+    Save.d.haptics = !Save.d.haptics;
+    Save.save();
+    syncToggles();
+    Haptics.play("serve");
+  });
+  // Backup code and optional cloud sync
+  const afterRestore = (msg) => {
+    Save.save();
+    buildChef();
+    envKey = "";
+    UI.close("ovBackup");
+    UI.close("ovSettings");
+    showMenu();
+    UI.toast(msg);
+  };
+  on("#sBackup", () => {
+    $("#backupCode").value = encodeBackup(Save.d);
+    $("#cloudSync").hidden = !Cloud;
+    $("#backupSub").textContent =
+      "Copy this code to move your progress to another phone. Paste a code here and tap Restore." +
+      (Cloud ? " Cloud sync keeps the best progress from every device." : "");
+    UI.open("ovBackup");
+  });
+  on("#backupClose", () => UI.close("ovBackup"));
+  on("#backupCopy", () => {
+    const box = $("#backupCode");
+    box.value = encodeBackup(Save.d);
+    box.select();
+    const done = () => UI.toast("Backup code copied");
+    if (navigator.clipboard?.writeText)
+      navigator.clipboard
+        .writeText(box.value)
+        .then(done, () => UI.toast("Select the code and copy it"));
+    else UI.toast("Select the code and copy it");
+  });
+  on("#backupRestore", () => {
+    let incoming;
+    try {
+      incoming = decodeBackup($("#backupCode").value);
+    } catch (err) {
+      Sound.play("wrong");
+      UI.toast(err.message);
+      return;
+    }
+    // Merge so restoring an older code never wipes newer progress.
+    Save.d = migrate(mergeSaves(Save.d, incoming), Save.defaults());
+    afterRestore("Progress restored!");
+  });
+  on("#cloudSync", (e) => {
+    if (!Cloud) return;
+    const b = e.currentTarget;
+    b.disabled = true;
+    if (!Save.d.playerId) Save.d.playerId = newPlayerId();
+    Cloud.sync(Save.d)
+      .then((merged) => {
+        Save.d = migrate(merged, Save.defaults());
+        afterRestore("Cloud save synced");
+      })
+      .catch((err) => UI.toast(err.message))
+      .finally(() => (b.disabled = false));
+  });
   on("#pSound", toggleSound);
   on("#sSound", toggleSound);
   on("#pMusic", toggleMusic);
@@ -3778,6 +5507,12 @@ export function mountGame(canvas, host, bridge) {
         .project(camera);
       c.el.style.transform = `translate3d(${(((a.x + 1) / 2) * innerWidth).toFixed(1)}px,${(((1 - a.y) / 2) * innerHeight).toFixed(1)}px,0) translate(-50%,-100%)`;
     }
+    for (let i = 0; i < 3; i++) {
+      const chip = Game.chips[i];
+      if (!chip || !trays[i]) continue;
+      const p = trays[i].getWorldPosition(_v).setY(1.45).project(camera);
+      chip.style.transform = `translate3d(${(((p.x + 1) / 2) * innerWidth).toFixed(1)}px,${(((1 - p.y) / 2) * innerHeight).toFixed(1)}px,0) translate(-50%,-50%)`;
+    }
     updateConfetti(dt);
     Sound.tick();
     // graceful degradation on slow devices
@@ -3803,7 +5538,8 @@ export function mountGame(canvas, host, bridge) {
     });
     setTimeout(() => $("#boot").classList.add("gone"), 200);
     // expose a tiny debug hook for testing
-    if (import.meta.env.DEV) window.__mp = { Game, Save, levelCfg, FOODS };
+    if (import.meta.env.DEV)
+      window.__mp = { Game, Save, levelCfg, FOODS, stations, trays, camera };
   }
   const fontsReady =
     document.fonts && document.fonts.load
@@ -3812,18 +5548,17 @@ export function mountGame(canvas, host, bridge) {
           document.fonts.load('800 20px "Baloo 2"'),
         ]).catch(() => {})
       : Promise.resolve();
-  Promise.race([fontsReady, new Promise((r) => setTimeout(r, 2500))]).then(
-    () => {
-      if (lifetime.disposed) return;
-      try {
-        boot();
-      } catch (e) {
-        console.error(e);
-        $("#bootMsg").textContent =
-          "Something went wrong while loading: " + e.message;
-      }
-    },
-  );
+  const ready = Promise.all([fontsReady, loadFoodArt(), loadUiArt()]);
+  Promise.race([ready, new Promise((r) => setTimeout(r, 2500))]).then(() => {
+    if (lifetime.disposed) return;
+    try {
+      boot();
+    } catch (e) {
+      console.error(e);
+      $("#bootMsg").textContent =
+        "Something went wrong while loading: " + e.message;
+    }
+  });
 
   // Dispose all shared and detached resources, including cached procedural templates.
   cleanupScene = () => {

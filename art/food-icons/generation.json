@@ -1,0 +1,204 @@
+{
+  "generator": "built-in image_gen",
+  "sourcePrompts": "docs/FOOD_ART_PROMPTS.md",
+  "masterSize": [
+    1024,
+    1024
+  ],
+  "runtimeSize": [
+    256,
+    256
+  ],
+  "export": "Original generated alpha preserved. Transparent margins normalized to approximately 80% maximum subject extent. Runtime WebP quality 88.",
+  "foods": [
+    {
+      "id": "jollof",
+      "name": "Jollof Rice",
+      "master": "art/food-icons/jollof-v2.png",
+      "runtime": "public/food/jollof-v2.webp",
+      "prompt": "Use case: stylized-concept. Asset: one standalone matching mobile-game food icon.\nYou are making a matching set of food icons for a cheerful mobile cooking game set in a Lagos \"mama put\" roadside food spot.\n\nStyle for EVERY image in this set:\n- Stylised 3D render, soft and chunky like modern casual mobile games (clay/Pixar-like), not photoreal.\n- One single serving, centred, filling about 80% of the frame.\n- Camera 3/4 view from about 35 degrees above, slightly to the front.\n- Soft warm studio light from the top-left, gentle soft shadow under the plate only.\n- Saturated, appetising colours with clear silhouettes that stay readable at 48 pixels.\n- Plates are plain white ceramic with a thin cream rim; bowls are white ceramic unless I say otherwise.\n- Square 1024x1024 PNG with a fully transparent background.\n- No text, no numbers, no logos, no brand names, no hands, no cutlery, no table, no extra props.\nFood: Nigerian jollof rice: a domed heap of smoky orange-red long-grain parboiled rice with a few green peas and tiny diced carrots, a couple of soft sliced onion rings on top, served on a white plate.\nProduction constraints: exactly ONE icon, square 1024x1024 PNG, genuine alpha transparency. Restrained stylised detail, rounded clay-like shapes, no photorealism. Entire serving and plate visible with around 10% clear margin on every side. No checkerboard painted into the image.",
+      "masterSha256": "3dadc8a46b617eb25579948f8a72f807dd6582783b001be5b584085aa82f5ae9",
+      "runtimeBytes": 16140
+    },
+    {
+      "id": "friedrice",
+      "name": "Fried Rice",
+      "master": "art/food-icons/friedrice-v1.png",
+      "runtime": "public/food/friedrice-v1.webp",
+      "prompt": "Use case: stylized-concept. Asset: one standalone food icon in a matching Lagos cooking-game set.\nYou are making a matching set of food icons for a cheerful mobile cooking game set in a Lagos \"mama put\" roadside food spot.\n\nStyle for EVERY image in this set:\n- Stylised 3D render, soft and chunky like modern casual mobile games (clay/Pixar-like), not photoreal.\n- One single serving, centred, filling about 80% of the frame.\n- Camera 3/4 view from about 35 degrees above, slightly to the front.\n- Soft warm studio light from the top-left, gentle soft shadow under the plate only.\n- Saturated, appetising colours with clear silhouettes that stay readable at 48 pixels.\n- Plates are plain white ceramic with a thin cream rim; bowls are white ceramic unless I say otherwise.\n- Square 1024x1024 PNG with a fully transparent background.\n- No text, no numbers, no logos, no brand names, no hands, no cutlery, no table, no extra props.\nFood: Nigerian fried rice: a domed heap of golden-yellow rice mixed with diced carrots, green peas, sweet corn and chopped green beans, served on a white plate.\nStrongly stylized rounded clay-like 3D game art with simple clean surfaces, not a photograph. Square 1024x1024 PNG with actual transparency, no drawn checkerboard. One serving only, complete plate in frame, clear transparent padding.",
+      "masterSha256": "d041a2ce36e75dcefb4a1c75162d0733d89f9fba7677274cd72f153acc330a2e",
+      "runtimeBytes": 15916
+    },
+    {
+      "id": "whiterice",
+      "name": "Rice & Stew",
+      "master": "art/food-icons/whiterice-v1.png",
+      "runtime": "public/food/whiterice-v1.webp",
+      "prompt": "Use case: stylized-concept. Asset: one standalone food icon in a matching Lagos cooking-game set.\nYou are making a matching set of food icons for a cheerful mobile cooking game set in a Lagos \"mama put\" roadside food spot.\n\nStyle for EVERY image in this set:\n- Stylised 3D render, soft and chunky like modern casual mobile games (clay/Pixar-like), not photoreal.\n- One single serving, centred, filling about 80% of the frame.\n- Camera 3/4 view from about 35 degrees above, slightly to the front.\n- Soft warm studio light from the top-left, gentle soft shadow under the plate only.\n- Saturated, appetising colours with clear silhouettes that stay readable at 48 pixels.\n- Plates are plain white ceramic with a thin cream rim; bowls are white ceramic unless I say otherwise.\n- Square 1024x1024 PNG with a fully transparent background.\n- No text, no numbers, no logos, no brand names, no hands, no cutlery, no table, no extra props.\nFood: Fluffy white rice on a white plate with a generous ladle of glossy red Nigerian tomato-and-pepper stew poured over the top, a thin layer of red oil shining at the edge.\nStrongly stylized rounded clay-like 3D game art with simplified chunky forms and clean surfaces, not a photograph. Keep the fixed camera and warm top-left lighting consistent across the set. Square 1024x1024 PNG with genuine alpha transparency, no drawn checkerboard. One serving only, complete dish or drink in frame, around 10 percent clear transparent padding. Food-specific bowl and drink instructions override the default plate only where explicitly stated.",
+      "masterSha256": "0a2de9bbd101bd427d4a368d2f301feebc4a360d3a0d6fe1dd34ecabb5474d64",
+      "runtimeBytes": 16940
+    },
+    {
+      "id": "beans",
+      "name": "Ewa Agoyin",
+      "master": "art/food-icons/beans-v1.png",
+      "runtime": "public/food/beans-v1.webp",
+      "prompt": "Use case: stylized-concept. Asset: one standalone food icon in a matching Lagos cooking-game set.\nYou are making a matching set of food icons for a cheerful mobile cooking game set in a Lagos \"mama put\" roadside food spot.\n\nStyle for EVERY image in this set:\n- Stylised 3D render, soft and chunky like modern casual mobile games (clay/Pixar-like), not photoreal.\n- One single serving, centred, filling about 80% of the frame.\n- Camera 3/4 view from about 35 degrees above, slightly to the front.\n- Soft warm studio light from the top-left, gentle soft shadow under the plate only.\n- Saturated, appetising colours with clear silhouettes that stay readable at 48 pixels.\n- Plates are plain white ceramic with a thin cream rim; bowls are white ceramic unless I say otherwise.\n- Square 1024x1024 PNG with a fully transparent background.\n- No text, no numbers, no logos, no brand names, no hands, no cutlery, no table, no extra props.\nFood: Ewa agoyin: soft, mashed brown honey beans in a white bowl, topped with a spoonful of very dark, almost black agoyin pepper sauce with visible fried onion bits and oil.\nStrongly stylized rounded clay-like 3D game art with simplified chunky forms and clean surfaces, not a photograph. Keep the fixed camera and warm top-left lighting consistent across the set. Square 1024x1024 PNG with genuine alpha transparency, no drawn checkerboard. One serving only, complete dish or drink in frame, around 10 percent clear transparent padding. Food-specific bowl and drink instructions override the default plate only where explicitly stated.",
+      "masterSha256": "a217d75e473c0682eaa9e80a719efbcaa577efeea7e583310a821fa676c55ad6",
+      "runtimeBytes": 18878
+    },
+    {
+      "id": "eba",
+      "name": "Eba",
+      "master": "art/food-icons/eba-v1.png",
+      "runtime": "public/food/eba-v1.webp",
+      "prompt": "Use case: stylized-concept. Asset: one standalone food icon in a matching Lagos cooking-game set.\nYou are making a matching set of food icons for a cheerful mobile cooking game set in a Lagos \"mama put\" roadside food spot.\n\nStyle for EVERY image in this set:\n- Stylised 3D render, soft and chunky like modern casual mobile games (clay/Pixar-like), not photoreal.\n- One single serving, centred, filling about 80% of the frame.\n- Camera 3/4 view from about 35 degrees above, slightly to the front.\n- Soft warm studio light from the top-left, gentle soft shadow under the plate only.\n- Saturated, appetising colours with clear silhouettes that stay readable at 48 pixels.\n- Plates are plain white ceramic with a thin cream rim; bowls are white ceramic unless I say otherwise.\n- Square 1024x1024 PNG with a fully transparent background.\n- No text, no numbers, no logos, no brand names, no hands, no cutlery, no table, no extra props.\nFood: A smooth round mound of yellow eba (garri swallow made with palm oil) on a white plate, soft, slightly glossy surface with gentle hand-shaped curves.\nStrongly stylized rounded clay-like 3D game art with simplified chunky forms and clean surfaces, not a photograph. Keep the fixed camera and warm top-left lighting consistent across the set. Square 1024x1024 PNG with genuine alpha transparency, no drawn checkerboard. One serving only, complete dish or drink in frame, around 10 percent clear transparent padding. Food-specific bowl and drink instructions override the default plate only where explicitly stated.",
+      "masterSha256": "c37a49cef7897991476a91a968f983b1946748ea0d197e6d339c3a3e960afad7",
+      "runtimeBytes": 11522
+    },
+    {
+      "id": "amala",
+      "name": "Amala",
+      "master": "art/food-icons/amala-v1.png",
+      "runtime": "public/food/amala-v1.webp",
+      "prompt": "Use case: stylized-concept. Asset: one standalone food icon in a matching Lagos cooking-game set.\nYou are making a matching set of food icons for a cheerful mobile cooking game set in a Lagos \"mama put\" roadside food spot.\n\nStyle for EVERY image in this set:\n- Stylised 3D render, soft and chunky like modern casual mobile games (clay/Pixar-like), not photoreal.\n- One single serving, centred, filling about 80% of the frame.\n- Camera 3/4 view from about 35 degrees above, slightly to the front.\n- Soft warm studio light from the top-left, gentle soft shadow under the plate only.\n- Saturated, appetising colours with clear silhouettes that stay readable at 48 pixels.\n- Plates are plain white ceramic with a thin cream rim; bowls are white ceramic unless I say otherwise.\n- Square 1024x1024 PNG with a fully transparent background.\n- No text, no numbers, no logos, no brand names, no hands, no cutlery, no table, no extra props.\nFood: A smooth round mound of dark brown amala (yam flour swallow) on a white plate, soft and slightly shiny.\nStrongly stylized rounded clay-like 3D game art with simplified chunky forms and clean surfaces, not a photograph. Keep the fixed camera and warm top-left lighting consistent across the set. Square 1024x1024 PNG with genuine alpha transparency, no drawn checkerboard. One serving only, complete dish or drink in frame, around 10 percent clear transparent padding. Food-specific bowl and drink instructions override the default plate only where explicitly stated.",
+      "masterSha256": "5f4aface5635feb277b42aa4333efc2a03cb66b87b43ad5bba0a9e578711226d",
+      "runtimeBytes": 12386
+    },
+    {
+      "id": "poundedyam",
+      "name": "Pounded Yam",
+      "master": "art/food-icons/poundedyam-v1.png",
+      "runtime": "public/food/poundedyam-v1.webp",
+      "prompt": "Use case: stylized-concept. Asset: one standalone food icon in a matching Lagos cooking-game set.\nYou are making a matching set of food icons for a cheerful mobile cooking game set in a Lagos \"mama put\" roadside food spot.\n\nStyle for EVERY image in this set:\n- Stylised 3D render, soft and chunky like modern casual mobile games (clay/Pixar-like), not photoreal.\n- One single serving, centred, filling about 80% of the frame.\n- Camera 3/4 view from about 35 degrees above, slightly to the front.\n- Soft warm studio light from the top-left, gentle soft shadow under the plate only.\n- Saturated, appetising colours with clear silhouettes that stay readable at 48 pixels.\n- Plates are plain white ceramic with a thin cream rim; bowls are white ceramic unless I say otherwise.\n- Square 1024x1024 PNG with a fully transparent background.\n- No text, no numbers, no logos, no brand names, no hands, no cutlery, no table, no extra props.\nFood: A smooth, fluffy round mound of bright white pounded yam (iyan) on a white plate, with a second smaller wrap beside it.\nStrongly stylized rounded clay-like 3D game art with simplified chunky forms and clean surfaces, not a photograph. Keep the fixed camera and warm top-left lighting consistent across the set. Square 1024x1024 PNG with genuine alpha transparency, no drawn checkerboard. One serving only, complete dish or drink in frame, around 10 percent clear transparent padding. Food-specific bowl and drink instructions override the default plate only where explicitly stated.",
+      "masterSha256": "aa45cb0da368f70b5b76dbc036a10ac064e56844c72b3cac4cf78427ae7557be",
+      "runtimeBytes": 9830
+    },
+    {
+      "id": "peppersoup",
+      "name": "Goat Pepper Soup",
+      "master": "art/food-icons/peppersoup-v1.png",
+      "runtime": "public/food/peppersoup-v1.webp",
+      "prompt": "Use case: stylized-concept. Asset: one standalone food icon in a matching Lagos cooking-game set.\nYou are making a matching set of food icons for a cheerful mobile cooking game set in a Lagos \"mama put\" roadside food spot.\n\nStyle for EVERY image in this set:\n- Stylised 3D render, soft and chunky like modern casual mobile games (clay/Pixar-like), not photoreal.\n- One single serving, centred, filling about 80% of the frame.\n- Camera 3/4 view from about 35 degrees above, slightly to the front.\n- Soft warm studio light from the top-left, gentle soft shadow under the plate only.\n- Saturated, appetising colours with clear silhouettes that stay readable at 48 pixels.\n- Plates are plain white ceramic with a thin cream rim; bowls are white ceramic unless I say otherwise.\n- Square 1024x1024 PNG with a fully transparent background.\n- No text, no numbers, no logos, no brand names, no hands, no cutlery, no table, no extra props.\nFood: Nigerian goat meat pepper soup in a deep dark bowl: clear reddish-brown spicy broth with chunks of goat meat, a few torn green scent leaves floating, light steam rising.\nStrongly stylized rounded clay-like 3D game art with simplified chunky forms and clean surfaces, not a photograph. Keep the fixed camera and warm top-left lighting consistent across the set. Square 1024x1024 PNG with genuine alpha transparency, no drawn checkerboard. One serving only, complete dish or drink in frame, around 10 percent clear transparent padding. Food-specific bowl and drink instructions override the default plate only where explicitly stated.",
+      "masterSha256": "604f34c48dd9d04b543384fd6be7d609606aba1786c9185d912f731a8ec4d2ab",
+      "runtimeBytes": 16704
+    },
+    {
+      "id": "egusi",
+      "name": "Egusi Soup",
+      "master": "art/food-icons/egusi-v1.png",
+      "runtime": "public/food/egusi-v1.webp",
+      "prompt": "Use case: stylized-concept. Asset: one standalone food icon in a matching Lagos cooking-game set.\nYou are making a matching set of food icons for a cheerful mobile cooking game set in a Lagos \"mama put\" roadside food spot.\n\nStyle for EVERY image in this set:\n- Stylised 3D render, soft and chunky like modern casual mobile games (clay/Pixar-like), not photoreal.\n- One single serving, centred, filling about 80% of the frame.\n- Camera 3/4 view from about 35 degrees above, slightly to the front.\n- Soft warm studio light from the top-left, gentle soft shadow under the plate only.\n- Saturated, appetising colours with clear silhouettes that stay readable at 48 pixels.\n- Plates are plain white ceramic with a thin cream rim; bowls are white ceramic unless I say otherwise.\n- Square 1024x1024 PNG with a fully transparent background.\n- No text, no numbers, no logos, no brand names, no hands, no cutlery, no table, no extra props.\nFood: Nigerian egusi soup in a white bowl: thick yellow-orange clumps of ground melon seed cooked in palm oil, dark green chopped bitter leaf, a chunk of beef and a piece of stockfish.\nStrongly stylized rounded clay-like 3D game art with simplified chunky forms and clean surfaces, not a photograph. Keep the fixed camera and warm top-left lighting consistent across the set. Square 1024x1024 PNG with genuine alpha transparency, no drawn checkerboard. One serving only, complete dish or drink in frame, around 10 percent clear transparent padding. Food-specific bowl and drink instructions override the default plate only where explicitly stated.",
+      "masterSha256": "dfcf65e5c603a0123eb386beea0b9c878b4e0e9b4674bf68975f8386c3c01752",
+      "runtimeBytes": 18562
+    },
+    {
+      "id": "efo",
+      "name": "Efo Riro",
+      "master": "art/food-icons/efo-v1.png",
+      "runtime": "public/food/efo-v1.webp",
+      "prompt": "Use case: stylized-concept. Asset: one standalone food icon in a matching Lagos cooking-game set.\nYou are making a matching set of food icons for a cheerful mobile cooking game set in a Lagos \"mama put\" roadside food spot.\n\nStyle for EVERY image in this set:\n- Stylised 3D render, soft and chunky like modern casual mobile games (clay/Pixar-like), not photoreal.\n- One single serving, centred, filling about 80% of the frame.\n- Camera 3/4 view from about 35 degrees above, slightly to the front.\n- Soft warm studio light from the top-left, gentle soft shadow under the plate only.\n- Saturated, appetising colours with clear silhouettes that stay readable at 48 pixels.\n- Plates are plain white ceramic with a thin cream rim; bowls are white ceramic unless I say otherwise.\n- Square 1024x1024 PNG with a fully transparent background.\n- No text, no numbers, no logos, no brand names, no hands, no cutlery, no table, no extra props.\nFood: Efo riro in a white bowl: rich deep-green chopped spinach stew mixed with red palm-oil pepper sauce, with two pieces of assorted meat.\nStrongly stylized rounded clay-like 3D game art with simplified chunky forms and clean surfaces, not a photograph. Keep the fixed camera and warm top-left lighting consistent across the set. Square 1024x1024 PNG with genuine alpha transparency, no drawn checkerboard. One serving only, complete dish or drink in frame, around 10 percent clear transparent padding. Food-specific bowl and drink instructions override the default plate only where explicitly stated.",
+      "masterSha256": "012b3d4a3006242961bcabf3dffda84bec889ec71640482541489b06a088f0a6",
+      "runtimeBytes": 19006
+    },
+    {
+      "id": "ewedu",
+      "name": "Ewedu & Gbegiri",
+      "master": "art/food-icons/ewedu-v1.png",
+      "runtime": "public/food/ewedu-v1.webp",
+      "prompt": "Use case: stylized-concept. Asset: one standalone food icon in a matching Lagos cooking-game set.\nYou are making a matching set of food icons for a cheerful mobile cooking game set in a Lagos \"mama put\" roadside food spot.\n\nStyle for EVERY image in this set:\n- Stylised 3D render, soft and chunky like modern casual mobile games (clay/Pixar-like), not photoreal.\n- One single serving, centred, filling about 80% of the frame.\n- Camera 3/4 view from about 35 degrees above, slightly to the front.\n- Soft warm studio light from the top-left, gentle soft shadow under the plate only.\n- Saturated, appetising colours with clear silhouettes that stay readable at 48 pixels.\n- Plates are plain white ceramic with a thin cream rim; bowls are white ceramic unless I say otherwise.\n- Square 1024x1024 PNG with a fully transparent background.\n- No text, no numbers, no logos, no brand names, no hands, no cutlery, no table, no extra props.\nFood: \"Abula\" soup in a white bowl split into two halves: bright green ewedu (jute leaf) on one side, smooth yellow-brown gbegiri bean soup on the other, a spoon of red stew in the centre.\nStrongly stylized rounded clay-like 3D game art with simplified chunky forms and clean surfaces, not a photograph. Keep the fixed camera and warm top-left lighting consistent across the set. Square 1024x1024 PNG with genuine alpha transparency, no drawn checkerboard. One serving only, complete dish or drink in frame, around 10 percent clear transparent padding. Food-specific bowl and drink instructions override the default plate only where explicitly stated.",
+      "masterSha256": "273348282651be472230390049c6e981d29af7be9106e9bc252ff19ebd42488a",
+      "runtimeBytes": 16822
+    },
+    {
+      "id": "beef",
+      "name": "Beef",
+      "master": "art/food-icons/beef-v1.png",
+      "runtime": "public/food/beef-v1.webp",
+      "prompt": "Use case: stylized-concept. Asset: one standalone food icon in a matching Lagos cooking-game set.\nYou are making a matching set of food icons for a cheerful mobile cooking game set in a Lagos \"mama put\" roadside food spot.\n\nStyle for EVERY image in this set:\n- Stylised 3D render, soft and chunky like modern casual mobile games (clay/Pixar-like), not photoreal.\n- One single serving, centred, filling about 80% of the frame.\n- Camera 3/4 view from about 35 degrees above, slightly to the front.\n- Soft warm studio light from the top-left, gentle soft shadow under the plate only.\n- Saturated, appetising colours with clear silhouettes that stay readable at 48 pixels.\n- Plates are plain white ceramic with a thin cream rim; bowls are white ceramic unless I say otherwise.\n- Square 1024x1024 PNG with a fully transparent background.\n- No text, no numbers, no logos, no brand names, no hands, no cutlery, no table, no extra props.\nFood: Three chunks of fried Nigerian stew beef on a small white saucer, coated in glossy red stew.\nStrongly stylized rounded clay-like 3D game art with simplified chunky forms and clean surfaces, not a photograph. Keep the fixed camera and warm top-left lighting consistent across the set. Square 1024x1024 PNG with genuine alpha transparency, no drawn checkerboard. One serving only, complete dish or drink in frame, around 10 percent clear transparent padding. Food-specific bowl and drink instructions override the default plate only where explicitly stated.",
+      "masterSha256": "6121ec2ba6c484557b8921a28ca4e670b56d715520435b1a361fc12f564649ee",
+      "runtimeBytes": 17198
+    },
+    {
+      "id": "chicken",
+      "name": "Fried Chicken",
+      "master": "art/food-icons/chicken-v1.png",
+      "runtime": "public/food/chicken-v1.webp",
+      "prompt": "Use case: stylized-concept. Asset: one standalone food icon in a matching Lagos cooking-game set.\nYou are making a matching set of food icons for a cheerful mobile cooking game set in a Lagos \"mama put\" roadside food spot.\n\nStyle for EVERY image in this set:\n- Stylised 3D render, soft and chunky like modern casual mobile games (clay/Pixar-like), not photoreal.\n- One single serving, centred, filling about 80% of the frame.\n- Camera 3/4 view from about 35 degrees above, slightly to the front.\n- Soft warm studio light from the top-left, gentle soft shadow under the plate only.\n- Saturated, appetising colours with clear silhouettes that stay readable at 48 pixels.\n- Plates are plain white ceramic with a thin cream rim; bowls are white ceramic unless I say otherwise.\n- Square 1024x1024 PNG with a fully transparent background.\n- No text, no numbers, no logos, no brand names, no hands, no cutlery, no table, no extra props.\nFood: Nigerian stewed-then-fried chicken: a golden-brown drumstick and a thigh on a white plate, crisp skin with a light red pepper glaze.\nStrongly stylized rounded clay-like 3D game art with simplified chunky forms and clean surfaces, not a photograph. Keep the fixed camera and warm top-left lighting consistent across the set. Square 1024x1024 PNG with genuine alpha transparency, no drawn checkerboard. One serving only, complete dish or drink in frame, around 10 percent clear transparent padding. Food-specific bowl and drink instructions override the default plate only where explicitly stated.",
+      "masterSha256": "03a01db4f4fff88ee67d2a5ea2e8a51766c9e04d2f9623ba717665dffdd9d877",
+      "runtimeBytes": 18232
+    },
+    {
+      "id": "fish",
+      "name": "Fried Fish",
+      "master": "art/food-icons/fish-v1.png",
+      "runtime": "public/food/fish-v1.webp",
+      "prompt": "Use case: stylized-concept. Asset: one standalone food icon in a matching Lagos cooking-game set.\nYou are making a matching set of food icons for a cheerful mobile cooking game set in a Lagos \"mama put\" roadside food spot.\n\nStyle for EVERY image in this set:\n- Stylised 3D render, soft and chunky like modern casual mobile games (clay/Pixar-like), not photoreal.\n- One single serving, centred, filling about 80% of the frame.\n- Camera 3/4 view from about 35 degrees above, slightly to the front.\n- Soft warm studio light from the top-left, gentle soft shadow under the plate only.\n- Saturated, appetising colours with clear silhouettes that stay readable at 48 pixels.\n- Plates are plain white ceramic with a thin cream rim; bowls are white ceramic unless I say otherwise.\n- Square 1024x1024 PNG with a fully transparent background.\n- No text, no numbers, no logos, no brand names, no hands, no cutlery, no table, no extra props.\nFood: A whole fried croaker fish lying on a white plate, golden crispy skin, slightly curled tail, a few red pepper flakes.\nStrongly stylized rounded clay-like 3D game art with simplified chunky forms and clean surfaces, not a photograph. Keep the fixed camera and warm top-left lighting consistent across the set. Square 1024x1024 PNG with genuine alpha transparency, no drawn checkerboard. One serving only, complete dish or drink in frame, around 10 percent clear transparent padding. Food-specific bowl and drink instructions override the default plate only where explicitly stated.",
+      "masterSha256": "28bb6597a973ad0005c9f72b39f71c04a6005c99b1a35af0149736ece3ef9aa2",
+      "runtimeBytes": 18538
+    },
+    {
+      "id": "egg",
+      "name": "Boiled Egg",
+      "master": "art/food-icons/egg-v1.png",
+      "runtime": "public/food/egg-v1.webp",
+      "prompt": "Use case: stylized-concept. Asset: one standalone food icon in a matching Lagos cooking-game set.\nYou are making a matching set of food icons for a cheerful mobile cooking game set in a Lagos \"mama put\" roadside food spot.\n\nStyle for EVERY image in this set:\n- Stylised 3D render, soft and chunky like modern casual mobile games (clay/Pixar-like), not photoreal.\n- One single serving, centred, filling about 80% of the frame.\n- Camera 3/4 view from about 35 degrees above, slightly to the front.\n- Soft warm studio light from the top-left, gentle soft shadow under the plate only.\n- Saturated, appetising colours with clear silhouettes that stay readable at 48 pixels.\n- Plates are plain white ceramic with a thin cream rim; bowls are white ceramic unless I say otherwise.\n- Square 1024x1024 PNG with a fully transparent background.\n- No text, no numbers, no logos, no brand names, no hands, no cutlery, no table, no extra props.\nFood: Two peeled boiled eggs on a small white saucer, one whole and one cut in half showing a bright yellow yolk, a little red stew underneath.\nStrongly stylized rounded clay-like 3D game art with simplified chunky forms and clean surfaces, not a photograph. Keep the fixed camera and warm top-left lighting consistent across the set. Square 1024x1024 PNG with genuine alpha transparency, no drawn checkerboard. One serving only, complete dish or drink in frame, around 10 percent clear transparent padding. Food-specific bowl and drink instructions override the default plate only where explicitly stated.",
+      "masterSha256": "216746b562383aa95fe1224eb03ae5240b111e0441d44f248c56378ebbbc9ead",
+      "runtimeBytes": 13028
+    },
+    {
+      "id": "plantain",
+      "name": "Dodo",
+      "master": "art/food-icons/plantain-v1.png",
+      "runtime": "public/food/plantain-v1.webp",
+      "prompt": "Use case: stylized-concept. Asset: one standalone food icon in a matching Lagos cooking-game set.\nYou are making a matching set of food icons for a cheerful mobile cooking game set in a Lagos \"mama put\" roadside food spot.\n\nStyle for EVERY image in this set:\n- Stylised 3D render, soft and chunky like modern casual mobile games (clay/Pixar-like), not photoreal.\n- One single serving, centred, filling about 80% of the frame.\n- Camera 3/4 view from about 35 degrees above, slightly to the front.\n- Soft warm studio light from the top-left, gentle soft shadow under the plate only.\n- Saturated, appetising colours with clear silhouettes that stay readable at 48 pixels.\n- Plates are plain white ceramic with a thin cream rim; bowls are white ceramic unless I say otherwise.\n- Square 1024x1024 PNG with a fully transparent background.\n- No text, no numbers, no logos, no brand names, no hands, no cutlery, no table, no extra props.\nFood: Dodo: diagonally sliced fried ripe plantain pieces, caramelised golden-orange with darker edges, arranged in a loose ring on a white plate.\nStrongly stylized rounded clay-like 3D game art with simplified chunky forms and clean surfaces, not a photograph. Keep the fixed camera and warm top-left lighting consistent across the set. Square 1024x1024 PNG with genuine alpha transparency, no drawn checkerboard. One serving only, complete dish or drink in frame, around 10 percent clear transparent padding. Food-specific bowl and drink instructions override the default plate only where explicitly stated.",
+      "masterSha256": "57ac45cf8fcd5d3607c00746b7bc1403d76bb02982e80af7a2cb30a14a4e6805",
+      "runtimeBytes": 16280
+    },
+    {
+      "id": "moimoi",
+      "name": "Moi Moi",
+      "master": "art/food-icons/moimoi-v1.png",
+      "runtime": "public/food/moimoi-v1.webp",
+      "prompt": "Use case: stylized-concept. Asset: one standalone food icon in a matching Lagos cooking-game set.\nYou are making a matching set of food icons for a cheerful mobile cooking game set in a Lagos \"mama put\" roadside food spot.\n\nStyle for EVERY image in this set:\n- Stylised 3D render, soft and chunky like modern casual mobile games (clay/Pixar-like), not photoreal.\n- One single serving, centred, filling about 80% of the frame.\n- Camera 3/4 view from about 35 degrees above, slightly to the front.\n- Soft warm studio light from the top-left, gentle soft shadow under the plate only.\n- Saturated, appetising colours with clear silhouettes that stay readable at 48 pixels.\n- Plates are plain white ceramic with a thin cream rim; bowls are white ceramic unless I say otherwise.\n- Square 1024x1024 PNG with a fully transparent background.\n- No text, no numbers, no logos, no brand names, no hands, no cutlery, no table, no extra props.\nFood: Nigerian moi moi: a steamed orange-pink bean pudding sitting on an opened green uma leaf on a white plate, cut to show a slice of boiled egg inside.\nStrongly stylized rounded clay-like 3D game art with simplified chunky forms and clean surfaces, not a photograph. Keep the fixed camera and warm top-left lighting consistent across the set. Square 1024x1024 PNG with genuine alpha transparency, no drawn checkerboard. One serving only, complete dish or drink in frame, around 10 percent clear transparent padding. Food-specific bowl and drink instructions override the default plate only where explicitly stated.",
+      "masterSha256": "de2e197136d2c05c9faf1171ab6e8acb33308407335a444eb4e23ae638ad0305",
+      "runtimeBytes": 14568
+    },
+    {
+      "id": "water",
+      "name": "Pure Water",
+      "master": "art/food-icons/water-v1.png",
+      "runtime": "public/food/water-v1.webp",
+      "prompt": "Use case: stylized-concept. Asset: one standalone food icon in a matching Lagos cooking-game set.\nYou are making a matching set of food icons for a cheerful mobile cooking game set in a Lagos \"mama put\" roadside food spot.\n\nStyle for EVERY image in this set:\n- Stylised 3D render, soft and chunky like modern casual mobile games (clay/Pixar-like), not photoreal.\n- One single serving, centred, filling about 80% of the frame.\n- Camera 3/4 view from about 35 degrees above, slightly to the front.\n- Soft warm studio light from the top-left, gentle soft shadow under the plate only.\n- Saturated, appetising colours with clear silhouettes that stay readable at 48 pixels.\n- Plates are plain white ceramic with a thin cream rim; bowls are white ceramic unless I say otherwise.\n- Square 1024x1024 PNG with a fully transparent background.\n- No text, no numbers, no logos, no brand names, no hands, no cutlery, no table, no extra props.\nFood: A single clear plastic 50cl \"pure water\" sachet of drinking water, pillow-shaped, with a generic blue and red printed band and no words, tiny cold water droplets on the plastic.\nStrongly stylized rounded clay-like 3D game art with simplified chunky forms and clean surfaces, not a photograph. Keep the fixed camera and warm top-left lighting consistent across the set. Square 1024x1024 PNG with genuine alpha transparency, no drawn checkerboard. One serving only, complete dish or drink in frame, around 10 percent clear transparent padding. Food-specific bowl and drink instructions override the default plate only where explicitly stated.",
+      "masterSha256": "dafe22c199449516a157ffcba295577fd77a25c434b432433388f0c24970641d",
+      "runtimeBytes": 13976
+    },
+    {
+      "id": "zobo",
+      "name": "Zobo",
+      "master": "art/food-icons/zobo-v1.png",
+      "runtime": "public/food/zobo-v1.webp",
+      "prompt": "Use case: stylized-concept. Asset: one standalone food icon in a matching Lagos cooking-game set.\nYou are making a matching set of food icons for a cheerful mobile cooking game set in a Lagos \"mama put\" roadside food spot.\n\nStyle for EVERY image in this set:\n- Stylised 3D render, soft and chunky like modern casual mobile games (clay/Pixar-like), not photoreal.\n- One single serving, centred, filling about 80% of the frame.\n- Camera 3/4 view from about 35 degrees above, slightly to the front.\n- Soft warm studio light from the top-left, gentle soft shadow under the plate only.\n- Saturated, appetising colours with clear silhouettes that stay readable at 48 pixels.\n- Plates are plain white ceramic with a thin cream rim; bowls are white ceramic unless I say otherwise.\n- Square 1024x1024 PNG with a fully transparent background.\n- No text, no numbers, no logos, no brand names, no hands, no cutlery, no table, no extra props.\nFood: A small clear plastic bottle of chilled zobo (hibiscus drink), deep red-purple, with a red cap and cold condensation drops, no label text.\nStrongly stylized rounded clay-like 3D game art with simplified chunky forms and clean surfaces, not a photograph. Keep the fixed camera and warm top-left lighting consistent across the set. Square 1024x1024 PNG with genuine alpha transparency, no drawn checkerboard. One serving only, complete dish or drink in frame, around 10 percent clear transparent padding. Food-specific bowl and drink instructions override the default plate only where explicitly stated.",
+      "masterSha256": "8444084dafda280e9da5a8b9398d340d43ea864d19acc73c8f4b272739b2372a",
+      "runtimeBytes": 10842
+    },
+    {
+      "id": "mineral",
+      "name": "Mineral",
+      "master": "art/food-icons/mineral-v1.png",
+      "runtime": "public/food/mineral-v1.webp",
+      "prompt": "Use case: stylized-concept. Asset: one standalone food icon in a matching Lagos cooking-game set.\nYou are making a matching set of food icons for a cheerful mobile cooking game set in a Lagos \"mama put\" roadside food spot.\n\nStyle for EVERY image in this set:\n- Stylised 3D render, soft and chunky like modern casual mobile games (clay/Pixar-like), not photoreal.\n- One single serving, centred, filling about 80% of the frame.\n- Camera 3/4 view from about 35 degrees above, slightly to the front.\n- Soft warm studio light from the top-left, gentle soft shadow under the plate only.\n- Saturated, appetising colours with clear silhouettes that stay readable at 48 pixels.\n- Plates are plain white ceramic with a thin cream rim; bowls are white ceramic unless I say otherwise.\n- Square 1024x1024 PNG with a fully transparent background.\n- No text, no numbers, no logos, no brand names, no hands, no cutlery, no table, no extra props.\nFood: A chilled soft drink in a plain glass bottle with a red cap and a plain red-and-white label with no words or logo, cold condensation drops.\nStrongly stylized rounded clay-like 3D game art with simplified chunky forms and clean surfaces, not a photograph. Keep the fixed camera and warm top-left lighting consistent across the set. Square 1024x1024 PNG with genuine alpha transparency, no drawn checkerboard. One serving only, complete dish or drink in frame, around 10 percent clear transparent padding. Food-specific bowl and drink instructions override the default plate only where explicitly stated.",
+      "masterSha256": "3e40d84288383706701a36e4c782c7d9313aa0c84e6e9368cfe279219cf3aedc",
+      "runtimeBytes": 10034
+    },
+    {
+      "id": "malt",
+      "name": "Malt",
+      "master": "art/food-icons/malt-v1.png",
+      "runtime": "public/food/malt-v1.webp",
+      "prompt": "Use case: stylized-concept. Asset: one standalone food icon in a matching Lagos cooking-game set.\nYou are making a matching set of food icons for a cheerful mobile cooking game set in a Lagos \"mama put\" roadside food spot.\n\nStyle for EVERY image in this set:\n- Stylised 3D render, soft and chunky like modern casual mobile games (clay/Pixar-like), not photoreal.\n- One single serving, centred, filling about 80% of the frame.\n- Camera 3/4 view from about 35 degrees above, slightly to the front.\n- Soft warm studio light from the top-left, gentle soft shadow under the plate only.\n- Saturated, appetising colours with clear silhouettes that stay readable at 48 pixels.\n- Plates are plain white ceramic with a thin cream rim; bowls are white ceramic unless I say otherwise.\n- Square 1024x1024 PNG with a fully transparent background.\n- No text, no numbers, no logos, no brand names, no hands, no cutlery, no table, no extra props.\nFood: A dark brown glass bottle of malt drink with a plain shiny gold foil label and gold cap, no words or logo, cold condensation drops.\nStrongly stylized rounded clay-like 3D game art with simplified chunky forms and clean surfaces, not a photograph. Keep the fixed camera and warm top-left lighting consistent across the set. Square 1024x1024 PNG with genuine alpha transparency, no drawn checkerboard. One serving only, complete dish or drink in frame, around 10 percent clear transparent padding. Food-specific bowl and drink instructions override the default plate only where explicitly stated.",
+      "masterSha256": "7323efcc82bc2dd29bb891808e8e152a81b81aba6a569b442c10163ca4f1c6b3",
+      "runtimeBytes": 10146
+    }
+  ]
+}

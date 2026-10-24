@@ -15,10 +15,11 @@ export function Surface({
   ...props
 }) {
   const store = useContext(StoreContext);
+  const overlay = className.split(" ").includes("overlay");
   const getShown = useCallback(() => {
     const state = store.getSnapshot();
-    return className === "overlay" ? !!state.overlays[id] : state.screen === id;
-  }, [store, id, className]);
+    return overlay ? !!state.overlays[id] : state.screen === id;
+  }, [store, id, overlay]);
   const shown = useSyncExternalStore(store.subscribe, getShown);
   return (
     <Tag {...props} id={id} className={className + (shown ? " show" : "")}>

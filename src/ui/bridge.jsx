@@ -6,6 +6,11 @@ import {
   Shop,
   Bubble,
   DailyMods,
+  Missions,
+  DirtyChip,
+  Orders,
+  Grow,
+  Ledger,
 } from "./DynamicLayers.jsx";
 
 // Flush only structural changes when the imperative engine immediately needs DOM refs.
@@ -44,6 +49,22 @@ export function createUiBridge(store, host) {
       slot("map", host.querySelector("#mapInner"), <LevelMap {...props} />),
     shop: (props) =>
       slot("shop", host.querySelector("#shopList"), <Shop {...props} />),
+    missions: (props) =>
+      slot(
+        "missions",
+        host.querySelector("#missionList"),
+        <Missions {...props} />,
+      ),
+    orders: (props) =>
+      slot("orders", host.querySelector("#orders"), <Orders {...props} />),
+    grow: (props) =>
+      slot("grow", host.querySelector("#growList"), <Grow {...props} />),
+    ledger: (id, rows) =>
+      slot(
+        "ledger-" + id,
+        host.querySelector("#" + id),
+        <Ledger rows={rows} />,
+      ),
     dailyMods: (mods) =>
       slot(
         "dailyMods",
@@ -67,7 +88,7 @@ export function createUiBridge(store, host) {
         );
       slot("caption", host.querySelector("#hudLvl"), content);
     },
-    bubble(customer, cols, foods, select) {
+    bubble(customer, cols, foods, moods, select) {
       let root;
       slot(
         "bubble-" + customer.id,
@@ -76,7 +97,22 @@ export function createUiBridge(store, host) {
           customer={customer}
           cols={cols}
           foods={foods}
+          moods={moods}
           select={select}
+          rootRef={(el) => {
+            root = el;
+          }}
+        />,
+      );
+      return root;
+    },
+    chip(id, clear) {
+      let root;
+      slot(
+        id,
+        host.querySelector("#world"),
+        <DirtyChip
+          clear={clear}
           rootRef={(el) => {
             root = el;
           }}
@@ -96,8 +132,8 @@ export function createUiBridge(store, host) {
       slot(
         id,
         host.querySelector("#fx"),
-        type === "coin" ? (
-          <i {...props} className="coin fly" />
+        type === "note" ? (
+          <i {...props} className="note fly" />
         ) : (
           <div {...props} className={"ftext " + (cls || "")}>
             {text}

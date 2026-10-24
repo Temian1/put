@@ -1,0 +1,413 @@
+/* Running the business: tool rail, orders and packing, staff, growth. */
+
+/* ---------- left tool rail: zoom, boosters and the sink ---------- */
+/* --hudH and --barH are set by the engine from the HUD and food bar sizes. */
+.rail {
+  position: absolute;
+  left: max(8px, env(safe-area-inset-left, 0px));
+  top: calc(var(--hudH, 130px) + 6px);
+  bottom: calc(var(--barH, 200px) + 84px);
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 10px;
+  pointer-events: auto;
+  z-index: 3;
+}
+.boost {
+  position: relative;
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  border: 2px solid #fff;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(180deg, #7b4bb0, var(--plum));
+  color: #fff;
+  box-shadow: 0 4px 0 #3a1434;
+}
+.boost:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #3a1434;
+}
+.boost .buttonIcon {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  vertical-align: 0;
+}
+.boost b {
+  position: absolute;
+  right: -6px;
+  top: -7px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: var(--gold);
+  color: var(--ink);
+  font: 400 12px/18px var(--display);
+  border: 2px solid #fff;
+}
+.boost.empty {
+  filter: grayscale(1) brightness(0.85);
+}
+.boost.active {
+  box-shadow:
+    0 4px 0 #3a1434,
+    0 0 0 3px #9fe3ff,
+    0 0 18px 4px #9fe3ff;
+}
+.boost.zoom {
+  background: linear-gradient(180deg, #5a2a12, #3b1707);
+  box-shadow: 0 4px 0 #1f0c03;
+}
+.boost.wash {
+  background: linear-gradient(180deg, #4fb6ff, #1e78c8);
+  box-shadow: 0 4px 0 #0f4f8a;
+}
+.boost.wash b {
+  background: #fff;
+  min-width: 26px;
+}
+.boost.wash i {
+  position: absolute;
+  left: 4px;
+  bottom: 3px;
+  height: 3px;
+  width: 0;
+  max-width: calc(100% - 8px);
+  border-radius: 2px;
+  background: #fff;
+}
+.boost.wash.full {
+  background: linear-gradient(180deg, #ff8a8d, var(--coral));
+  box-shadow: 0 4px 0 var(--coral-d);
+  animation: pulse 0.7s infinite;
+}
+
+/* ---------- order notifications and the packing strip ---------- */
+.notify {
+  position: absolute;
+  left: 50%;
+  top: calc(var(--hudH, 130px) + 4px);
+  transform: translate(-50%, -12px);
+  width: max-content;
+  max-width: min(80vw, 420px);
+  padding: 8px 14px;
+  border-radius: 14px;
+  background: var(--plum);
+  color: #fff;
+  font-weight: 800;
+  font-size: 14px;
+  line-height: 1.25;
+  text-align: center;
+  border: 2px solid #fff;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 4;
+}
+.notify.show {
+  animation: notifyIn 3.2s ease forwards;
+}
+@keyframes notifyIn {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -12px);
+  }
+  10%,
+  85% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -6px);
+  }
+}
+.orders {
+  position: absolute;
+  left: calc(max(8px, env(safe-area-inset-left, 0px)) + 52px);
+  right: max(8px, env(safe-area-inset-right, 0px));
+  bottom: calc(var(--barH, 200px) + 6px);
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  pointer-events: none;
+  z-index: 3;
+  padding: 6px 2px 4px;
+}
+.orders.has {
+  pointer-events: auto;
+}
+.ocard {
+  position: relative;
+  flex: none;
+  width: 132px;
+  padding: 6px 7px 10px;
+  border-radius: 14px;
+  background: #fff;
+  border: 3px solid #fff;
+  box-shadow:
+    0 4px 0 rgba(74, 31, 12, 0.25),
+    0 6px 12px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  animation: bubIn 0.4s cubic-bezier(0.2, 1.8, 0.4, 1);
+}
+.ocard.event {
+  width: 160px;
+  background: linear-gradient(#fff7d6, #ffe7a3);
+}
+.ocard.sel {
+  border-color: var(--gold);
+  box-shadow:
+    0 0 0 3px var(--gold),
+    0 6px 12px rgba(0, 0, 0, 0.25);
+}
+.ocard.done {
+  border-color: var(--green);
+}
+.ohead {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+.oicon {
+  font-size: 20px;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  line-height: 24px;
+  text-align: center;
+}
+img.oicon {
+  object-fit: contain;
+}
+.otitle {
+  min-width: 0;
+  font: 400 13px/1.05 var(--display);
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.otitle small {
+  display: block;
+  font: 800 10px/1.1 var(--body);
+  color: var(--ink-soft);
+}
+.oitems {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-top: 3px;
+}
+.oit {
+  position: relative;
+  width: 30px;
+  height: 30px;
+}
+.oit img {
+  width: 100%;
+  height: 100%;
+}
+.oit b {
+  position: absolute;
+  right: -4px;
+  bottom: -3px;
+  font: 400 10px/14px var(--display);
+  padding: 0 3px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: #fff;
+}
+.oit.ok img {
+  opacity: 0.45;
+}
+.oit.ok b {
+  background: var(--green);
+}
+.osend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: 100%;
+  margin-top: 4px;
+  padding: 5px 0;
+  border: 0;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #5bd27a, var(--green));
+  color: #fff;
+  font: 400 13px/1 var(--display);
+  box-shadow: 0 3px 0 var(--green-d);
+}
+.osend .buttonIcon {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  vertical-align: 0;
+}
+.ocard.packing .osend {
+  background: var(--gold);
+  color: var(--ink);
+  animation: pulse 0.5s infinite;
+}
+.otime {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  bottom: 3px;
+  height: 4px;
+  border-radius: 999px;
+  background: #eadbc4;
+  overflow: hidden;
+}
+.otime b {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: var(--green);
+}
+
+/* ---------- customer names and stock warnings ---------- */
+.bubble .who {
+  position: absolute;
+  left: 50%;
+  top: -11px;
+  transform: translateX(-50%);
+  font: 800 10px/14px var(--body);
+  color: #fff;
+  background: rgba(74, 31, 12, 0.85);
+  padding: 0 6px;
+  border-radius: 999px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.bubble.vip .who {
+  top: 100%;
+  margin-top: 4px;
+}
+.food.low:not([data-stage="cooking"]) .stock {
+  background: var(--coral);
+}
+.food[data-stage="raw"] .lbl {
+  background: var(--coral-d);
+}
+
+/* ---------- staff, growth and the shift ledger ---------- */
+.staffBtns {
+  display: grid;
+  gap: 6px;
+}
+@media (max-width: 400px) {
+  .card > .staffBtns {
+    grid-column: 1 / -1;
+    grid-template-columns: 1fr 1fr;
+  }
+  .staffBtns .btn {
+    justify-content: center;
+  }
+}
+.card.staff .owedNote {
+  margin: 2px 0 0;
+  color: var(--coral-d);
+  font-weight: 800;
+}
+.card.owed {
+  box-shadow:
+    0 4px 0 #ebd5b2,
+    inset 0 0 0 2px var(--coral);
+}
+.portrait {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  object-fit: cover;
+  background: #fce6be;
+}
+.repPill {
+  padding: 0 12px;
+  font-size: 14px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 0 1 auto;
+}
+.repPill .star {
+  color: var(--gold);
+}
+.growHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(135deg, var(--teal), var(--teal-d));
+  color: #fff;
+  border-radius: 18px;
+  padding: 10px 14px;
+}
+.growHead small {
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  font-size: 11px;
+  opacity: 0.9;
+}
+.growHead h4 {
+  margin: 0;
+  font: 400 22px/1.1 var(--display);
+}
+.repBig {
+  font: 400 24px/1 var(--display);
+  color: var(--gold);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.25);
+  white-space: nowrap;
+}
+.card.place.owned {
+  box-shadow:
+    0 4px 0 #ebd5b2,
+    inset 0 0 0 2px var(--teal);
+}
+.ledger {
+  display: contents;
+}
+.stat.neg b {
+  color: var(--coral-d);
+}
+.stat.pos b {
+  color: var(--green-d);
+}
+.stat.warn {
+  background: #ffe1e1;
+}
+.stat.warn b {
+  color: var(--coral-d);
+  font-size: 18px;
+}
+.menuBtns .row.three {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.menuBtns .row.three .btn {
+  font-size: 15px;
+  padding: 10px 4px;
+  flex-direction: column;
+  gap: 2px;
+}
+.menuBtns .row.three .btn svg {
+  margin: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .boost.wash.full,
+  .ocard.packing .osend,
+  .notify.show {
+    animation: none;
+  }
+  .notify.show {
+    opacity: 1;
+  }
+}

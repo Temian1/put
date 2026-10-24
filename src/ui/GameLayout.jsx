@@ -1,6 +1,27 @@
 import React, { memo } from "react";
 import { Surface } from "./Surface.jsx";
 import { Icon } from "./Icon.jsx";
+
+function Toggle({ id, label }) {
+  return (
+    <div className="toggle">
+      {label}
+      <button className="sw" id={id} aria-label={label}>
+        <Icon name="check" />
+      </button>
+    </div>
+  );
+}
+
+function CashPill({ id, pillId }) {
+  return (
+    <div className="pill" id={pillId}>
+      <i className="note"></i>
+      <span id={id}>{"₦0"}</span>
+    </div>
+  );
+}
+
 export const GameLayout = memo(function GameLayout({
   canvasRef,
   hostRef,
@@ -26,10 +47,13 @@ export const GameLayout = memo(function GameLayout({
               <path d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.5 7.5 0 0 0-1.7-1L15 3h-4l-.4 2.8a7.5 7.5 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1c.5.4 1.1.7 1.7 1L11 21h4l.4-2.8c.6-.3 1.2-.6 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"></path>
             </svg>
           </button>
-          <div className="pill" id="menuCoinPill">
-            <i className="coin"></i>
-            <span id="menuCoins">{"0"}</span>
+          <div className="pill repPill" id="repPill" aria-label="Reputation">
+            <span className="star" aria-hidden="true">
+              {"★"}
+            </span>
+            <span id="menuRep">{"50"}</span>
           </div>
+          <CashPill id="menuCoins" pillId="menuCoinPill" />
         </div>
         <div className="logo">
           <div className="l1">{"MAMA PUT"}</div>
@@ -46,26 +70,27 @@ export const GameLayout = memo(function GameLayout({
           </button>
           <div className="row">
             <button className="btn teal" id="btnShop">
-              <svg
-                viewBox="0 0 24 24"
-                fill="#fff"
-                aria-hidden="true"
-                focusable="false"
-              >
-                <path d="M3 4h2l2.4 10.2A2 2 0 0 0 9.3 16H18a2 2 0 0 0 1.9-1.4L22 8H6.2L5.6 5.5A2 2 0 0 0 3.7 4H3zm6 14a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm9 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"></path>
-              </svg>
-              {"Upgrades"}
+              <Icon name="upgrade" />
+              <span className="buttonLabel">{"Upgrades"}</span>
             </button>
             <button className="btn coral" id="btnDaily">
-              <svg
-                viewBox="0 0 24 24"
-                fill="#fff"
-                aria-hidden="true"
-                focusable="false"
-              >
-                <path d="M7 2v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V2h-2v2H9V2zm-2 8h14v10H5zm7 2l1.3 2.6 2.9.4-2.1 2 .5 2.9-2.6-1.4-2.6 1.4.5-2.9-2.1-2 2.9-.4z"></path>
-              </svg>
-              {"Daily"}
+              <Icon name="gift" />
+              <span className="buttonLabel">{"Daily"}</span>
+            </button>
+          </div>
+          <div className="row three">
+            <button className="btn plain" id="btnMissions">
+              <Icon name="target" />
+              <span className="buttonLabel">{"Missions"}</span>
+              <span className="badge" id="missionBadge" hidden></span>
+            </button>
+            <button className="btn plain" id="btnStaff">
+              <Icon name="staff" />
+              <span className="buttonLabel">{"Staff"}</span>
+            </button>
+            <button className="btn plain" id="btnGrow">
+              <Icon name="map" />
+              <span className="buttonLabel">{"Grow"}</span>
             </button>
           </div>
           <button className="btn gold" id="btnEndless">
@@ -92,10 +117,7 @@ export const GameLayout = memo(function GameLayout({
             </svg>
           </button>
           <h2>{"Your Food Journey"}</h2>
-          <div className="pill">
-            <i className="coin"></i>
-            <span id="mapCoins">{"0"}</span>
-          </div>
+          <CashPill id="mapCoins" />
         </div>
         <div className="mapScroll scroll" id="mapScroll">
           <div className="mapInner" id="mapInner"></div>
@@ -117,10 +139,7 @@ export const GameLayout = memo(function GameLayout({
                 <span id="hudProgTxt">{"0 / 5 served"}</span>
               </div>
             </div>
-            <div className="pill" id="hudCoinPill">
-              <i className="coin"></i>
-              <span id="hudCoins">{"0"}</span>
-            </div>
+            <CashPill id="hudCoins" pillId="hudCoinPill" />
           </div>
           <div className="hrow">
             <div className="pill timer" id="hudTimer">
@@ -153,12 +172,50 @@ export const GameLayout = memo(function GameLayout({
           <div className="b2"></div>
           <div className="b3"></div>
         </div>
+        <div className="rail" id="rail">
+          <button className="boost zoom" id="zoomIn" aria-label="Zoom in">
+            <Icon name="zoomIn" />
+          </button>
+          <button className="boost zoom" id="zoomOut" aria-label="Zoom out">
+            <Icon name="zoomOut" />
+          </button>
+          <button className="boost" id="bFreeze" aria-label="Freeze Time">
+            <Icon name="freeze" />
+            <b>0</b>
+          </button>
+          <button className="boost" id="bAuto" aria-label="Auto-Serve">
+            <Icon name="bell" />
+            <b>0</b>
+          </button>
+          <button className="boost" id="bCalm" aria-label="Patience Boost">
+            <Icon name="heart" />
+            <b>0</b>
+          </button>
+          <button
+            className="boost wash"
+            id="btnWash"
+            hidden
+            aria-label="Wash plates"
+          >
+            <Icon name="wash" />
+            <b id="washTxt">{"0"}</b>
+            <i id="washBar"></i>
+          </button>
+        </div>
+        <div className="notify" id="notify" aria-live="polite"></div>
+        <div className="orders" id="orders"></div>
         <div className="foodBar" id="foodBar">
           <div className="foodGrid" id="foodBtns"></div>
         </div>
+        <div className="freezeFx" id="freezeFx"></div>
       </Surface>
       <div id="fx"></div>
-      <Surface className="overlay" id="ovPause" tag="div">
+      <div id="hand" hidden aria-hidden="true">
+        <svg viewBox="0 0 48 48">
+          <path d="M18 24V9a3 3 0 0 1 6 0v12l1-1a3 3 0 0 1 5 1 3 3 0 0 1 5 1 3 3 0 0 1 5 2v9c0 7-5 12-12 12h-2c-4 0-7-2-9-5l-6-9a3 3 0 0 1 5-4z" />
+        </svg>
+      </div>
+      <Surface className="overlay scroll" id="ovPause" tag="div">
         <div className="panel">
           <div className="ribbon">{"Small Break"}</div>
           <p className="sub">
@@ -169,18 +226,8 @@ export const GameLayout = memo(function GameLayout({
               <Icon name="play" />
               <span className="buttonLabel">{"Resume"}</span>
             </button>
-            <div className="toggle">
-              {"Sound effects"}
-              <button className="sw" id="pSound" aria-label="Sound effects">
-                <Icon name="check" />
-              </button>
-            </div>
-            <div className="toggle">
-              {"Music"}
-              <button className="sw" id="pMusic" aria-label="Music">
-                <Icon name="check" />
-              </button>
-            </div>
+            <Toggle id="pSound" label="Sound effects" />
+            <Toggle id="pMusic" label="Music" />
             <div className="btnRow">
               <button className="btn plain" id="pRestart">
                 <Icon name="restart" />
@@ -194,7 +241,7 @@ export const GameLayout = memo(function GameLayout({
           </div>
         </div>
       </Surface>
-      <Surface className="overlay" id="ovWin" tag="div">
+      <Surface className="overlay scroll" id="ovWin" tag="div">
         <div className="panel">
           <div className="ribbon" id="winTitle">
             {"Level Complete!"}
@@ -209,14 +256,15 @@ export const GameLayout = memo(function GameLayout({
           </div>
           <div className="stats">
             <div className="stat">
-              <span>{"Score"}</span>
-              <b id="winScore">{"0"}</b>
+              <span>{"Sales"}</span>
+              <b id="winScore">{"₦0"}</b>
             </div>
+            <div className="ledger" id="winLedger"></div>
             <div className="stat">
-              <span>{"Coins earned"}</span>
+              <span>{"Cash in hand"}</span>
               <b>
-                <i className="coin"></i>
-                <span id="winCoins">{"0"}</span>
+                <i className="note"></i>
+                <span id="winCoins">{"₦0"}</span>
               </b>
             </div>
             <div className="stat">
@@ -240,7 +288,7 @@ export const GameLayout = memo(function GameLayout({
           </div>
         </div>
       </Surface>
-      <Surface className="overlay" id="ovFail" tag="div">
+      <Surface className="overlay scroll" id="ovFail" tag="div">
         <div className="panel">
           <div className="ribbon" id="failTitle">
             {"Ah! Customers Vex!"}
@@ -256,6 +304,7 @@ export const GameLayout = memo(function GameLayout({
               <span>{"Served"}</span>
               <b id="failServed">{"0"}</b>
             </div>
+            <div className="ledger" id="failLedger"></div>
           </div>
           <div className="btnRow">
             <button className="btn plain" id="failMap">
@@ -275,19 +324,24 @@ export const GameLayout = memo(function GameLayout({
             <div className="ribbon small" style={{ margin: "0" }}>
               {"Mama's Shop"}
             </div>
-            <div className="pill">
-              <i className="coin"></i>
-              <span id="shopCoins">{"0"}</span>
-            </div>
+            <CashPill id="shopCoins" />
           </div>
-          <div className="tabs">
+          <div className="tabs" role="tablist">
             <button id="tabUp" className="on">
               <Icon name="upgrade" />
               <span className="buttonLabel">{"Upgrades"}</span>
             </button>
+            <button id="tabStaff">
+              <Icon name="staff" />
+              <span className="buttonLabel">{"Staff"}</span>
+            </button>
+            <button id="tabBoost">
+              <Icon name="boost" />
+              <span className="buttonLabel">{"Boosters"}</span>
+            </button>
             <button id="tabStyle">
-              <Icon name="chef" />
-              <span className="buttonLabel">{"Chef & Kitchen"}</span>
+              <Icon name="style" />
+              <span className="buttonLabel">{"Style"}</span>
             </button>
           </div>
           <div className="shopList scroll" id="shopList"></div>
@@ -299,32 +353,45 @@ export const GameLayout = memo(function GameLayout({
           </div>
         </div>
       </Surface>
-      <Surface className="overlay" id="ovSettings" tag="div">
+      <Surface className="overlay" id="ovMissions" tag="div">
+        <div className="panel">
+          <div className="shopHead">
+            <div className="ribbon small" style={{ margin: "0" }}>
+              {"Missions"}
+            </div>
+            <CashPill id="missionCoins" />
+          </div>
+          <div className="tabs two">
+            <button id="tabDailyM" className="on">
+              <Icon name="target" />
+              <span className="buttonLabel">{"Today"}</span>
+            </button>
+            <button id="tabAch">
+              <Icon name="check" />
+              <span className="buttonLabel">{"Achievements"}</span>
+            </button>
+          </div>
+          <div className="shopList scroll" id="missionList"></div>
+          <div className="btnRow" style={{ marginTop: "12px" }}>
+            <button className="btn coral" id="missionsClose">
+              <Icon name="close" />
+              <span className="buttonLabel">{"Close"}</span>
+            </button>
+          </div>
+        </div>
+      </Surface>
+      <Surface className="overlay scroll" id="ovSettings" tag="div">
         <div className="panel">
           <div className="ribbon">{"Settings"}</div>
           <div className="pauseList">
-            <div className="toggle">
-              {"Sound effects"}
-              <button className="sw" id="sSound" aria-label="Sound effects">
-                <Icon name="check" />
-              </button>
-            </div>
-            <div className="toggle">
-              {"Music"}
-              <button className="sw" id="sMusic" aria-label="Music">
-                <Icon name="check" />
-              </button>
-            </div>
-            <div className="toggle">
-              {"High quality graphics"}
-              <button
-                className="sw"
-                id="sQuality"
-                aria-label="High quality graphics"
-              >
-                <Icon name="check" />
-              </button>
-            </div>
+            <Toggle id="sSound" label="Sound effects" />
+            <Toggle id="sMusic" label="Music" />
+            <Toggle id="sHaptics" label="Vibration" />
+            <Toggle id="sQuality" label="High quality graphics" />
+            <button className="btn teal" id="sBackup">
+              <Icon name="cloud" />
+              <span className="buttonLabel">{"Backup & cloud save"}</span>
+            </button>
             <button className="btn plain" id="sReset">
               <Icon name="restart" />
               <span className="buttonLabel">{"Reset progress"}</span>
@@ -336,27 +403,76 @@ export const GameLayout = memo(function GameLayout({
           </div>
         </div>
       </Surface>
-      <Surface className="overlay" id="ovReward" tag="div">
+      <Surface className="overlay" id="ovGrow" tag="div">
+        <div className="panel">
+          <div className="shopHead">
+            <div className="ribbon small" style={{ margin: "0" }}>
+              {"Grow Your Business"}
+            </div>
+            <CashPill id="growCoins" />
+          </div>
+          <div className="shopList scroll" id="growList"></div>
+          <div className="btnRow" style={{ marginTop: "12px" }}>
+            <button className="btn coral" id="growClose">
+              <Icon name="close" />
+              <span className="buttonLabel">{"Close"}</span>
+            </button>
+          </div>
+        </div>
+      </Surface>
+      <Surface className="overlay scroll" id="ovBackup" tag="div">
+        <div className="panel">
+          <div className="ribbon small">{"Backup & Cloud Save"}</div>
+          <p className="sub small" id="backupSub">
+            {
+              "Copy this code to move your progress to another phone. Paste a code to restore."
+            }
+          </p>
+          <textarea
+            id="backupCode"
+            className="codeBox"
+            rows="4"
+            spellCheck="false"
+            aria-label="Backup code"
+          ></textarea>
+          <div className="btnRow" style={{ margin: "10px 0" }}>
+            <button className="btn teal" id="backupCopy">
+              <Icon name="copy" />
+              <span className="buttonLabel">{"Copy"}</span>
+            </button>
+            <button className="btn gold" id="backupRestore">
+              <Icon name="restart" />
+              <span className="buttonLabel">{"Restore"}</span>
+            </button>
+          </div>
+          <button
+            className="btn green"
+            id="cloudSync"
+            hidden
+            style={{ width: "100%", marginBottom: "10px" }}
+          >
+            <Icon name="cloud" />
+            <span className="buttonLabel">{"Sync with cloud"}</span>
+          </button>
+          <button
+            className="btn coral"
+            id="backupClose"
+            style={{ width: "100%" }}
+          >
+            <Icon name="close" />
+            <span className="buttonLabel">{"Close"}</span>
+          </button>
+        </div>
+      </Surface>
+      <Surface className="overlay scroll" id="ovReward" tag="div">
         <div className="panel">
           <div className="ribbon">{"Daily Reward!"}</div>
           <p className="sub" id="rewardSub">
             {"Welcome back! Day 1 of your streak."}
           </p>
-          <div
-            style={{ display: "grid", placeItems: "center", margin: "16px 0" }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                fontFamily: "var(--display)",
-                fontSize: "44px",
-              }}
-            >
-              <i className="coin" style={{ width: "52px", height: "52px" }}></i>
-              <span id="rewardAmt">{"50"}</span>
-            </div>
+          <div className="rewardAmt">
+            <i className="note big"></i>
+            <span id="rewardAmt">{"₦1,500"}</span>
           </div>
           <button
             className="btn gold big pulse"
@@ -368,7 +484,7 @@ export const GameLayout = memo(function GameLayout({
           </button>
         </div>
       </Surface>
-      <Surface className="overlay" id="ovDaily" tag="div">
+      <Surface className="overlay scroll" id="ovDaily" tag="div">
         <div className="panel">
           <div className="ribbon">{"Daily Challenge"}</div>
           <p className="sub" id="dailySub"></p>
