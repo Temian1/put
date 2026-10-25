@@ -12,12 +12,21 @@ import {
   levelCfg,
   endlessCfg,
 } from "../src/game/data.js";
+import { UNPAID_LIMIT } from "../src/game/staff.js";
 import {
-  payroll,
-  removeStaff,
-  onDuty,
-  UNPAID_LIMIT,
-} from "../src/game/staff.js";
+  hire,
+  sack,
+  toggleDuty,
+  onShift,
+  payCrew,
+  canHire,
+  runBranches,
+  collect,
+  managerAt,
+  migrateCrew,
+  CREW_LIMIT,
+  TILL_SHIFTS,
+} from "../src/game/crew.js";
 import {
   REP,
   clampRep,
@@ -63,50 +72,101 @@ const fresh = (patch = {}) => {
   return Object.assign(s.d, patch);
 };
 
-describe("salaries, quitting and sacking", () => {
+describe("each restaurant's own crew", () => {
   const chidi = STAFF.find((s) => s.id === "chidi"),
     bisi = STAFF.find((s) => s.id === "bisi");
-  it("pays everyone on duty when there is enough cash", () => {
-    const d = fresh({ staff: ["chidi", "bisi"] });
-    const r = payroll(d, STAFF, 5000);
-    expect(r).toMatchObject({
-      bill: chidi.wage + bisi.wage,
-      unpaid: [],
-      quit: [],
-    });
-    expect(r.paid).toBe(r.bill);
+  const two = () => fresh({ branches: ["ch0", "ch1"] });
+  it("hires staff for one restaurant only", () => {
+    const d = two();
+    hire(d, "ch0", "chidi");
+    expect(onShift(d, "ch0").map((s) => s.name)).toEqual(["Chidi"]);
+    expect(onShift(d, "ch1")).toEqual([]);
+    expect(canHire(d, "ch2", "chidi").ok).toBe(false);
   });
-  it("skips staff who are off duty", () => {
-    const d = fresh({ staff: ["chidi", "bisi"], staffOff: ["bisi"] });
-    expect(onDuty(d, STAFF).map((s) => s.id)).toEqual(["chidi"]);
-    expect(payroll(d, STAFF, 5000).bill).toBe(chidi.wage);
+  it("hires several people for the same job, each with a new name", () => {
+    const d = two();
+    for (let i = 0; i < CREW_LIMIT.server; i++) hire(d, "ch0", "chidi");
+    const names = onShift(d, "ch0").map((s) => s.name);
+    expect(names).toHaveLength(3);
+    expect(new Set(names).size).toBe(3);
+    expect(names.every((n) => n === "Chidi" || NAMES.includes(n))).toBe(true);
+    expect(hire(d, "ch0", "tunde")).toBe(null);
   });
   it("pays in hiring order and gives the unpaid a strike", () => {
-    const d = fresh({ staff: ["bisi", "chidi"] });
-    const r = payroll(d, STAFF, bisi.wage + 10);
-    expect(r.unpaid).toEqual(["chidi"]);
-    expect(d.unpaid).toEqual({ bisi: 0, chidi: 1 });
+    const d = two();
+    hire(d, "ch0", "bisi");
+    hire(d, "ch0", "chidi");
+    const r = payCrew(d, "ch0", bisi.wage + 10, UNPAID_LIMIT);
+    expect(r).toMatchObject({
+      bill: bisi.wage + chidi.wage,
+      paid: bisi.wage,
+      unpaid: ["Chidi"],
+    });
   });
-  it("staff quit after three unpaid shifts in a row; pay resets the count", () => {
-    const d = fresh({ staff: ["chidi"] });
-    payroll(d, STAFF, 0);
-    payroll(d, STAFF, 0);
-    payroll(d, STAFF, 10000);
-    expect(d.unpaid.chidi).toBe(0);
-    for (let i = 1; i < UNPAID_LIMIT; i++) payroll(d, STAFF, 0);
-    expect(d.staff).toEqual(["chidi"]);
-    const r = payroll(d, STAFF, 0);
-    expect(r.quit).toEqual(["chidi"]);
-    expect(d.staff).toEqual([]);
+  it("off-duty staff earn nothing; staff quit after three unpaid shifts", () => {
+    const d = two();
+    const b = hire(d, "ch0", "bisi");
+    hire(d, "ch0", "chidi");
+    toggleDuty(d, "ch0", b.uid);
+    expect(payCrew(d, "ch0", 5000, UNPAID_LIMIT).bill).toBe(chidi.wage);
+    payCrew(d, "ch0", 0, UNPAID_LIMIT);
+    payCrew(d, "ch0", 10000, UNPAID_LIMIT);
+    for (let i = 1; i < UNPAID_LIMIT; i++) payCrew(d, "ch0", 0, UNPAID_LIMIT);
+    expect(onShift(d, "ch0").map((s) => s.name)).toEqual(["Chidi"]);
+    expect(payCrew(d, "ch0", 0, UNPAID_LIMIT).quit).toEqual(["Chidi"]);
+    expect(onShift(d, "ch0")).toEqual([]);
   });
-  it("sacking removes the worker and their record", () => {
-    const d = fresh({
+  it("sacking removes the worker", () => {
+    const d = two();
+    const m = hire(d, "ch0", "chidi");
+    expect(sack(d, "ch0", m.uid)).toBe(true);
+    expect(onShift(d, "ch0")).toEqual([]);
+  });
+  it("an old restaurant earns into its safe only with a manager", () => {
+    const d = two();
+    expect(runBranches(d, "ch0", 1, UNPAID_LIMIT)).toEqual([]);
+    hire(d, "ch1", "mgr1");
+    expect(managerAt(d, "ch1").title).toBe("Junior manager");
+    expect(canHire(d, "ch1", "mgr3").ok).toBe(false);
+    const [r] = runBranches(d, "ch0", 1, UNPAID_LIMIT);
+    const income = PLACES[1].income;
+    expect(r.net).toBe(
+      Math.round(income * 0.55) - Math.round(Math.round(income * 0.55) * 0.15),
+    );
+    // The restaurant you are playing at earns from the shift itself.
+    expect(runBranches(d, "ch1", 1, UNPAID_LIMIT)).toEqual([]);
+    const before = d.coins;
+    expect(collect(d, "ch1")).toBe(r.net);
+    expect(d.coins).toBe(before + r.net);
+    expect(collect(d, "ch1")).toBe(0);
+  });
+  it("better managers and more staff earn more; the safe fills up", () => {
+    const run = (mgr, staff) => {
+      const d = two();
+      hire(d, "ch1", mgr);
+      for (let i = 0; i < staff; i++) hire(d, "ch1", "chidi");
+      return runBranches(d, "ch0", 1, UNPAID_LIMIT)[0].net;
+    };
+    expect(run("mgr3", 0)).toBeGreaterThan(run("mgr1", 0));
+    expect(run("mgr2", 2)).toBeGreaterThan(run("mgr2", 0));
+    const d = two();
+    hire(d, "ch1", "mgr3");
+    for (let i = 0; i < TILL_SHIFTS + 5; i++)
+      runBranches(d, "ch0", 1, UNPAID_LIMIT);
+    expect(d.till.ch1).toBe(PLACES[1].income * TILL_SHIFTS);
+  });
+  it("moves staff from older saves to the restaurant you were running", () => {
+    const out = migrateCrew({
+      place: "ch1",
       staff: ["chidi", "bisi"],
-      staffOff: ["chidi"],
+      staffOff: ["bisi"],
       unpaid: { chidi: 2 },
     });
-    removeStaff(d, "chidi");
-    expect(d).toMatchObject({ staff: ["bisi"], staffOff: [], unpaid: {} });
+    expect(out.crew.ch1).toMatchObject([
+      { job: "chidi", name: "Chidi", off: false, unpaid: 2 },
+      { job: "bisi", off: true },
+    ]);
+    expect(out.staff).toEqual([]);
   });
   it("has dispatch riders and a market errand worker", () => {
     expect(

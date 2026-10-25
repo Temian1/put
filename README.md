@@ -78,6 +78,17 @@ The game runs for **100 levels in 10 chapters**. After the Mama Put Empire (leve
 - **Decline:** reputation falls if the buka stays closed (up to 15 points for long absences), and branch income shrinks with low reputation. Business level is set by reputation and lifetime sales, so a struggling business drops back down the levels.
 - **Growth is slow on purpose:** business levels need ₦250k, ₦1.2m, ₦4m and ₦12m in lifetime sales. Branches cost ₦150k–₦6m, an okada ₦450k+ and the bus ₦2.5m. The street fills with more stalls, buildings, people and traffic as you grow.
 
+## Restaurants, staff and managers
+
+- **Staff per restaurant:** every restaurant has its own crew. Hire them in Shop → Staff, picking the restaurant at the top. You can hire up to 3 servers, 2 cooks, 2 cleaners, 2 riders and 1 market errand per restaurant. Each extra hire of a job gets a new Nigerian name. Staff only work, and are only paid, when you play at their restaurant.
+- **Managers:** Junior, Experienced and Expert managers run a restaurant while you play elsewhere. They earn 55%, 80% or 100% of its potential, take a cut, and pay its staff. A good manager turns extra staff into profit. The takings go into the manager's safe, which holds 12 shifts of money. Collect it in Grow (the Grow button shows how much is waiting). Without a manager an old restaurant stays shut while you are away. At the restaurant you are playing, a manager also cuts waste on ingredients and packs.
+- **Serving:** a server collects every ready dish of a customer's order along the bench and serves it in one trip.
+- **Seating:** any clean chair can be used from level 1, by VIPs too. A dirty plate only blocks its own chair.
+- **Litter (level 13+):** customers and passers-by drop nylon, sachets, bones and paper on the dining floor. Tap the brown broom buttons to sweep it, or hire a cleaner. Litter lowers hygiene. When the place is dirty, customers complain and lose patience, fewer people come, and three or more complaints cost reputation. Inspectors fine low hygiene.
+- **Renovate the building (Shop → Buka):** tiles and paint, then standing fans, then air-conditioning. Each level adds hygiene, cuts litter and makes customers more patient.
+- **Camera:** drag empty floor to look around, pinch or use the rail buttons to zoom, and tap the target button to re-centre.
+- **Modals:** every modal scrolls with a finger drag on small phones.
+
 ## Online backend and admin (war.kikter.com)
 
 The frontend (Vercel, https://mamaput-phi.vercel.app) talks to the Kikter Games Laravel app at **https://war.kikter.com/api/mamaput**. Admins manage the game in Filament at **https://war.kikter.com/admin**, under **Mama Put Rush**:

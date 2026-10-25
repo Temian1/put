@@ -253,62 +253,99 @@ function Portrait({ src, a, b, icon }) {
   );
 }
 
-function StaffCard({ s, save, art, hire, toggle, sack, unpaidLimit }) {
-  const [arm, setArm] = useState(false);
-  const hired = save.staff.includes(s.id),
-    onDuty = hired && !save.staffOff.includes(s.id),
-    owed = (save.unpaid || {})[s.id] || 0;
+const ROLE_ICON = { rider: "bike", manager: "chef" };
+
+// A job you can hire for the chosen restaurant (several people per job).
+function JobCard({ job, have, max, check, coins, art, hire }) {
+  const c = check(job);
   return (
-    <div className={"card staff" + (owed ? " owed" : "")}>
+    <div className="card staff">
       <Portrait
-        src={art["staff:" + s.id]}
-        a={s.a}
-        b={s.b}
-        icon={s.role === "rider" ? "bike" : "staff"}
+        src={art["staff:" + job.id]}
+        a={job.a}
+        b={job.b}
+        icon={ROLE_ICON[job.role] || "staff"}
       />
       <div>
         <h4>
-          {s.name} <small>· {s.title}</small>
+          {job.title}
+          {job.stars ? <small> · {"★".repeat(job.stars)}</small> : null}
         </h4>
-        <p>{s.desc}</p>
-        <p className="wage">Salary {fmtNaira(s.wage)} per shift</p>
+        <p>{job.desc}</p>
+        <p className="wage">
+          {job.role === "manager"
+            ? `Takes ${Math.round(job.pay * 100)}% of the takings`
+            : `Salary ${fmtNaira(job.wage)} per shift`}{" "}
+          · {have}/{max} here
+        </p>
+      </div>
+      {c.ok ? (
+        <BuyButton
+          cost={job.cost}
+          coins={coins}
+          onClick={(e) => hire(job, e.currentTarget.closest(".card"), e)}
+        />
+      ) : (
+        <button className="btn plain" disabled title={c.why}>
+          <Icon name="check" />
+          Full
+        </button>
+      )}
+    </div>
+  );
+}
+
+// Someone working at the chosen restaurant.
+function CrewRow({ m, job, toggle, sack, unpaidLimit }) {
+  const [arm, setArm] = useState(false);
+  const owed = m.unpaid || 0,
+    manager = job.role === "manager";
+  return (
+    <div className={"card crew" + (owed ? " owed" : "")}>
+      <Portrait a={job.a} b={job.b} icon={ROLE_ICON[job.role] || "staff"} />
+      <div>
+        <h4>
+          {m.name} <small>· {job.title}</small>
+        </h4>
         {owed ? (
           <p className="owedNote">
-            Unpaid {owed} of {unpaidLimit} shifts. Keep enough cash for the next
-            payday or {s.name} quits!
+            Unpaid {owed} of {unpaidLimit} shifts. Keep enough cash or {m.name}{" "}
+            quits!
           </p>
-        ) : null}
+        ) : (
+          <p className="wage">
+            {manager
+              ? "Runs this restaurant while you are away"
+              : m.off
+                ? "Off duty: no salary"
+                : `On duty · ${fmtNaira(job.wage)} per shift`}
+          </p>
+        )}
       </div>
-      {hired ? (
-        <div className="staffBtns">
+      <div className="staffBtns">
+        {manager ? null : (
           <button
-            className={"btn " + (onDuty ? "teal" : "plain")}
-            onClick={(e) => toggle(s, e.currentTarget.closest(".card"), e)}
-            aria-pressed={onDuty}
+            className={"btn " + (m.off ? "plain" : "teal")}
+            onClick={() => toggle(m)}
+            aria-pressed={!m.off}
           >
-            <Icon name={onDuty ? "check" : "close"} />
-            {onDuty ? "On duty" : "Off"}
+            <Icon name={m.off ? "close" : "check"} />
+            {m.off ? "Off" : "On duty"}
           </button>
-          <button
-            className={"btn " + (arm ? "coral" : "plain")}
-            onClick={() => {
-              if (!arm) {
-                setArm(true);
-                setTimeout(() => setArm(false), 4000);
-              } else sack(s);
-            }}
-          >
-            <Icon name="sack" />
-            {arm ? "Sure? Sack" : "Sack"}
-          </button>
-        </div>
-      ) : (
-        <BuyButton
-          cost={s.cost}
-          coins={save.coins}
-          onClick={(e) => hire(s, e.currentTarget.closest(".card"), e)}
-        />
-      )}
+        )}
+        <button
+          className={"btn " + (arm ? "coral" : "plain")}
+          onClick={() => {
+            if (!arm) {
+              setArm(true);
+              setTimeout(() => setArm(false), 4000);
+            } else sack(m);
+          }}
+        >
+          <Icon name="sack" />
+          {arm ? "Sure? Sack" : "Sack"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -319,7 +356,7 @@ export function Shop({
   upgrades,
   outfits,
   decor,
-  staff,
+  crew,
   boosters,
   buyUpgrade,
   buyOutfit,
@@ -364,29 +401,70 @@ export function Shop({
         </div>
       );
     });
-  if (tab === "staff")
+  if (tab === "staff") {
+    const jobOf = (id) => crew.jobs.find((j) => j.id === id);
+    const here = crew.places.find((p) => p.id === crew.place);
     return (
       <>
-        <div className="sectionLabel">Hire helping hands</div>
+        <div className="sectionLabel">Staff for each restaurant</div>
+        <div className="placeChips" role="tablist">
+          {crew.places.map((p) => (
+            <button
+              key={p.id}
+              role="tab"
+              aria-selected={p.id === crew.place}
+              className={"placeChip" + (p.id === crew.place ? " on" : "")}
+              onClick={() => crew.setPlace(p.id)}
+            >
+              {p.name}
+            </button>
+          ))}
+        </div>
         <p className="hintText">
-          Staff work every shift you play and are paid after it, from the
-          shift&apos;s cash and then your savings. Unpaid {unpaidLimit} shifts
-          in a row, they quit. Sack staff to save money.
+          {here ? here.name : "This restaurant"} has its own crew. They work
+          every shift you play here and are paid after it. Unpaid {unpaidLimit}{" "}
+          shifts in a row, they quit.
+          {crew.place === "ch0"
+            ? ""
+            : " A manager keeps it open while you play elsewhere."}
         </p>
-        {staff.map((s) => (
-          <StaffCard
-            key={s.id}
-            s={s}
-            save={save}
-            art={art}
-            hire={hireStaff}
-            toggle={toggleStaff}
-            sack={sackStaff}
-            unpaidLimit={unpaidLimit}
-          />
-        ))}
+        {crew.members.length ? (
+          <>
+            <div className="sectionLabel">
+              Working here ({crew.members.length})
+            </div>
+            {crew.members.map((m) =>
+              jobOf(m.job) ? (
+                <CrewRow
+                  key={m.uid}
+                  m={m}
+                  job={jobOf(m.job)}
+                  toggle={toggleStaff}
+                  sack={sackStaff}
+                  unpaidLimit={unpaidLimit}
+                />
+              ) : null,
+            )}
+          </>
+        ) : null}
+        <div className="sectionLabel">Hire</div>
+        {crew.jobs
+          .filter((j) => j.role !== "manager" || crew.place !== "ch0")
+          .map((j) => (
+            <JobCard
+              key={j.id}
+              job={j}
+              have={crew.count(j.role)}
+              max={crew.limit[j.role] || 1}
+              check={crew.check}
+              coins={save.coins}
+              art={art}
+              hire={hireStaff}
+            />
+          ))}
       </>
     );
+  }
   if (tab === "buka")
     return (
       <>
@@ -687,19 +765,21 @@ export function Bubble({
   );
 }
 
-export function DirtyChip({ clear, rootRef, small }) {
+export function DirtyChip({ clear, rootRef, small, litter }) {
   return (
     <button
       ref={rootRef}
-      className={"dirtyChip" + (small ? " small" : "")}
-      aria-label="Clear table"
+      className={
+        "dirtyChip" + (small ? " small" : "") + (litter ? " litter" : "")
+      }
+      aria-label={litter ? "Sweep litter" : "Clear table"}
       onPointerDown={(e) => {
         e.stopPropagation();
         e.preventDefault();
         clear();
       }}
     >
-      <Icon name="wash" />
+      <Icon name={litter ? "broom" : "wash"} />
       {small ? null : "Clear"}
     </button>
   );
@@ -801,6 +881,11 @@ export function Grow({
   visit,
   playAt,
   earned,
+  manager,
+  till,
+  tillTotal,
+  collect,
+  staffAt,
 }) {
   return (
     <>
@@ -824,11 +909,17 @@ export function Grow({
           You run a Food Empire. Keep the bills paid and reputation high.
         </p>
       )}
+      {tillTotal ? (
+        <button className="btn gold collectAll" onClick={() => collect()}>
+          <i className="note" />
+          Collect {fmtNaira(tillTotal)} from your managers
+        </button>
+      ) : null}
       <div className="sectionLabel">Your restaurants</div>
       <p className="hintText">
-        Each chapter is a new restaurant. Beat the chapter before it, then pay
-        to open it. Opened restaurants earn money after every shift; visit or
-        replay them any time.
+        Each chapter is a new restaurant with its own staff. Beat the chapter
+        before it, then pay to open it. Put a manager in charge and it keeps
+        earning while you play elsewhere; collect the money here.
       </p>
       {places.map((p) => {
         const owned = save.branches.includes(p.id),
@@ -854,12 +945,29 @@ export function Grow({
               <p>
                 Levels {p.firstLevel}–{p.firstLevel + 9}
                 {p.income
-                  ? ` · earns ${fmtNaira(p.income)} per shift once open`
+                  ? ` · up to ${fmtNaira(p.income)} per shift with a manager`
                   : " · where it all started"}
               </p>
+              {owned && p.income ? (
+                <p className={"mgrLine" + (manager(p) ? "" : " none")}>
+                  {manager(p)
+                    ? `${manager(p).name} ${"★".repeat(manager(p).stars)} · safe ${fmtNaira(till(p))}`
+                    : "No manager: shut while you play elsewhere"}
+                </p>
+              ) : null}
             </div>
             {owned ? (
               <div className="staffBtns">
+                {till(p) ? (
+                  <button className="btn gold" onClick={() => collect(p)}>
+                    <i className="note" />
+                    Collect
+                  </button>
+                ) : null}
+                <button className="btn plain" onClick={() => staffAt(p)}>
+                  <Icon name="staff" />
+                  Staff
+                </button>
                 <button className="btn green" onClick={() => playAt(p)}>
                   <Icon name="play" />
                   Play

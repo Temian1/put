@@ -49,7 +49,7 @@ test("workers: idle staff notice new work promptly and cooldown runs during trav
 test("workers: two servers reserve different takeaway tasks", async ({
   page,
 }) => {
-  await boot(page, fresh({ staff: ["chidi", "tunde"] }));
+  await boot(page, fresh({ staff: ["chidi", "tunde"], place: "ch1" }));
   await page.evaluate(() =>
     window.__mp.Game.start({
       ...window.__mp.levelCfg(15),
@@ -88,7 +88,7 @@ test("workers: two servers reserve different takeaway tasks", async ({
 test("workers: cooks prioritize waiting customers over speculative batches", async ({
   page,
 }) => {
-  await boot(page, fresh({ staff: ["basira"] }));
+  await boot(page, fresh({ staff: ["basira"], place: "ch1" }));
   await page.evaluate(() =>
     window.__mp.Game.start({
       ...window.__mp.levelCfg(15),

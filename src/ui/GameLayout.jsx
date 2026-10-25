@@ -115,6 +115,7 @@ export const GameLayout = memo(function GameLayout({
             <button className="btn plain" id="btnGrow">
               <Icon name="map" />
               <span className="buttonLabel">{"Grow"}</span>
+              <span className="badge cash" id="growBadge" hidden></span>
             </button>
           </div>
           <button className="btn gold" id="btnEndless">
@@ -214,6 +215,14 @@ export const GameLayout = memo(function GameLayout({
           </button>
           <button className="boost zoom" id="zoomOut" aria-label="Zoom out">
             <Icon name="zoomOut" />
+          </button>
+          <button
+            className="boost zoom"
+            id="camCenter"
+            aria-label="Centre the view"
+            hidden
+          >
+            <Icon name="target" />
           </button>
           <button className="boost" id="bFreeze" aria-label="Freeze Time">
             <Icon name="freeze" />

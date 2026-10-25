@@ -23,7 +23,25 @@ import {
   PLACES,
   MAX_LEVEL,
 } from "../game/data.js";
-import { payroll, removeStaff, UNPAID_LIMIT } from "../game/staff.js";
+import { UNPAID_LIMIT } from "../game/staff.js";
+import {
+  JOBS,
+  CREW_LIMIT,
+  crewAt,
+  onShift,
+  roleCount as crewCount,
+  managerAt,
+  canHire,
+  hire as hireCrew,
+  sack as sackCrew,
+  toggleDuty,
+  wageBill as crewWages,
+  payCrew,
+  runBranches,
+  tillAt,
+  tillTotal,
+  collect as collectTill,
+} from "../game/crew.js";
 import {
   REP,
   clampRep,
@@ -33,7 +51,6 @@ import {
   nextTier,
   canOpen,
   openBranch,
-  branchIncome,
   levelOpen,
   placeOfLevel,
 } from "../game/growth.js";
@@ -854,6 +871,44 @@ export function mountGame(canvas, host, bridge) {
       FOOD_TPL[id] = g;
     }
     return FOOD_TPL[id].clone();
+  }
+  // Rubbish customers drop on the dining floor: a nylon bag, a pure water
+  // sachet, a chicken bone or a paper wrap.
+  const LITTER_KINDS = ["nylon", "sachet", "bone", "paper"];
+  function litterModel(kind) {
+    const key = "__litter_" + kind;
+    if (!FOOD_TPL[key]) {
+      const g = new T3.Group();
+      if (kind === "nylon") {
+        const b = mesh(sph(0.11, 8, 6), M("#2F80ED", { roughness: 0.5 }));
+        b.scale.set(1.2, 0.55, 0.9);
+        b.position.y = 0.06;
+        g.add(b);
+      } else if (kind === "sachet") {
+        g.add(
+          mesh(
+            rbox(0.2, 0.02, 0.13, 0.01),
+            M("#DDEFFF", { roughness: 0.2, transparent: true, opacity: 0.8 }),
+            0,
+            0.02,
+            0,
+          ),
+        );
+      } else if (kind === "bone") {
+        const b = mesh(cyl(0.025, 0.025, 0.2, 6), M("#F3E6C8"), 0, 0.03, 0);
+        b.rotation.z = Math.PI / 2;
+        g.add(b);
+        g.add(mesh(sph(0.04, 6, 5), M("#F3E6C8"), 0.1, 0.03, 0));
+        g.add(mesh(sph(0.04, 6, 5), M("#F3E6C8"), -0.1, 0.03, 0));
+      } else {
+        const b = mesh(sph(0.09, 7, 5), M("#F1E3C2", { roughness: 1 }));
+        b.scale.set(1, 0.6, 1);
+        b.position.y = 0.05;
+        g.add(b);
+      }
+      FOOD_TPL[key] = g;
+    }
+    return FOOD_TPL[key].clone();
   }
   // Empty plate left behind with smears of stew, waiting to be cleared.
   function dirtyPlate() {
@@ -1952,6 +2007,7 @@ export function mountGame(canvas, host, bridge) {
       false,
     );
     env.add(pv);
+    buildRenovation(env, effects(Save.d).building, t, ci);
     // counter
     env.add(mesh(rbox(7, 0.95, 0.9, 0.1), M(t.counter), 0, 0.5, 0.55));
     env.add(
@@ -2435,6 +2491,65 @@ export function mountGame(canvas, host, bridge) {
     }
   }
 
+  /* ---- renovation: tiles and paint, standing fans, then air-conditioning ---- */
+  function buildRenovation(g, level, t, ci) {
+    if (level >= 1) {
+      const tiles = new T3.Mesh(
+        G("renoFloor", () => new T3.PlaneGeometry(9.4, 1.7)),
+        new T3.MeshStandardMaterial({
+          map: canvasTex("reno" + ci, 128, 128, (x) => {
+            for (let a = 0; a < 4; a++)
+              for (let b = 0; b < 4; b++) {
+                x.fillStyle = (a + b) % 2 ? "#F4EFE6" : "#CFE7E3";
+                x.fillRect(a * 32, b * 32, 32, 32);
+              }
+          }),
+          roughness: 0.35,
+        }),
+      );
+      tiles.material.map.wrapS = tiles.material.map.wrapT = T3.RepeatWrapping;
+      tiles.material.map.repeat.set(6, 1);
+      tiles.rotation.x = -Math.PI / 2;
+      tiles.position.set(0, 0.085, -0.85);
+      tiles.receiveShadow = true;
+      g.add(tiles);
+    }
+    if (level >= 2)
+      [-4.1, 4.1].forEach((x, i) => {
+        const fan = new T3.Group();
+        fan.position.set(x, 0, -2.2);
+        fan.add(mesh(cyl(0.18, 0.22, 0.05, 12), M("#333"), 0, 0.03, 0));
+        fan.add(mesh(cyl(0.025, 0.025, 1.3, 6), M("#C9CED6"), 0, 0.68, 0));
+        const head = new T3.Group();
+        head.position.set(0, 1.4, 0.02);
+        head.rotation.y = x > 0 ? -0.5 : 0.5;
+        head.add(mesh(cyl(0.12, 0.12, 0.14, 10), M("#E8ECF1"), 0, 0, -0.06));
+        const blades = new T3.Group();
+        for (let k = 0; k < 3; k++) {
+          const b = mesh(rbox(0.07, 0.3, 0.01, 0.01), M("#4FC3F7"), 0, 0.14, 0);
+          const arm = new T3.Group();
+          arm.rotation.z = (k * Math.PI * 2) / 3;
+          arm.add(b);
+          blades.add(arm);
+        }
+        head.add(blades);
+        fan.add(head);
+        g.add(fan);
+        dyn.push({ o: blades, type: "spin", ph: i });
+      });
+    if (level >= 3)
+      [-3.2, 3.2].forEach((x) => {
+        const ac = mesh(
+          rbox(0.95, 0.32, 0.26, 0.05),
+          M("#FFFFFF"),
+          x,
+          2.6,
+          -2.05,
+        );
+        g.add(ac);
+        g.add(mesh(rbox(0.8, 0.03, 0.02, 0.01), M("#9AA4B2"), x, 2.48, -1.91));
+      });
+  }
   /* ---- dining: plastic tables and chairs on the customer side ---- */
   const DINING_SLOTS = [
     [-1.05, -1.62],
@@ -3395,6 +3510,11 @@ export function mountGame(canvas, host, bridge) {
       bridge.remove("bubble-" + this.id);
     }
   }
+  // The restaurant a shift runs at: a level's own chapter, else where you are.
+  const placeFor = (cfg) =>
+    cfg && cfg.mode === "level" && cfg.n
+      ? placeOfLevel(cfg.n).id
+      : Save.d.place || "ch0";
   /* ================= HELPERS (hired staff, visible and walking) ================= */
   // Staff live in the back kitchen (camera side of the bench). To reach the
   // front counter or the dining tables they walk round the bench ends.
@@ -3408,13 +3528,14 @@ export function mountGame(canvas, host, bridge) {
       { x: -1.6, z: KITCHEN_Z },
     ],
     cleaner: [{ x: -2.35, z: 3.35 }],
-    errand: [{ x: 2.45, z: 3.35 }],
+    errand: [{ x: 3.85, z: 3.75 }],
     rider: [
       { x: 3.95, z: -3.05 },
       { x: 3.35, z: -3.3 },
     ],
   };
   const roleCount = {};
+  let litterSeq = 0;
   const V = (x, z) => new T3.Vector3(x, 0, z);
   class Helper {
     constructor(spec) {
@@ -3496,27 +3617,60 @@ export function mountGame(canvas, host, bridge) {
         const waiting = G0.customers
           .filter((c) => c.state === "wait")
           .sort((a, b) => a.p / a.max - b.p / b.max);
-        for (const c of waiting)
-          for (const it of nextNeeded(c.order)) {
-            const ck = G0.cookers[it.f];
-            if (ck && !hasPortion(ck)) continue;
-            if (G0.claimed.has(c.id + it.f)) continue;
-            const st = stations[it.f];
-            if (!st) continue;
-            G0.claimed.add(c.id + it.f);
-            return this.go(this.toBench(st.position.x), () => {
-              G0.claimed.delete(c.id + it.f);
-              const k = G0.cookers[it.f];
-              if (!c.needs(it.f) || (k && !hasPortion(k))) return false;
-              if (k) takePortion(k);
-              st.userData.bounce = 1;
-              G0.deliver(
-                c,
-                it.f,
-                st.getWorldPosition(new T3.Vector3()).setY(1.4),
-              );
-            });
-          }
+        const ready = (f) => {
+          const ck = G0.cookers[f];
+          return !!stations[f] && (!ck || hasPortion(ck));
+        };
+        // One trip serves the whole order: the server picks up every dish
+        // that is ready along the bench, then hands them over together.
+        for (const c of waiting) {
+          if (G0.claimed.has("cust" + c.id)) continue;
+          const first = nextNeeded(c.order).find(
+            (it) => ready(it.f) && !G0.claimed.has(c.id + it.f),
+          );
+          if (!first) continue;
+          const xs = [
+            ...new Set(
+              c.order
+                .filter((it) => !it.done && ready(it.f))
+                .map((it) => stations[it.f].position.x),
+            ),
+          ].sort(
+            (a, b) =>
+              Math.abs(a - this.root.position.x) -
+              Math.abs(b - this.root.position.x),
+          );
+          G0.claimed.add("cust" + c.id);
+          return this.go(
+            [
+              ...this.toBench(xs[0]),
+              ...xs.slice(1).map((x) => V(clamp(x, -3.3, 3.3), 2.95)),
+            ],
+            () => {
+              G0.claimed.delete("cust" + c.id);
+              if (c.state !== "wait") return false;
+              let served = 0;
+              for (let guard = 0; guard < 8; guard++) {
+                const it = nextNeeded(c.order).find(
+                  (o) => ready(o.f) && c.needs(o.f),
+                );
+                if (!it) break;
+                const k = G0.cookers[it.f],
+                  st = stations[it.f];
+                if (k) takePortion(k);
+                st.userData.bounce = 1;
+                G0.deliver(
+                  c,
+                  it.f,
+                  st.getWorldPosition(new T3.Vector3()).setY(1.4),
+                );
+                served++;
+              }
+              return served > 0;
+            },
+            0.5 + 0.12 * xs.length,
+          );
+        }
         for (const o of G0.orders)
           for (const it of o.items) {
             if (!packNeeds(o, it.f)) continue;
@@ -3602,9 +3756,22 @@ export function mountGame(canvas, host, bridge) {
             Math.PI,
           );
         }
+        const l = G0.litter.find((x) => !G0.claimed.has("litter" + x.id));
         const ti = G0.tables.findIndex(
           (t, i) => t.plates.length && !G0.claimed.has("table" + i),
         );
+        if (l && (ti < 0 || G0.litter.length >= 3)) {
+          G0.claimed.add("litter" + l.id);
+          return this.go(
+            [...this.toTable({ x: l.x }), V(l.x, l.z + 0.35)],
+            () => {
+              G0.claimed.delete("litter" + l.id);
+              G0.sweep(l, true);
+            },
+            0.6,
+            Math.PI,
+          );
+        }
         if (ti >= 0) {
           G0.claimed.add("table" + ti);
           return this.go(
@@ -3993,6 +4160,7 @@ export function mountGame(canvas, host, bridge) {
     customers: [],
     strollers: [],
     helpers: [],
+    litter: [],
     laneX: [0],
     selected: null,
     cooldown: {},
@@ -4124,6 +4292,11 @@ export function mountGame(canvas, host, bridge) {
       this.fines = 0;
       this.busFees = 0;
       this.hygiene = 80;
+      this.litter.forEach((l) => this.removeLitter(l));
+      this.litter = [];
+      this.litterT = rnd(8, 14);
+      this.complaints = 0;
+      this.complainT = 0;
       this.hygT = 0;
       this.inspector = null;
       this.inspectT =
@@ -4158,9 +4331,13 @@ export function mountGame(canvas, host, bridge) {
       chefState.x = 0;
       buildFoodButtons(cfg.foods);
       for (const k in roleCount) delete roleCount[k];
-      this.helpers = STAFF.filter(
-        (s) => Save.d.staff.includes(s.id) && !Save.d.staffOff.includes(s.id),
-      ).map((s) => new Helper(s));
+      // Only this restaurant's own crew works here. Managers run the
+      // books, so they do not walk the floor.
+      this.place = placeFor(cfg);
+      this.manager = managerAt(Save.d, this.place);
+      this.helpers = onShift(Save.d, this.place)
+        .filter((s) => s.role !== "manager")
+        .map((s) => new Helper(s));
       // Each okada lets one hired rider deliver for free.
       this.riders = createRiders(
         this.helpers
@@ -4168,7 +4345,7 @@ export function mountGame(canvas, host, bridge) {
           .slice(0, eff.bikes)
           .map((h) => h.spec),
       );
-      $("#hygiene").hidden = !cfg.dishes;
+      $("#hygiene").hidden = !cfg.dishes && !cfg.litter;
       this.renderOrders();
       $("#notify").classList.remove("show");
       bridge.caption(cfg, fmtNairaShort(Save.d.endlessBest));
@@ -4214,6 +4391,8 @@ export function mountGame(canvas, host, bridge) {
       this.helpers = [];
       if (this.inspector) world.remove(this.inspector.P.root);
       this.inspector = null;
+      this.litter.forEach((l) => this.removeLitter(l));
+      this.litter = [];
       for (const t of this.tables) {
         t.plates.forEach((m) => m.parent?.remove(m));
         if (t.chip) bridge.remove(t.chipId);
@@ -4305,6 +4484,7 @@ export function mountGame(canvas, host, bridge) {
       const pat =
         (c.patience + order.length * 2.6) *
         (1 + 0.1 * Save.d.up.patience) *
+        this.eff.comfort *
         (vip ? 0.85 : 1) *
         (c.tutorial ? 1.5 : 1) *
         traits.patience;
@@ -4546,8 +4726,8 @@ export function mountGame(canvas, host, bridge) {
         fly(o, w, head, 0.25 + i * 0.05, 0.4, (ob) => world.remove(ob));
       });
       tray.userData.items = [];
-      // Customers with a free chair carry their plate to the table.
-      c.seat = this.cfg.assembly && !c.vip ? this.claimSeat(c) : null;
+      // Customers with a free, clean chair carry their plate to the table.
+      c.seat = this.claimSeat(c);
       if (this.cfg.dishes && !c.seat) this.leaveDirty(c.lane);
       Sound.play("serve");
       Haptics.play("serve");
@@ -4973,9 +5153,9 @@ export function mountGame(canvas, host, bridge) {
     },
     /* ---- dining tables ---- */
     claimSeat(c) {
+      // A dirty plate only blocks its own chair, not the whole table.
       for (const t of this.tables) {
-        if (t.plates.length) continue;
-        const s = t.seats.find((x) => !x.taken);
+        const s = t.seats.find((x) => !x.taken && !x.plate);
         if (s) {
           s.taken = c;
           s.table = t;
@@ -5000,12 +5180,15 @@ export function mountGame(canvas, host, bridge) {
       if (c.meal) t.g.remove(c.meal);
       s.taken = null;
       c.seat = null;
+      if (Math.random() < 0.4 * this.eff.litterRate)
+        this.dropLitter(s.x + rnd(-0.4, 0.4), s.z + rnd(-0.5, 0.3));
       if (this.cfg.dishes) {
         const p = dirtyPlate();
         p.scale.setScalar(0.6);
         p.position.set(s.x - t.x > 0 ? 0.18 : -0.18, 0.75, 0);
         t.g.add(p);
         t.plates.push(p);
+        s.plate = p;
         const i = this.tables.indexOf(t);
         if (!t.chip) {
           t.chipId = "tchip-" + i;
@@ -5028,6 +5211,7 @@ export function mountGame(canvas, host, bridge) {
         }
         return false;
       }
+      t.seats.forEach((x) => (x.plate = null));
       bridge.remove(t.chipId);
       t.chip = null;
       Sound.play("place");
@@ -5044,7 +5228,8 @@ export function mountGame(canvas, host, bridge) {
         dirty:
           this.dirty.filter(Boolean).length +
           // A plate left on a dining table looks less bad than one on the counter.
-          0.5 * this.tables.reduce((n, t) => n + t.plates.length, 0),
+          0.5 * this.tables.reduce((n, t) => n + t.plates.length, 0) +
+          0.6 * this.litter.length,
         sinkFull: sinkFull(this.sink),
         starving,
       });
@@ -5052,6 +5237,60 @@ export function mountGame(canvas, host, bridge) {
       $("#hygTxt").textContent = Math.round(this.hygiene);
       el.classList.toggle("bad", this.hygiene < 55);
       el.classList.toggle("ok", this.hygiene >= 75);
+    },
+    /* ---- litter: customers drop rubbish; sweep it before they complain ---- */
+    dropLitter(x, z) {
+      if (!this.cfg.litter || this.litter.length >= 8) return;
+      const kind = pick(LITTER_KINDS),
+        m = litterModel(kind);
+      x = clamp(x, -4.2, 4.2);
+      z = clamp(z, -2.5, -0.15);
+      m.position.set(x, 0.09, z);
+      m.rotation.y = rnd(0, Math.PI * 2);
+      world.add(m);
+      const l = { id: ++litterSeq, x, z, m, kind, chip: null };
+      l.chip = bridge.chip("litter-" + l.id, () => this.sweep(l), true, true);
+      this.litter.push(l);
+      this.updateTools();
+    },
+    removeLitter(l) {
+      world.remove(l.m);
+      bridge.remove("litter-" + l.id);
+      l.chip = null;
+    },
+    sweep(l, byHelper) {
+      if (!this.litter.includes(l) || this.state !== "playing") return false;
+      this.litter.splice(this.litter.indexOf(l), 1);
+      this.removeLitter(l);
+      burst(new T3.Vector3(l.x, 0.3, l.z), 5, 0.6, [0, 1]);
+      Sound.play("place");
+      if (!byHelper) Haptics.play("tap");
+      this.track("sweep");
+      this.updateHygiene();
+      return true;
+    },
+    updateLitter(dt) {
+      if (!this.cfg.litter) return;
+      // Passers-by and the wind add rubbish now and then. A renovated
+      // building with proper bins gets less.
+      this.litterT -= dt;
+      if (this.litterT <= 0) {
+        this.litterT = rnd(10, 18) / this.eff.litterRate;
+        this.dropLitter(rnd(-4, 4), rnd(-2.4, -0.3));
+      }
+      // A dirty place gets complaints: patience drops and word spreads.
+      this.complainT -= dt;
+      if (this.complainT <= 0 && this.hygiene < 50 && this.litter.length >= 3) {
+        this.complainT = 7;
+        const c = pick(this.customers.filter((x) => x.state === "wait"));
+        if (c) {
+          c.say(pick(LINES.dirty), 1.8);
+          c.p = Math.max(1, c.p - c.max * 0.12);
+          this.complaints++;
+          if (this.complaints === 1)
+            this.notify("🧹", "Customers are complaining: sweep the floor!");
+        }
+      }
     },
     updateInspector(dt) {
       this.inspectT -= dt;
@@ -5257,7 +5496,7 @@ export function mountGame(canvas, host, bridge) {
       $("#bFreeze").classList.toggle("active", this.freezeT > 0);
     },
     wageBill() {
-      return this.helpers.reduce((s, h) => s + h.spec.wage, 0);
+      return crewWages(Save.d, this.place || placeFor(this.cfg));
     },
     // Settles the shift: costs and salaries are paid from the takings, then
     // savings. Unpaid staff get a strike and quit at the limit.
@@ -5267,24 +5506,34 @@ export function mountGame(canvas, host, bridge) {
         tax = taxes(tier, sales + extra),
         rent = roundNaira(RENT[tier] * LIVE.rent, 10),
         upkeep = upkeepCost(d),
-        // Branches earn less when the brand's reputation slips.
-        branches = Math.round(
-          branchIncome(d) * clamp(this.repNow / 60, 0.4, 1.2),
-        ),
+        // A manager here trims waste on ingredients and packs.
+        saving = this.manager ? this.manager.saving : 0,
+        waste = roundNaira((this.foodCost + this.packCost) * saving, 10),
         costs =
           this.foodCost +
-          this.packCost +
+          this.packCost -
+          waste +
           this.riderFees +
           tax.levy +
           tax.vat +
           rent +
           upkeep +
           (this.fines || 0),
-        net = sales + extra + branches - costs;
-      const pay = payroll(d, STAFF, d.coins + net);
+        net = sales + extra - costs;
+      const place = this.place || placeFor(this.cfg);
+      const pay = payCrew(d, place, d.coins + net, UNPAID_LIMIT);
+      // Other restaurants with a manager bank their takings in the safe.
+      // They earn less when the brand's reputation slips.
+      const away = runBranches(
+        d,
+        place,
+        clamp(this.repNow / 60, 0.4, 1.2),
+        UNPAID_LIMIT,
+      );
       const debtBefore = d.debt;
       d.coins = settleDebt(d, d.coins + net - pay.paid);
       if (d.debt > 0) this.repNow = clampRep(this.repNow - 3);
+      if (this.complaints >= 3) this.repNow = clampRep(this.repNow - 2);
       const repBefore = this.repStart;
       d.reputation = Math.round(this.repNow * 10) / 10;
       const market = advanceMarket(d, this.eff.fridge);
@@ -5300,12 +5549,31 @@ export function mountGame(canvas, host, bridge) {
       neg("Rent & NEPA light", rent);
       neg("Equipment upkeep", upkeep);
       neg("Hygiene fine", this.fines);
-      if (pay.bill) neg("Staff salaries", pay.paid);
-      if (branches)
+      if (this.complaints >= 3)
         rows.push({
-          label: "Other restaurants' income",
-          value: "+" + fmtNaira(branches),
+          label: `${this.complaints} complaints about dirt`,
+          value: "★ -2",
+          cls: "warn",
+        });
+      if (pay.bill) neg("Staff salaries", pay.paid);
+      if (waste)
+        rows.push({
+          label: `${this.manager.name} saved on waste`,
+          value: "+" + fmtNaira(waste),
           cls: "pos",
+        });
+      const banked = away.reduce((t, b) => t + Math.max(0, b.net), 0);
+      if (banked)
+        rows.push({
+          label: "Managers banked at other restaurants",
+          value: "+" + fmtNaira(banked) + " (collect in Grow)",
+          cls: "pos",
+        });
+      if (away.some((b) => b.full))
+        rows.push({
+          label: "A manager's safe is full",
+          value: "Collect it in Grow",
+          cls: "warn",
         });
       if (d.debt > 0)
         rows.push({
@@ -5334,19 +5602,21 @@ export function mountGame(canvas, host, bridge) {
           value: TIERS[tierNow].name,
           cls: tierNow > tier ? "pos" : "warn",
         });
-      const name = (id) => STAFF.find((x) => x.id === id).name;
+      const strikes = Object.fromEntries(
+        crewAt(d, place).map((m) => [m.name, m.unpaid || 0]),
+      );
       pay.unpaid
-        .filter((id) => !pay.quit.includes(id))
-        .forEach((id) =>
+        .filter((n) => !pay.quit.includes(n))
+        .forEach((n) =>
           rows.push({
-            label: `${name(id)} not paid`,
-            value: `${d.unpaid[id]}/${UNPAID_LIMIT}`,
+            label: `${n} not paid`,
+            value: `${strikes[n] || 0}/${UNPAID_LIMIT}`,
             cls: "warn",
           }),
         );
-      pay.quit.forEach((id) =>
+      [...pay.quit, ...away.flatMap((b) => b.quit)].forEach((n) =>
         rows.push({
-          label: `${name(id)} quit: unpaid`,
+          label: `${n} quit: unpaid`,
           value: "Gone",
           cls: "warn",
         }),
@@ -5589,6 +5859,7 @@ export function mountGame(canvas, host, bridge) {
           this.updateHygiene();
         }
         this.updateInspector(dt);
+        this.updateLitter(dt);
         if (washed) {
           Sound.play("place");
           this.track("wash", washed);
@@ -5613,7 +5884,8 @@ export function mountGame(canvas, host, bridge) {
               spawnFactor(this.repNow) *
               this.eff.spawn *
               (1 - 0.05 * this.tierStart) *
-              (Save.d.debt > 0 ? 1.15 : 1);
+              (Save.d.debt > 0 ? 1.15 : 1) *
+              (this.cfg.litter && this.hygiene < 50 ? 1.2 : 1);
           } else this.spawnT = 0.25;
         }
         this.hintT -= dt;
@@ -5765,7 +6037,9 @@ export function mountGame(canvas, host, bridge) {
   }
   const ray = new T3.Raycaster(),
     ndc = new T3.Vector2();
+  let tapHit = false;
   listen(canvas, "pointerdown", (e) => {
+    tapHit = false;
     // A second finger is a pinch, not a tap.
     if (Game.state !== "playing" || e.isPrimary === false) return;
     const r = canvas.getBoundingClientRect();
@@ -5784,6 +6058,7 @@ export function mountGame(canvas, host, bridge) {
       let o = h.object;
       while (o && !o.userData.pick) o = o.parent;
       if (o) {
+        tapHit = true;
         const p = o.userData.pick;
         if (p.type === "station") Game.tapFood(p.id);
         else if (p.type === "tray") Game.clearTable(p.lane);
@@ -5809,7 +6084,8 @@ export function mountGame(canvas, host, bridge) {
     document,
     "touchmove",
     (e) => {
-      if (!e.target.closest(".scroll")) e.preventDefault();
+      // Every modal can be dragged to scroll; the game scene cannot.
+      if (!e.target.closest(".scroll, .overlay")) e.preventDefault();
     },
     { passive: false },
   );
@@ -5834,9 +6110,15 @@ export function mountGame(canvas, host, bridge) {
     tgt: { dist: 14, el: 0.72, yaw: 0, offY: 0, ty: 1.1, tz: 0.2 },
     zoom: 1,
     z: 1,
+    // Drag to look around: a pan offset on the floor, eased like the rest.
+    px: 0,
+    pz: 0,
+    panX: 0,
+    panZ: 0,
   };
   function camMode(m) {
     cam.mode = m;
+    centerCamera();
     fitCamera();
   }
   function fitCamera() {
@@ -5887,14 +6169,16 @@ export function mountGame(canvas, host, bridge) {
       W = innerWidth;
     camera.setViewOffset(W, H, 0, cam.offY, W, H);
     cam.z = lerp(cam.z, cam.zoom, k);
+    cam.px = lerp(cam.px, cam.panX, Math.min(1, dt * 10));
+    cam.pz = lerp(cam.pz, cam.panZ, Math.min(1, dt * 10));
     const ce = Math.cos(cam.el),
       dist = cam.dist * cam.z;
     camera.position.set(
-      Math.sin(cam.yaw) * ce * dist,
+      cam.px + Math.sin(cam.yaw) * ce * dist,
       cam.ty + Math.sin(cam.el) * dist,
-      cam.tz + Math.cos(cam.yaw) * ce * dist,
+      cam.tz + cam.pz + Math.cos(cam.yaw) * ce * dist,
     );
-    camera.lookAt(0, cam.ty, cam.tz);
+    camera.lookAt(cam.px, cam.ty, cam.tz + cam.pz);
     if (shake > 0 && !REDUCED) {
       camera.position.x += rnd(-1, 1) * shake;
       camera.position.y += rnd(-1, 1) * shake;
@@ -5924,8 +6208,21 @@ export function mountGame(canvas, host, bridge) {
     const [a, b] = [...touches.values()];
     return Math.hypot(a.x - b.x, a.y - b.y);
   };
+  // One finger dragging on empty floor moves the view; taps on food,
+  // customers and tables still work as before.
+  const PAN = { x: 4.5, zMin: -3.5, zMax: 2.5 };
+  let drag = null;
+  function centerCamera() {
+    cam.panX = cam.panZ = 0;
+    const b = $("#camCenter");
+    if (b) b.hidden = true;
+  }
   listen(canvas, "pointerdown", (e) => {
     touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    drag =
+      touches.size === 1 && !tapHit
+        ? { x: e.clientX, y: e.clientY, px: cam.panX, pz: cam.panZ, on: false }
+        : null;
     if (touches.size === 2) {
       pinch0 = spread();
       zoom0 = cam.zoom;
@@ -5935,10 +6232,22 @@ export function mountGame(canvas, host, bridge) {
     if (!touches.has(e.pointerId)) return;
     touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (touches.size === 2 && pinch0) setZoom(zoom0 * (pinch0 / spread()));
+    else if (drag && touches.size === 1) {
+      const dx = e.clientX - drag.x,
+        dy = e.clientY - drag.y;
+      if (!drag.on && Math.hypot(dx, dy) < 10) return;
+      drag.on = true;
+      // Screen pixels to floor units at the current distance.
+      const k = (cam.dist * cam.z * 1.15) / innerHeight;
+      cam.panX = clamp(drag.px - dx * k, -PAN.x, PAN.x);
+      cam.panZ = clamp(drag.pz - dy * k * 1.4, PAN.zMin, PAN.zMax);
+      $("#camCenter").hidden = false;
+    }
   });
   const lift = (e) => {
     touches.delete(e.pointerId);
     if (touches.size < 2) pinch0 = 0;
+    if (!touches.size) drag = null;
   };
   listen(window, "pointerup", lift);
   listen(window, "pointercancel", lift);
@@ -6025,6 +6334,7 @@ export function mountGame(canvas, host, bridge) {
   function showMenu() {
     Game.clear();
     Game.state = "menu";
+    updateTillBadge();
     UI.close("ovWin");
     UI.close("ovFail");
     UI.close("ovPause");
@@ -6045,16 +6355,34 @@ export function mountGame(canvas, host, bridge) {
     $("#btnEndless").classList.toggle("pulse", el);
     if (Save.d.lastClaim !== today()) setTimeout(openReward, 700);
   }
-  let shopTab = "up";
+  let shopTab = "up",
+    crewPlace = "";
   function buildShop() {
     UI.coins();
+    if (!Save.d.branches.includes(crewPlace)) crewPlace = Save.d.place;
+    const placeName = (id) => PLACES.find((p) => p.id === id)?.name || id;
     bridge.shop({
       tab: shopTab,
       save: Save.d,
       upgrades: UPGRADES,
       outfits: OUTFITS,
       decor: DECOR,
-      staff: STAFF,
+      crew: {
+        place: crewPlace,
+        places: PLACES.filter((p) => Save.d.branches.includes(p.id)),
+        members: crewAt(Save.d, crewPlace),
+        jobs: JOBS,
+        limit: CREW_LIMIT,
+        count: (role) => crewCount(Save.d, crewPlace, role),
+        check: (job) => canHire(Save.d, crewPlace, job.id),
+        till: tillAt(Save.d, crewPlace),
+        here: crewPlace === Save.d.place,
+        setPlace: (id) => {
+          crewPlace = id;
+          Sound.play("click");
+          buildShop();
+        },
+      },
       boosters: BOOSTERS,
       equipment: EQUIPMENT,
       equipLevel: (id) => equipLevel(Save.d, id),
@@ -6074,30 +6402,36 @@ export function mountGame(canvas, host, bridge) {
           e,
         );
       },
-      hireStaff: (s, card, e) =>
+      hireStaff: (job, card, e) => {
+        const c = canHire(Save.d, crewPlace, job.id);
+        if (!c.ok) {
+          Sound.play("wrong");
+          UI.toast(c.why);
+          return;
+        }
         buy(
-          s.cost,
+          job.cost,
           () => {
-            Save.d.staff.push(s.id);
+            const m = hireCrew(Save.d, crewPlace, job.id);
             Game.track("hire");
-            UI.toast(`${s.name} don join your buka!`);
+            UI.toast(`${m.name} don join ${placeName(crewPlace)}!`);
+            buildShop();
           },
           card,
           e,
-        ),
+        );
+      },
       art: ART,
       unpaidLimit: UNPAID_LIMIT,
-      sackStaff: (s) => {
-        removeStaff(Save.d, s.id);
+      sackStaff: (m) => {
+        sackCrew(Save.d, crewPlace, m.uid);
         Save.save();
         Sound.play("wrong");
-        UI.toast(`${s.name} has been sacked. No more salary.`);
+        UI.toast(`${m.name} has been sacked. No more salary.`);
         buildShop();
       },
-      toggleStaff: (s) => {
-        const off = Save.d.staffOff;
-        if (off.includes(s.id)) off.splice(off.indexOf(s.id), 1);
-        else off.push(s.id);
+      toggleStaff: (m) => {
+        toggleDuty(Save.d, crewPlace, m.uid);
         Save.save();
         Sound.play("click");
         buildShop();
@@ -6308,6 +6642,26 @@ export function mountGame(canvas, host, bridge) {
       places: PLACES,
       art: ART,
       check: (pl) => canOpen(Save.d, pl),
+      manager: (pl) => managerAt(Save.d, pl.id),
+      till: (pl) => tillAt(Save.d, pl.id),
+      tillTotal: tillTotal(Save.d),
+      collect: (pl) => {
+        const v = pl ? collectTill(Save.d, pl.id) : collectAll();
+        if (!v) return;
+        Save.save();
+        Sound.play("coin");
+        UI.coins();
+        UI.toast(`Collected ${fmtNaira(v)} from your managers`);
+        buildGrow();
+        updateTillBadge();
+      },
+      staffAt: (pl) => {
+        crewPlace = pl.id;
+        shopTab = "staff";
+        UI.close("ovGrow");
+        openShop("staff");
+        UI.open("ovShop");
+      },
       open: (pl, card) => {
         if (!openRestaurant(pl)) return;
         card?.classList.add("bought");
@@ -6333,6 +6687,17 @@ export function mountGame(canvas, host, bridge) {
       },
     });
   }
+  function collectAll() {
+    return PLACES.reduce((t, p) => t + collectTill(Save.d, p.id), 0);
+  }
+  // The Grow button shows when managers have money waiting.
+  function updateTillBadge() {
+    const b = $("#growBadge");
+    if (!b) return;
+    const v = tillTotal(Save.d);
+    b.hidden = !v;
+    b.textContent = v ? fmtNairaShort(v) : "";
+  }
   // Market: stock the store before prices rise
   function buildMarket() {
     UI.coins();
@@ -6354,7 +6719,8 @@ export function mountGame(canvas, host, bridge) {
       cap,
       fridge: effects(Save.d).fridge,
       buy: (id, n, e) => {
-        const discount = Save.d.staff.includes("ngozi") ? 0.8 : 1;
+        const discount =
+          crewCount(Save.d, Save.d.place, "errand") > 0 ? 0.8 : 1;
         const r = marketBuy(Save.d, id, n, cap, discount);
         if (!r.ok) {
           Sound.play("wrong");
@@ -6478,6 +6844,10 @@ export function mountGame(canvas, host, bridge) {
   on("#growClose", () => UI.close("ovGrow"));
   on("#zoomIn", () => setZoom(cam.zoom * 0.85));
   on("#zoomOut", () => setZoom(cam.zoom * 1.18));
+  on("#camCenter", () => {
+    centerCamera();
+    setZoom(1);
+  });
   on("#btnStaff", () => {
     Sound.play("click");
     openShop("staff");
@@ -6802,6 +7172,7 @@ export function mountGame(canvas, host, bridge) {
           d.o.position.y = d.y + Math.sin(T * 1.5 + d.ph) * 0.12;
         else if (d.type === "sway")
           d.o.rotation.z = Math.sin(T * 1.2 + d.ph) * 0.06;
+        else if (d.type === "spin") d.o.rotation.z = T * 9 + d.ph;
       });
     }
     updateCamera(dt, T);
@@ -6823,6 +7194,11 @@ export function mountGame(canvas, host, bridge) {
       if (!t.chip) continue;
       const p = _v.set(t.x, 1.25, t.z).project(camera);
       t.chip.style.transform = `translate3d(${(((p.x + 1) / 2) * innerWidth).toFixed(1)}px,${(((1 - p.y) / 2) * innerHeight).toFixed(1)}px,0) translate(-50%,-50%)`;
+    }
+    for (const l of Game.litter) {
+      if (!l.chip) continue;
+      const p = _v.set(l.x, 0.45, l.z).project(camera);
+      l.chip.style.transform = `translate3d(${(((p.x + 1) / 2) * innerWidth).toFixed(1)}px,${(((1 - p.y) / 2) * innerHeight).toFixed(1)}px,0) translate(-50%,-50%)`;
     }
     for (let i = 0; i < 3; i++) {
       const chip = Game.chips[i];

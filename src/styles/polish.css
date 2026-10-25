@@ -283,7 +283,8 @@ svg.star.on {
 .tabs.three {
   grid-template-columns: repeat(3, 1fr);
 }
-#ovBoard .panel {
+#ovBoard .panel,
+#ovGrow .panel {
   width: min(100%, 460px);
   max-height: 100%;
   display: flex;
@@ -685,4 +686,62 @@ svg.star.on {
   font-weight: 800;
   font-size: 14px;
   color: var(--ink);
+}
+/* Every modal scrolls with a finger drag when it is taller than the screen. */
+.overlay {
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+/* A list that cannot scroll further hands the drag on to its modal. */
+.overlay .scroll {
+  overscroll-behavior: auto;
+}
+/* Staff per restaurant */
+.placeChips {
+  /* The shop list is a scrolling grid; keep this row from collapsing. */
+  min-height: 44px;
+  flex: none;
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 2px 2px 8px;
+  touch-action: pan-x;
+}
+.placeChips .placeChip {
+  flex: none;
+  border: 2px solid #e2c9a0;
+  background: #fff8ea;
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font: 800 13px var(--body);
+}
+.placeChips .placeChip.on {
+  background: var(--teal);
+  border-color: var(--teal);
+  color: #fff;
+}
+.card.crew {
+  background: #f1fbf9;
+}
+.mgrLine {
+  margin: 2px 0 0;
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--teal);
+}
+.mgrLine.none {
+  color: #b25a00;
+}
+.collectAll {
+  width: 100%;
+  margin: 8px 0;
+}
+.badge.cash {
+  background: #2fa34f;
+  font-size: 12px;
+}
+.dirtyChip.litter {
+  background: #8d5a2b;
 }

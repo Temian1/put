@@ -1,6 +1,7 @@
 import { COIN_TO_NAIRA } from "../game/currency.js";
 import { emptyStats } from "../game/missions.js";
 import { LEGACY_PLACES, PLACES } from "../game/data.js";
+import { migrateCrew } from "../game/crew.js";
 
 export const SAVE_SCHEMA = 3;
 
@@ -22,6 +23,10 @@ export function createSave(storage = globalThis.localStorage) {
         staff: [],
         staffOff: [],
         unpaid: {},
+        // Each restaurant's own staff, and its manager's safe of takings.
+        crew: {},
+        crewSeq: 0,
+        till: {},
         reputation: 50,
         equip: {},
         pantry: {},
@@ -88,6 +93,12 @@ export function migrate(d, defaults) {
     out.branches = [...new Set(["ch0", ...reached, ...old])];
     out.place = LEGACY_PLACES[out.place] || out.place;
   }
+  // Staff used to be shared by every restaurant.
+  if (d && (!d.crew || typeof d.crew !== "object")) {
+    delete out.crew;
+    migrateCrew(out);
+  }
+  if (!out.till || typeof out.till !== "object") out.till = {};
   out.schema = SAVE_SCHEMA;
   const fresh = createDefaultsShape();
   out.up = Object.assign(fresh.up, out.up || {});

@@ -74,6 +74,14 @@ export const EQUIPMENT = [
     upkeep: 200,
   },
   {
+    id: "building",
+    name: "Renovate the building",
+    desc: "Tiles and paint, then standing fans, then air-conditioning. +6 hygiene, less litter and more patient customers per level",
+    icon: "🏗️",
+    costs: [60000, 180000, 450000],
+    upkeep: 400,
+  },
+  {
     id: "bike",
     name: "Delivery okada",
     desc: "Each okada lets one hired rider deliver with no outside fee",
@@ -107,7 +115,15 @@ export function effects(d) {
     batchBonus: 3 * L("bigpots"),
     sinkCap: 4 + 3 * L("sink"),
     washTime: L("sink") ? 0.35 : 0.5,
-    hygiene: 12 * L("handwash") + 8 * L("uniforms") + 5 * L("fridge"),
+    hygiene:
+      12 * L("handwash") +
+      8 * L("uniforms") +
+      5 * L("fridge") +
+      6 * L("building"),
+    building: L("building"),
+    // Less rubbish dropped, and customers wait longer in a nicer place.
+    litterRate: 1 - 0.2 * L("building"),
+    comfort: 1 + 0.04 * L("building"),
     pantryCap: 10 + 10 * L("store"),
     spawn: L("sign") ? 0.92 : 1,
     bikes: L("bike"),

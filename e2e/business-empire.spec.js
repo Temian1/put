@@ -131,7 +131,11 @@ test("health inspector visits and judges hygiene", async ({ page }) => {
 test("hired workers stand in the back kitchen and walk to jobs", async ({
   page,
 }) => {
-  await boot(page, fresh({ staff: ["basira", "bisi", "chidi"], unlocked: 20 }));
+  // Level 12 is at the second restaurant, so that is where they work.
+  await boot(
+    page,
+    fresh({ staff: ["basira", "bisi", "chidi"], unlocked: 20, place: "ch1" }),
+  );
   await startLevel(page, 12);
   await waitPlaying(page);
   const pos = await page.evaluate(() =>

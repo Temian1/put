@@ -113,7 +113,7 @@ export function createUiBridge(store, host) {
       );
       return root;
     },
-    chip(id, clear, small) {
+    chip(id, clear, small, litter) {
       let root;
       slot(
         id,
@@ -121,6 +121,7 @@ export function createUiBridge(store, host) {
         <DirtyChip
           clear={clear}
           small={small}
+          litter={litter}
           rootRef={(el) => {
             root = el;
           }}

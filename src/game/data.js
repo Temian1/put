@@ -820,6 +820,14 @@ const DECOR = [
   },
 ];
 const LINES = {
+  // A customer complaining about a dirty dining floor.
+  dirty: [
+    "This place dirty o!",
+    "Abeg sweep this floor!",
+    "Na so una dey keep restaurant?",
+    "Ehn! Nylon everywhere",
+    "I no fit chop for dirty place",
+  ],
   arrive: [
     "Madam, sharp sharp!",
     "I dey hungry o!",
@@ -905,6 +913,7 @@ const UNLOCKS = {
   dishes: 11,
   online: 15,
   inspect: 20,
+  litter: 13,
   events: 27,
   haggle: 8,
 };
@@ -930,6 +939,7 @@ function levelCfg(n) {
     stock = n >= UNLOCKS.stock,
     haggle = n >= UNLOCKS.haggle,
     inspect = n >= UNLOCKS.inspect,
+    litter = n >= UNLOCKS.litter,
     online = n >= UNLOCKS.online,
     event = EVENT_LEVELS[n] || "";
   // Frying, restocking, table clearing and deliveries add work, so the clock grows.
@@ -967,6 +977,9 @@ function levelCfg(n) {
   } else if (n === UNLOCKS.inspect) {
     challenge = "New: health inspectors can visit. Keep it clean!";
     teach = "inspect";
+  } else if (n === UNLOCKS.litter) {
+    challenge =
+      "New: customers drop litter. Tap it to sweep before they complain";
   } else if (n === UNLOCKS.dishes) {
     challenge = "New: clear dirty tables and wash plates";
     teach = "dishes";
@@ -1014,6 +1027,7 @@ function levelCfg(n) {
     event,
     haggle,
     inspect,
+    litter,
     theme: ch.theme ?? ci,
     sign: ch.sign || null,
     tutorial: n <= 2,
@@ -1139,6 +1153,7 @@ function endlessCfg() {
     event: "random",
     haggle: true,
     inspect: true,
+    litter: true,
     theme: 4,
     sign: null,
     tutorial: false,
