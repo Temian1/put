@@ -7,6 +7,7 @@ use App\Models\MamaputPlayer;
 use App\Models\MamaputWalletLog;
 use App\Models\User;
 use App\Models\VatarPlayer;
+use App\Models\VatarPurchase;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -87,6 +88,56 @@ final class MamaputAccounts
             $into->vatar_player_id = $vatar;
         }
         $into->save();
+    }
+
+    /**
+     * Delivers a paid Lagos Life coin pack: its coins go to the buyer's
+     * wallet once, however often the game, the webhook or a retry asks.
+     * Lagos Life is then told the purchase was delivered.
+     *
+     * @param  array<string, mixed>|null  $remote  the purchase, if already fetched
+     * @return array{granted: bool, player: MamaputPlayer, purchase: VatarPurchase}
+     */
+    public static function deliverPurchase(VatarApi $api, string $purchaseId, ?VatarPlayer $owner = null, ?array $remote = null): array
+    {
+        $setting = $api->setting();
+        $remote ??= $api->call('GET', '/purchases/'.rawurlencode($purchaseId));
+        abort_unless(($remote['id'] ?? null) === $purchaseId && ($remote['mode'] ?? null) === $setting->mode, 403, 'Vatar purchase mode or ID mismatch.');
+        abort_unless(in_array($remote['status'] ?? null, ['paid', 'delivered', 'refunded'], true), 422, 'Purchase is not paid.');
+        $product = MamaputConfig::product((string) ($remote['productId'] ?? ''));
+        abort_unless($product, 422, 'This product is not on sale in Mama Put.');
+        $owner ??= VatarPlayer::where('mode', $setting->mode)->where('player_id', (string) ($remote['playerId'] ?? ''))->first();
+        // 503 asks Lagos Life (or the retry queue) to try again later.
+        abort_unless($owner, 503, 'Player must open Mama Put before delivery.');
+        abort_unless(($remote['playerId'] ?? null) === $owner->player_id && $owner->mode === $setting->mode, 403, 'Purchase belongs to another player.');
+        $player = MamaputPlayer::where('vatar_player_id', $owner->id)->first();
+        abort_unless($player, 503, 'Player must open Mama Put before delivery.');
+        $granted = DB::transaction(function () use ($purchaseId, $owner, $remote, $product, $player): bool {
+            $row = VatarPurchase::firstOrCreate(
+                ['mode' => $owner->mode, 'game_id' => $owner->game_id, 'purchase_id' => $purchaseId],
+                ['vatar_player_id' => $owner->id, 'product_id' => $remote['productId'], 'status' => $remote['status'],
+                    'item' => 'mamaput_coins', 'quantity' => max(1, min(65000, (int) $product['coins']))],
+            );
+            $row = VatarPurchase::whereKey($row->id)->lockForUpdate()->firstOrFail();
+            abort_unless($row->vatar_player_id === $owner->id && $row->item === 'mamaput_coins', 409, 'Purchase identity mismatch.');
+            $row->status = $remote['status'];
+            $grant = $row->status !== 'refunded' && ! $row->granted_at;
+            if ($grant) {
+                $row->granted_at = now();
+                self::credit($player, $row->quantity, 'lagoslife_purchase', $row->purchase_id);
+            }
+            if ($row->status === 'delivered') {
+                $row->delivered_at ??= now();
+            }
+            $row->save();
+
+            return $grant;
+        });
+        $row = VatarPurchase::where('mode', $owner->mode)->where('game_id', $owner->game_id)
+            ->where('purchase_id', $purchaseId)->firstOrFail();
+        abort_if($row->status === 'refunded', 409, 'Vatar: refunded');
+
+        return ['granted' => $granted, 'player' => $player->fresh(), 'purchase' => $api->deliver($row)];
     }
 
     public static function balance(MamaputPlayer $player): int

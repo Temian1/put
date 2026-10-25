@@ -107,10 +107,10 @@ test("hiring: several servers per restaurant, each with their own name", async (
   const crew = await page.evaluate(() => window.__mp.Save.d.crew.ch0);
   expect(crew).toHaveLength(2);
   expect(crew[0].name).not.toBe(crew[1].name);
-  // Managers are hired for other restaurants, not the first one.
-  await expect(page.locator("#shopList")).not.toContainText("Expert manager");
-  await page.locator(".placeChips .placeChip", { hasText: "Junction" }).click();
+  // Every restaurant, the first one included, can have a manager.
   await expect(page.locator("#shopList")).toContainText("Expert manager");
+  await page.locator(".placeChips .placeChip", { hasText: "Junction" }).click();
+  await expect(page.locator("#shopList .card.crew")).toHaveCount(0);
 });
 
 test("litter: customers' rubbish is swept by tapping or by the cleaner", async ({

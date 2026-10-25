@@ -14,6 +14,12 @@ import {
 } from "../src/game/data.js";
 import { UNPAID_LIMIT } from "../src/game/staff.js";
 import {
+  EQUIPMENT,
+  effects,
+  buyEquipment,
+  level as equipLevel,
+} from "../src/game/equipment.js";
+import {
   hire,
   sack,
   toggleDuty,
@@ -35,7 +41,6 @@ import {
   tierOf,
   canOpen,
   openBranch,
-  branchIncome,
   levelOpen,
   nextToOpen,
 } from "../src/game/growth.js";
@@ -155,6 +160,43 @@ describe("each restaurant's own crew", () => {
       runBranches(d, "ch0", 1, UNPAID_LIMIT);
     expect(d.till.ch1).toBe(PLACES[1].income * TILL_SHIFTS);
   });
+  it("equipment belongs to one restaurant; old saves keep theirs everywhere", () => {
+    const d = fresh({ coins: 900000, branches: ["ch0", "ch1"], place: "ch1" });
+    const tables = EQUIPMENT.find((it) => it.id === "tables");
+    expect(buyEquipment(d, tables)).toBe(true);
+    expect(effects(d).tables).toBe(2);
+    expect(effects(d, "ch0").tables).toBe(1);
+    expect(buyEquipment(d, tables, "ch0")).toBe(true);
+    expect(equipLevel(d, "tables", "ch0")).toBe(1);
+    const old = createSave({
+      getItem: () =>
+        JSON.stringify({
+          schema: 3,
+          unlocked: 15,
+          branches: ["ch0", "ch1"],
+          equip: { tables: 2, sign: 1 },
+        }),
+      setItem() {},
+    });
+    old.load();
+    expect(effects(old.d, "ch0").tables).toBe(3);
+    expect(effects(old.d, "ch1").tables).toBe(3);
+  });
+  it("the Roadside Buka earns with a manager; equipment raises takings", () => {
+    const d = fresh({ branches: ["ch0", "ch1"] });
+    hire(d, "ch0", "mgr2");
+    const [plain] = runBranches(d, "ch1", 1, UNPAID_LIMIT);
+    expect(plain.place).toBe("ch0");
+    expect(plain.net).toBeGreaterThan(0);
+    const e = fresh({
+      branches: ["ch0", "ch1"],
+      equipBy: { ch0: { bigpots: 2 } },
+    });
+    hire(e, "ch0", "mgr2");
+    expect(runBranches(e, "ch1", 1, UNPAID_LIMIT)[0].net).toBeGreaterThan(
+      plain.net,
+    );
+  });
   it("moves staff from older saves to the restaurant you were running", () => {
     const out = migrateCrew({
       place: "ch1",
@@ -210,7 +252,6 @@ describe("reputation and growth", () => {
     expect(openBranch(d, yaba)).toBe(true);
     expect(d.coins).toBe(200000 - yaba.cost);
     expect(levelOpen(d, 11)).toBe(true);
-    expect(branchIncome(d)).toBe(yaba.income);
     expect(openBranch(d, yaba)).toBe(false);
     expect(PLACES).toHaveLength(10);
     for (let i = 1; i < PLACES.length; i++)

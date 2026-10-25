@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 /**
  * API for Mama Put Rush (frontend on Vercel). Players authenticate with a
@@ -120,38 +121,49 @@ class MamaputController extends Controller
         $api = $api->using(VatarSetting::mamaput());
         $vatar = $api->player($data['session']);
         abort_unless($player->vatar_player_id === $vatar->id, 403, 'Sign in with Lagos Life first.');
-        $remote = $api->call('GET', '/purchases/'.rawurlencode($data['purchaseId']));
-        abort_unless(($remote['id'] ?? null) === $data['purchaseId'] && ($remote['mode'] ?? null) === $vatar->mode
-            && ($remote['playerId'] ?? null) === $vatar->player_id, 403, 'Purchase belongs to another player.');
-        abort_unless(in_array($remote['status'] ?? null, ['paid', 'delivered', 'refunded'], true), 422, 'Purchase is not paid.');
-        $product = MamaputConfig::product((string) ($remote['productId'] ?? ''));
-        abort_unless($product, 422, 'This product is not on sale in Mama Put.');
-        $granted = DB::transaction(function () use ($data, $vatar, $remote, $product, $player): bool {
-            $row = VatarPurchase::firstOrCreate(
-                ['mode' => $vatar->mode, 'game_id' => $vatar->game_id, 'purchase_id' => $data['purchaseId']],
-                ['vatar_player_id' => $vatar->id, 'product_id' => $remote['productId'], 'status' => $remote['status'],
-                    'item' => 'mamaput_coins', 'quantity' => max(1, min(65000, (int) $product['coins']))],
-            );
-            $row = VatarPurchase::whereKey($row->id)->lockForUpdate()->firstOrFail();
-            abort_unless($row->vatar_player_id === $vatar->id && $row->item === 'mamaput_coins', 409, 'Purchase identity mismatch.');
-            $row->status = $remote['status'];
-            $grant = $row->status !== 'refunded' && ! $row->granted_at;
-            if ($grant) {
-                $row->granted_at = now();
-                MamaputAccounts::credit($player, $row->quantity, 'lagoslife_purchase', $row->purchase_id);
-            }
-            if ($row->status === 'delivered') {
-                $row->delivered_at ??= now();
-            }
-            $row->save();
+        $result = MamaputAccounts::deliverPurchase($api, $data['purchaseId'], $vatar);
 
-            return $grant;
-        });
-        $row = VatarPurchase::where('mode', $vatar->mode)->where('purchase_id', $data['purchaseId'])->firstOrFail();
-        abort_if($row->status === 'refunded', 409, 'This purchase was refunded.');
-        $api->deliver($row);
+        return response()->json(['granted' => $result['granted']] + $this->walletState($result['player']));
+    }
 
-        return response()->json(['granted' => $granted] + $this->walletState($player->fresh()));
+    /**
+     * Lagos Life calls this when a Mama Put coin pack is paid for, so the
+     * coins arrive even if the player closed the game before it confirmed.
+     * Signed with the webhook secret (X-Vatar-Signature: sha256=HMAC of the
+     * raw body). Only answers 2xx once the event is handled; Lagos Life
+     * retries anything else.
+     */
+    public function lagosLifeWebhook(Request $request, VatarApi $api): JsonResponse
+    {
+        $setting = VatarSetting::mamaput();
+        abort_unless($setting->configured() && filled($setting->webhook_secret), 503, 'Webhook is not configured.');
+        $raw = $request->getContent();
+        abort_if(strlen($raw) > 16384, 413);
+        $expected = 'sha256='.hash_hmac('sha256', $raw, $setting->webhook_secret);
+        abort_unless(hash_equals($expected, (string) $request->header('X-Vatar-Signature', '')), 401, 'Invalid webhook signature.');
+        $event = $request->validate([
+            'id' => ['required', 'string', 'max:100'], 'type' => ['required', 'string', 'max:40'],
+            'mode' => ['required', 'in:test,live'], 'data' => ['required', 'array'],
+        ]);
+        abort_unless($event['mode'] === $setting->mode, 403, 'Vatar: wrong_mode');
+        if ($event['type'] !== 'purchase.paid') {
+            return response()->json(['accepted' => true, 'handled' => false], 202);
+        }
+        $id = $event['data']['purchaseId'] ?? null;
+        if (! is_string($id) || ! preg_match('/^[a-zA-Z0-9_-]{1,100}$/', $id)) {
+            return response()->json(['accepted' => true, 'handled' => false], 202);
+        }
+        try {
+            $result = MamaputAccounts::deliverPurchase($api->using($setting), $id);
+        } catch (HttpException $e) {
+            // Not a Mama Put pack, or refunded: nothing to retry.
+            if (in_array($e->getStatusCode(), [403, 409, 422], true)) {
+                return response()->json(['accepted' => true, 'handled' => false, 'reason' => $e->getMessage()], 202);
+            }
+            throw $e;
+        }
+
+        return response()->json(['accepted' => true, 'handled' => true, 'granted' => $result['granted']], 202);
     }
 
     public function me(Request $request): JsonResponse

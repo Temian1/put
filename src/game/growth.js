@@ -57,9 +57,3 @@ export function openBranch(d, place) {
   d.branches.push(place.id);
   return true;
 }
-
-export const branchIncome = (d) =>
-  PLACES.filter((p) => d.branches.includes(p.id)).reduce(
-    (s, p) => s + p.income,
-    0,
-  );

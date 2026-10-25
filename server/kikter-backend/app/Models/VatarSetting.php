@@ -30,8 +30,20 @@ class VatarSetting extends Model
     public static function mamaput(): self
     {
         $own = static::find(2);
+        if ($own && $own->configured()) {
+            return $own;
+        }
+        // Keys from .env (config/mamaput.php) when none are saved in the admin.
+        $env = config('mamaput.vatar');
+        if (filled($env['secret'] ?? null)) {
+            return new self([
+                'id' => 2, 'enabled' => true, 'mode' => $env['mode'] ?: 'test',
+                'secret' => $env['secret'], 'webhook_secret' => $env['webhook_secret'],
+                'results_secret' => $env['results_secret'], 'products' => [],
+            ]);
+        }
 
-        return $own && $own->configured() ? $own : static::current();
+        return static::current();
     }
 
     public function configured(): bool

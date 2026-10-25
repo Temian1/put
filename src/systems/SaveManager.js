@@ -2,6 +2,7 @@ import { COIN_TO_NAIRA } from "../game/currency.js";
 import { emptyStats } from "../game/missions.js";
 import { LEGACY_PLACES, PLACES } from "../game/data.js";
 import { migrateCrew } from "../game/crew.js";
+import { migrateEquip } from "../game/equipment.js";
 
 export const SAVE_SCHEMA = 3;
 
@@ -27,6 +28,8 @@ export function createSave(storage = globalThis.localStorage) {
         crew: {},
         crewSeq: 0,
         till: {},
+        // Equipment bought for each restaurant.
+        equipBy: {},
         reputation: 50,
         equip: {},
         pantry: {},
@@ -99,6 +102,7 @@ export function migrate(d, defaults) {
     migrateCrew(out);
   }
   if (!out.till || typeof out.till !== "object") out.till = {};
+  if (d && (!d.equipBy || typeof d.equipBy !== "object")) migrateEquip(out);
   out.schema = SAVE_SCHEMA;
   const fresh = createDefaultsShape();
   out.up = Object.assign(fresh.up, out.up || {});

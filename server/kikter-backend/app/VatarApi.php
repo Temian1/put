@@ -139,6 +139,9 @@ class VatarApi
         }
         abort_unless(($remote['playerId'] ?? null) === $owner->player_id && $owner->mode === $setting->mode, 403, 'Purchase belongs to another player.');
         $product = $setting->product((string) ($remote['productId'] ?? ''));
+        if (! $product && MamaputConfig::product((string) ($remote['productId'] ?? ''))) {
+            return MamaputAccounts::deliverPurchase($this, $purchaseId, $owner, $remote)['purchase'];
+        }
         $item = ($product['type'] ?? 'skin') === 'item' && isset(GameStore::ITEMS[$product['item'] ?? '']) ? $product['item'] : null;
         abort_unless($product && ($item || preg_match('/^#[a-fA-F0-9]{6}$/', $product['skin'] ?? '')), 422, 'Product is not mapped to a suit or store item.');
         $purchase = DB::transaction(function () use ($purchaseId, $owner, $remote, $product, $item): VatarPurchase {

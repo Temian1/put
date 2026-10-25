@@ -22,7 +22,8 @@ test("buy buka equipment: tables appear in the scene", async ({ page }) => {
   const card = page.locator("#shopList .card", { hasText: "Plastic table" });
   await card.locator(".btn").click();
   await expect(card).toContainText("1/5");
-  expect((await saved(page)).equip.tables).toBe(1);
+  // Equipment belongs to the restaurant it was bought for.
+  expect((await saved(page)).equipBy.ch0.tables).toBe(1);
   await page.locator("#shopClose").click({ force: true });
   await startLevel(page, 5);
   await waitPlaying(page);

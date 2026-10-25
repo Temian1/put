@@ -5,7 +5,8 @@ namespace App\Filament;
 use Filament\Support\Contracts\HasLabel;
 
 /**
- * Admin sidebar sections, in display order.
+ * Admin sidebar sections, in display order. Each label names its game, so
+ * Lagos War (Block Battle) and Mama Put Rush settings are never mixed up.
  */
 enum NavigationGroup implements HasLabel
 {
@@ -20,10 +21,10 @@ enum NavigationGroup implements HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Players => 'Players',
-            self::Matches => 'Matches',
-            self::GameControl => 'Game control',
-            self::MamaPut => 'Mama Put Rush',
+            self::Players => 'Lagos War · Players',
+            self::Matches => 'Lagos War · Matches',
+            self::GameControl => 'Lagos War · Game control',
+            self::MamaPut => 'Mama Put Rush (separate game)',
         };
     }
 }

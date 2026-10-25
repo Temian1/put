@@ -350,6 +350,25 @@ function CrewRow({ m, job, toggle, sack, unpaidLimit }) {
   );
 }
 
+// Which restaurant the Staff and Buka tabs are buying for.
+function PlacePicker({ crew }) {
+  return (
+    <div className="placeChips" role="tablist">
+      {crew.places.map((p) => (
+        <button
+          key={p.id}
+          role="tab"
+          aria-selected={p.id === crew.place}
+          className={"placeChip" + (p.id === crew.place ? " on" : "")}
+          onClick={() => crew.setPlace(p.id)}
+        >
+          {p.name}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function Shop({
   tab,
   save,
@@ -407,26 +426,12 @@ export function Shop({
     return (
       <>
         <div className="sectionLabel">Staff for each restaurant</div>
-        <div className="placeChips" role="tablist">
-          {crew.places.map((p) => (
-            <button
-              key={p.id}
-              role="tab"
-              aria-selected={p.id === crew.place}
-              className={"placeChip" + (p.id === crew.place ? " on" : "")}
-              onClick={() => crew.setPlace(p.id)}
-            >
-              {p.name}
-            </button>
-          ))}
-        </div>
+        <PlacePicker crew={crew} />
         <p className="hintText">
           {here ? here.name : "This restaurant"} has its own crew. They work
           every shift you play here and are paid after it. Unpaid {unpaidLimit}{" "}
           shifts in a row, they quit.
-          {crew.place === "ch0"
-            ? ""
-            : " A manager keeps it open while you play elsewhere."}
+          {" A manager keeps it open while you play elsewhere."}
         </p>
         {crew.members.length ? (
           <>
@@ -448,30 +453,30 @@ export function Shop({
           </>
         ) : null}
         <div className="sectionLabel">Hire</div>
-        {crew.jobs
-          .filter((j) => j.role !== "manager" || crew.place !== "ch0")
-          .map((j) => (
-            <JobCard
-              key={j.id}
-              job={j}
-              have={crew.count(j.role)}
-              max={crew.limit[j.role] || 1}
-              check={crew.check}
-              coins={save.coins}
-              art={art}
-              hire={hireStaff}
-            />
-          ))}
+        {crew.jobs.map((j) => (
+          <JobCard
+            key={j.id}
+            job={j}
+            have={crew.count(j.role)}
+            max={crew.limit[j.role] || 1}
+            check={crew.check}
+            coins={save.coins}
+            art={art}
+            hire={hireStaff}
+          />
+        ))}
       </>
     );
   }
   if (tab === "buka")
     return (
       <>
-        <div className="sectionLabel">Grow your buka</div>
+        <div className="sectionLabel">Equipment for each restaurant</div>
+        <PlacePicker crew={crew} />
         <p className="hintText">
-          Everything you buy appears in your buka. Most items cost upkeep (gas,
-          light, repairs) after every shift.
+          Everything you buy appears in that restaurant only. Most items cost
+          upkeep (gas, light, repairs) after every shift. At a restaurant a
+          manager runs, equipment raises its takings.
         </p>
         {equipment.map((it) => {
           const lv = equipLevel(it.id),

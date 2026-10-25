@@ -644,7 +644,7 @@ const TIERS = [
 // Restaurants you have opened keep earning after every shift and can be
 // visited or replayed at any time.
 const OPENING = [
-  { area: "Ojuelegba, Surulere", cost: 0, income: 0 },
+  { area: "Ojuelegba, Surulere", cost: 0, income: 1000 },
   { area: "Yaba, Lagos", cost: 50000, income: 1500 },
   { area: "Mushin, Lagos", cost: 120000, income: 3000 },
   { area: "Ikeja GRA, Lagos", cost: 250000, income: 5000 },

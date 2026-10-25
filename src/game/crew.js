@@ -1,4 +1,5 @@
 import { STAFF, NAMES, PLACES } from "./data.js";
+import { equipTotal, upkeep } from "./equipment.js";
 
 // Each restaurant has its own crew. Staff are hired for one restaurant and
 // work only there; you can hire several people for the same job. A manager
@@ -76,6 +77,8 @@ export const jobOf = (id) => JOBS.find((j) => j.id === id) || null;
 // before the manager's skill share. A skilled manager profits from staff;
 // a junior one barely covers their salaries.
 export const STAFF_RETURN = 1.6;
+// Each equipment level at an away restaurant adds this share of its income.
+export const EQUIP_RETURN = 0.04;
 // The safe holds this many shifts of takings; then it stops filling.
 export const TILL_SHIFTS = 12;
 
@@ -200,10 +203,11 @@ export function runBranches(d, current, repFactor, limit) {
       (m) => !m.off && jobOf(m.job)?.role !== "manager",
     );
     const potential =
-      p.income + staff.reduce((t, m) => t + wageOf(m) * STAFF_RETURN, 0);
+      p.income * (1 + EQUIP_RETURN * equipTotal(d, p.id)) +
+      staff.reduce((t, m) => t + wageOf(m) * STAFF_RETURN, 0);
     const gross = Math.round(potential * repFactor * mgr.share);
     const cut = Math.round(gross * mgr.pay);
-    let left = gross - cut + (d.till[p.id] || 0);
+    let left = gross - cut - upkeep(d, p.id) + (d.till[p.id] || 0);
     const pay = payCrew(d, p.id, left, limit);
     left -= pay.paid;
     const cap = p.income * TILL_SHIFTS;

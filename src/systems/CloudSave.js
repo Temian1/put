@@ -22,6 +22,14 @@ export function mergeSaves(local, remote) {
   merged.best = maxMap(local.best, remote.best);
   merged.up = maxMap(local.up, remote.up);
   merged.equip = maxMap(local.equip, remote.equip);
+  if (local.equipBy || remote.equipBy) {
+    merged.equipBy = {};
+    for (const p of union(
+      Object.keys(local.equipBy || {}),
+      Object.keys(remote.equipBy || {}),
+    ))
+      merged.equipBy[p] = maxMap(local.equipBy?.[p], remote.equipBy?.[p]);
+  }
   merged.endlessBest = Math.max(
     local.endlessBest || 0,
     remote.endlessBest || 0,

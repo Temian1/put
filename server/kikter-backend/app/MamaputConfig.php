@@ -30,7 +30,7 @@ final class MamaputConfig
 
     /** Restaurants (one per chapter): name, opening cost, income per shift. */
     public const PLACES = [
-        ['Roadside Buka', 0, 0], ['Junction Food Spot', 50000, 1500], ['Swallow Joint', 120000, 3000],
+        ['Roadside Buka', 0, 1000], ['Junction Food Spot', 50000, 1500], ['Swallow Joint', 120000, 3000],
         ['Owambe Catering', 250000, 5000], ['Mama Put Empire', 450000, 7500],
         ['Ikeja City Restaurant', 700000, 10000], ['Port Harcourt Branch', 1000000, 13000],
         ['Abuja Food Court', 1400000, 17000], ['Catering Company', 1900000, 22000],

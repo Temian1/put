@@ -100,13 +100,23 @@ export const EQUIPMENT = [
 ];
 export const BUS_HIRE = 8000;
 
-export const level = (d, id) => (d.equip && d.equip[id]) || 0;
+// Each restaurant has its own equipment. `place` defaults to the restaurant
+// you are at (d.place). Saves from before restaurants had their own kit
+// keep it in d.equip until they are migrated.
+export const placeOf = (d) => d.place || "ch0";
+export const equipAt = (d, place = placeOf(d)) =>
+  d.equipBy ? d.equipBy[place] || {} : d.equip || {};
+export const level = (d, id, place) => equipAt(d, place)[id] || 0;
 export const maxLevel = (item) => item.costs.length;
-export const nextCost = (d, item) => item.costs[level(d, item.id)];
+export const nextCost = (d, item, place) =>
+  item.costs[level(d, item.id, place)];
+// All equipment levels at a restaurant, for the manager's earnings.
+export const equipTotal = (d, place) =>
+  Object.values(equipAt(d, place)).reduce((s, n) => s + n, 0);
 
 // What the equipment does, as plain numbers the game reads.
-export function effects(d) {
-  const L = (id) => level(d, id);
+export function effects(d, place) {
+  const L = (id) => level(d, id, place);
   return {
     tables: 1 + L("tables"),
     seats: 2 * (1 + L("tables")),
@@ -132,13 +142,26 @@ export function effects(d) {
   };
 }
 
-export const upkeep = (d) =>
-  EQUIPMENT.reduce((s, it) => s + it.upkeep * level(d, it.id), 0);
+export const upkeep = (d, place) =>
+  EQUIPMENT.reduce((s, it) => s + it.upkeep * level(d, it.id, place), 0);
 
-export function buyEquipment(d, item) {
-  const cost = nextCost(d, item);
+export function buyEquipment(d, item, place = placeOf(d)) {
+  const cost = nextCost(d, item, place);
   if (cost === undefined || d.coins < cost) return false;
   d.coins -= cost;
-  d.equip = { ...(d.equip || {}), [item.id]: level(d, item.id) + 1 };
+  if (!d.equipBy) migrateEquip(d);
+  d.equipBy[place] = {
+    ...equipAt(d, place),
+    [item.id]: level(d, item.id, place) + 1,
+  };
   return true;
+}
+
+// Equipment used to be shared by every restaurant: each one you own keeps
+// a copy of what you had, so nobody loses anything they paid for.
+export function migrateEquip(out) {
+  const old = out.equip && typeof out.equip === "object" ? out.equip : {};
+  out.equipBy = {};
+  for (const b of out.branches || ["ch0"]) out.equipBy[b] = { ...old };
+  return out;
 }

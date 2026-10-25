@@ -35,7 +35,12 @@ class MamaputSettings extends Page
 
     protected static string|UnitEnum|null $navigationGroup = NavigationGroup::MamaPut;
 
-    protected static ?string $title = 'Mama Put settings';
+    protected static ?string $title = 'Mama Put Rush settings';
+
+    public function getSubheading(): ?string
+    {
+        return 'Only for Mama Put Rush (mamaput-phi.vercel.app). Changing these never affects Lagos War; its settings are under "Lagos War · Game control".';
+    }
 
     protected static ?string $navigationLabel = 'Settings';
 
@@ -163,12 +168,14 @@ class MamaputSettings extends Page
                                         ->dehydrateStateUsing(fn (mixed $state): int => (int) $state),
                                 ]),
                             Section::make('Lagos Life game keys')
-                                ->description('Only if Mama Put is registered as its own game in Lagos Life. Otherwise it uses the Lagos War keys from Game settings. The key is encrypted and never shown again; leave it blank to keep the saved one.')
+                                ->description('Only if Mama Put is registered as its own game in Lagos Life. Otherwise it uses the Lagos War keys from Game settings (and the Lagos War webhook hands Mama Put coin packs over). Keys are encrypted and never shown again; leave a field blank to keep the saved one. Webhook URL to enter in Lagos Life: '.url('/api/mamaput/lagoslife/webhook'))
                                 ->columns(3)->schema([
                                     Toggle::make('own_vatar')->label('Use separate Mama Put keys'),
                                     Select::make('vatar_mode')->options(['test' => 'Sandbox', 'live' => 'Live'])->required(),
                                     TextInput::make('vatar_secret')->label('API secret')->password()->maxLength(250)
                                         ->rule('regex:/^vtr_(test|live)_[a-zA-Z0-9_-]+$/'),
+                                    TextInput::make('vatar_webhook_secret')->label('Webhook signing secret')->password()->maxLength(250)
+                                        ->rule('regex:/^vtr_whsec_(test|live)_[a-zA-Z0-9_-]+$/'),
                                 ]),
                         ]),
                         Tab::make('Features')->icon(Heroicon::OutlinedPuzzlePiece)->schema([
@@ -200,10 +207,15 @@ class MamaputSettings extends Page
         if ($state['own_vatar'] && ! filled($secret ?: $vatar->secret)) {
             throw ValidationException::withMessages(['data.vatar_secret' => 'Supply the API secret first.']);
         }
-        $vatar->update(array_merge(filled($secret) ? ['secret' => $secret] : [], [
+        $hook = $state['vatar_webhook_secret'] ?? null;
+        if (filled($hook) && ! str_starts_with($hook, 'vtr_whsec_'.$state['vatar_mode'].'_')) {
+            throw ValidationException::withMessages(['data.vatar_webhook_secret' => 'The key must match the selected mode.']);
+        }
+        $vatar->update(array_merge(filled($secret) ? ['secret' => $secret] : [], filled($hook) ? ['webhook_secret' => $hook] : [], [
             'enabled' => (bool) $state['own_vatar'], 'mode' => $state['vatar_mode'],
         ]));
         $this->data['vatar_secret'] = null;
+        $this->data['vatar_webhook_secret'] = null;
         MamaputConfig::store($state);
         Notification::make()->title('Mama Put settings saved')->body('Players get them the next time the game starts.')->success()->send();
     }

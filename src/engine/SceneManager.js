@@ -123,6 +123,7 @@ import {
   upkeep as upkeepCost,
   buyEquipment,
   level as equipLevel,
+  equipAt,
   BUS_HIRE,
 } from "../game/equipment.js";
 import {
@@ -1181,10 +1182,11 @@ export function mountGame(canvas, host, bridge) {
     const body = mesh(GEO.body, bm, 0, 0.76, 0);
     inner.add(body);
     inner.add(mesh(GEO.belt, acc, 0, 0.86, 0));
-    [-0.17, 0.17].forEach((x) => {
+    const feet = [-0.17, 0.17].map((x) => {
       const f = mesh(GEO.foot, MAT_SHOE, x, 0.07, 0.1);
       f.scale.set(0.9, 0.55, 1.3);
       inner.add(f);
+      return f;
     });
     const mkArm = (side) => {
       const p = new T3.Group();
@@ -1367,6 +1369,7 @@ export function mountGame(canvas, host, bridge) {
       head,
       armL,
       armR,
+      feet,
       smile,
       frown,
       mouthO,
@@ -1958,7 +1961,7 @@ export function mountGame(canvas, host, bridge) {
       "|" +
       Save.d.decor.slice().sort().join() +
       "|" +
-      JSON.stringify(Save.d.equip) +
+      JSON.stringify(equipAt(Save.d)) +
       "|" +
       tierOf(Save.d);
     if (env && envKey === decorKey) return;
@@ -2065,8 +2068,8 @@ export function mountGame(canvas, host, bridge) {
         ),
       );
       palm(env, -6.2, -3, 4.6);
-      palm(env, 6.5, -3.4, 5.2);
-      palm(env, -9, -6, 5);
+      palm(env, 8, -3.1, 5.2);
+      palm(env, -12.5, -7.4, 5);
       parasol(env, 5.2, -2.6, "#FF5A5F", "#FFFFFF");
       parasol(env, -5.4, -2.6, "#12A99F", "#FFC531");
       for (let i = 0; i < 3; i++) {
@@ -2080,7 +2083,7 @@ export function mountGame(canvas, host, bridge) {
         M("#4A4E57", { roughness: 0.95 }),
         0,
         0.02,
-        -4,
+        -5.1,
         false,
       );
       road.rotation.x = -Math.PI / 2;
@@ -2091,7 +2094,7 @@ export function mountGame(canvas, host, bridge) {
           M("#FFD54F"),
           -26 + i * 4,
           0.03,
-          -4,
+          -5.1,
           false,
         );
         env.add(d);
@@ -2114,12 +2117,12 @@ export function mountGame(canvas, host, bridge) {
           "#4A1F0C",
         ),
       );
-      lamp(env, -4.4, -2.3);
-      lamp(env, 4.4, -2.3);
-      palm(env, -7.6, -2.8, 4.4);
-      parasol(env, 6.4, -2.2, "#FFC531", "#12A99F");
+      lamp(env, -4.4, -2.9);
+      lamp(env, 4.4, -2.9);
+      palm(env, -6.4, -2.95, 4.4);
+      parasol(env, 7.9, -2.8, "#FFC531", "#12A99F");
       const k = keke(env);
-      dyn.push({ o: k, type: "drive", z: -4.6, speed: 3.2, x: -14 });
+      dyn.push({ o: k, type: "drive", z: -4.7, speed: 3.2, x: -14, len: 2 });
     } else if (ci === 2) {
       const road = mesh(
         G("road2", () => new T3.PlaneGeometry(60, 3.2)),
@@ -2164,7 +2167,15 @@ export function mountGame(canvas, host, bridge) {
       plant(env, -4, -3.2);
       plant(env, 4, -3.2);
       const d = danfo(env);
-      dyn.push({ o: d, type: "drive", z: -8.6, speed: 4, x: 16, dir: -1 });
+      dyn.push({
+        o: d,
+        type: "drive",
+        z: -9.1,
+        speed: 4,
+        x: 16,
+        dir: -1,
+        len: 3.4,
+      });
     } else if (ci === 3) {
       const tent = new T3.Group();
       tent.position.set(0, 0, -5);
@@ -2590,7 +2601,8 @@ export function mountGame(canvas, host, bridge) {
           plastic[1] === "#FFFFFF" && i % 2 ? "#12A99F" : plastic[1],
         );
         c.position.set(side * 0.58, 0, 0);
-        c.rotation.y = (side * Math.PI) / 2;
+        // Backrest away from the table, so the diner faces their food.
+        c.rotation.y = (-side * Math.PI) / 2;
         c.scale.setScalar(0.92);
         t.add(c);
         return {
@@ -2607,11 +2619,12 @@ export function mountGame(canvas, host, bridge) {
 
   /* ---- traffic: cars, kekes, danfos and okadas on every street ---- */
   const TRAFFIC_LANES = {
-    0: [-3.35],
-    1: [-4.6, -3.4],
-    2: [-9.2, -8.0],
-    3: [-3.5],
-    4: [-3.75],
+    0: [-4.7, -5.5],
+    1: [-4.7, -5.45],
+    2: [-8.0, -9.1],
+    3: [-8.2, -9.0],
+    // A narrow one-way street between the parked okadas and the facade.
+    4: [-4.45],
   };
   function car(g, color) {
     const k = new T3.Group();
@@ -2645,14 +2658,14 @@ export function mountGame(canvas, host, bridge) {
     return k;
   }
   function buildTraffic(g, ci) {
-    const lanes = TRAFFIC_LANES[ci] || [-3.5];
+    const lanes = TRAFFIC_LANES[ci] || [-4.65, -5.55];
     if (ci === 0 || ci === 3 || ci === 4) {
       const road = mesh(
-        G("road3", () => new T3.PlaneGeometry(60, 1.7)),
+        G("road3", () => new T3.PlaneGeometry(60, 2.5)),
         M("#4A4E57", { roughness: 0.95 }),
         0,
         0.015,
-        lanes[0],
+        (lanes[0] + (lanes[1] ?? lanes[0])) / 2,
         false,
       );
       road.rotation.x = -Math.PI / 2;
@@ -2668,17 +2681,21 @@ export function mountGame(canvas, host, bridge) {
       okada,
       keke,
     ];
+    const oneWay = lanes.length === 1;
     for (let i = 0; i < n; i++) {
-      const v = makers[i](g);
+      // No danfo bus where the street is too narrow for it.
+      const v = (oneWay && i === 2 ? makers[0] : makers[i])(g);
       if (i === 4) v.scale.setScalar(0.9);
-      const dir = i % 2 ? -1 : 1;
+      const dir = oneWay || i % 2 === 0 ? 1 : -1;
       dyn.push({
         o: v,
         type: "drive",
-        z: lanes[i % lanes.length] + (dir > 0 ? 0.35 : -0.35),
+        // One lane per direction, so traffic never drives through itself.
+        z: lanes[dir > 0 ? 0 : 1],
         speed: rnd(2.4, 5),
-        x: rnd(-16, 16),
+        x: -16 + ((i * 11) % 32),
         dir,
+        len: i === 2 && !oneWay ? 3.4 : 2,
       });
     }
   }
@@ -2689,14 +2706,14 @@ export function mountGame(canvas, host, bridge) {
     for (let i = 0; i < equipLevel(Save.d, "bike"); i++) {
       const b = new T3.Group();
       okada(b);
-      b.position.set(4.7 + i * 0.95, 0, -2.75);
+      b.position.set(4.7 + i * 0.95, 0, -3.25);
       b.rotation.y = -0.35;
       g.add(b);
     }
     if (equipLevel(Save.d, "bus")) {
       const bus = danfo(g);
-      bus.position.set(-6.2, 0, -2.85);
-      bus.rotation.y = 0.15;
+      bus.position.set(-9.2, 0, -3.15);
+      bus.rotation.y = 0;
     }
     const cols = ["#FF7A1A", "#12A99F", "#FF5A5F", "#2FA34F", "#6B2D8C"];
     for (let i = 0; i < tier; i++) {
@@ -3458,8 +3475,21 @@ export function mountGame(canvas, host, bridge) {
       }
       // animation
       const I = P.inner;
+      // Seated on the chair: body up on the seat, feet forward under the table.
+      const seated = this.state === "eat";
+      if (seated !== this.sitting) {
+        this.sitting = seated;
+        P.feet?.forEach((f) =>
+          f.position.set(
+            f.position.x,
+            seated ? -0.14 : 0.07,
+            seated ? 0.36 : 0.1,
+          ),
+        );
+      }
       if (this.state === "eat") {
-        I.position.y = lerp(I.position.y, -0.3, dt * 8);
+        I.position.y = lerp(I.position.y, 0.22, dt * 8);
+        I.rotation.z = 0;
         P.armR.rotation.x = -1.1 + Math.sin(this.t * 7) * 0.35;
         P.armL.rotation.x = -0.4;
         P.head.rotation.x = 0.15 + Math.sin(this.t * 7) * 0.06;
@@ -4216,6 +4246,9 @@ export function mountGame(canvas, host, bridge) {
         UI.close(id),
       );
       this.cfg = cfg;
+      // Playing a level takes you to its restaurant: its own equipment,
+      // staff and look.
+      if (cfg.mode === "level" && cfg.n) Save.d.place = placeFor(cfg);
       this.startedAt = performance.now();
       // Systems the admin has switched off for everyone.
       if (!LIVE.features.haggle) cfg.haggle = false;
@@ -5505,7 +5538,7 @@ export function mountGame(canvas, host, bridge) {
         tier = this.tierStart ?? tierOf(d),
         tax = taxes(tier, sales + extra),
         rent = roundNaira(RENT[tier] * LIVE.rent, 10),
-        upkeep = upkeepCost(d),
+        upkeep = upkeepCost(d, this.place || placeFor(this.cfg)),
         // A manager here trims waste on ingredients and packs.
         saving = this.manager ? this.manager.saving : 0,
         waste = roundNaira((this.foodCost + this.packCost) * saving, 10),
@@ -6385,18 +6418,19 @@ export function mountGame(canvas, host, bridge) {
       },
       boosters: BOOSTERS,
       equipment: EQUIPMENT,
-      equipLevel: (id) => equipLevel(Save.d, id),
+      equipLevel: (id) => equipLevel(Save.d, id, crewPlace),
       buyEquip: (it, card, e) => {
-        const cost = it.costs[equipLevel(Save.d, it.id)];
+        const cost = it.costs[equipLevel(Save.d, it.id, crewPlace)];
         if (cost === undefined) return;
         buy(
           cost,
           () => {
             Save.d.coins += cost;
-            buyEquipment(Save.d, it);
+            buyEquipment(Save.d, it, crewPlace);
             envKey = "";
             showMenuEnvRefresh();
-            UI.toast(`${it.name} added to your buka!`);
+            UI.toast(`${it.name} added to ${placeName(crewPlace)}!`);
+            buildShop();
           },
           card,
           e,
@@ -7160,7 +7194,14 @@ export function mountGame(canvas, host, bridge) {
       }
       dyn.forEach((d) => {
         if (d.type === "drive") {
-          d.x += (d.dir || 1) * d.speed * dt;
+          let speed = d.speed;
+          for (const o of dyn) {
+            if (o === d || o.type !== "drive" || o.z !== d.z) continue;
+            const gap = ((o.x - d.x) * (d.dir || 1) + 32) % 32;
+            if (gap < (o.len + d.len) / 2 + 0.6)
+              speed = Math.min(speed, o.speed * 0.9);
+          }
+          d.x += (d.dir || 1) * speed * dt;
           if (d.x > 16) d.x = -16;
           if (d.x < -16) d.x = 16;
           d.o.position.set(d.x, 0, d.z);
@@ -7254,6 +7295,8 @@ export function mountGame(canvas, host, bridge) {
         stations,
         trays,
         camera,
+        scene,
+        dyn,
         Online,
         syncNow,
       };
