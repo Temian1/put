@@ -745,3 +745,17 @@ svg.star.on {
 .dirtyChip.litter {
   background: #8d5a2b;
 }
+/* Pay with Lagos Life money in the shop */
+.buyCol {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: stretch;
+}
+.btn.lagosBuy {
+  background: linear-gradient(180deg, #8a3d7c, var(--plum));
+  color: #fff;
+  font-size: 13px;
+  padding: 5px 10px;
+  box-shadow: 0 3px 0 #3b1434;
+}

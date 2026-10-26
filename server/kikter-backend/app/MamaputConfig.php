@@ -44,6 +44,46 @@ final class MamaputConfig
         'plantain' => 'Plantain', 'drinks' => 'Drinks',
     ];
 
+    /**
+     * What a Lagos Life product can give in Mama Put: the game's own shop
+     * items (ids match the client), naira for the buka, or wallet coins.
+     */
+    public const ITEMS = [
+        'booster' => ['freeze' => 'Freeze Time booster', 'auto' => 'Auto-Serve booster', 'calm' => 'Patience Boost booster'],
+        'upgrade' => ['fast' => 'Sharp Sharp Hands', 'patience' => 'Sweet Mouth', 'tips' => 'Big Tips', 'time' => 'Generator'],
+        'outfit' => ['teal' => 'Lagos Teal outfit', 'royal' => 'Royal Purple outfit', 'gold' => 'Owambe Gold outfit'],
+        'decor' => ['plants' => 'Potted Plants', 'bunting' => 'Party Bunting', 'lights' => 'Fairy Lights'],
+        'equipment' => [
+            'tables' => 'Plastic table & chairs', 'fridge' => 'Deep freezer', 'burner' => 'Extra gas burner',
+            'bigpots' => 'Bigger pots', 'sink' => 'Double sink', 'handwash' => 'Handwash station & bin',
+            'uniforms' => 'Staff uniforms & caps', 'store' => 'Store room shelves', 'sign' => 'Lit signboard',
+            'building' => 'Renovate the building', 'bike' => 'Delivery okada', 'bus' => 'Catering bus',
+        ],
+        'cash' => [],
+        'coins' => [],
+    ];
+
+    public const ITEM_TYPES = [
+        'booster' => 'Booster (amount = how many)', 'upgrade' => 'Upgrade level (amount = levels)',
+        'outfit' => 'Outfit', 'decor' => 'Decoration', 'equipment' => 'Equipment level at the current restaurant',
+        'cash' => 'Naira for the buka (amount = ₦)', 'coins' => 'Wallet coins (amount = coins)',
+    ];
+
+    /** Lagos Life products to create in the Mama Put game, ready to use. */
+    public const SUGGESTED_PRODUCTS = [
+        ['product_id' => 'mp_freeze_3', 'name' => '3 Freeze Time boosters', 'type' => 'booster', 'item' => 'freeze', 'amount' => 3],
+        ['product_id' => 'mp_auto_3', 'name' => '3 Auto-Serve boosters', 'type' => 'booster', 'item' => 'auto', 'amount' => 3],
+        ['product_id' => 'mp_calm_3', 'name' => '3 Patience boosters', 'type' => 'booster', 'item' => 'calm', 'amount' => 3],
+        ['product_id' => 'mp_outfit_royal', 'name' => 'Royal Purple outfit', 'type' => 'outfit', 'item' => 'royal', 'amount' => 1],
+        ['product_id' => 'mp_outfit_gold', 'name' => 'Owambe Gold outfit', 'type' => 'outfit', 'item' => 'gold', 'amount' => 1],
+        ['product_id' => 'mp_decor_lights', 'name' => 'Fairy Lights', 'type' => 'decor', 'item' => 'lights', 'amount' => 1],
+        ['product_id' => 'mp_fridge', 'name' => 'Deep freezer', 'type' => 'equipment', 'item' => 'fridge', 'amount' => 1],
+        ['product_id' => 'mp_renovate', 'name' => 'Renovate the building', 'type' => 'equipment', 'item' => 'building', 'amount' => 1],
+        ['product_id' => 'mp_generator', 'name' => 'Generator upgrade', 'type' => 'upgrade', 'item' => 'time', 'amount' => 1],
+        ['product_id' => 'mp_cash_50k', 'name' => '₦50,000 for your buka', 'type' => 'cash', 'item' => '', 'amount' => 50000],
+        ['product_id' => 'mp_coins_100', 'name' => '100 coins', 'type' => 'coins', 'item' => '', 'amount' => 100],
+    ];
+
     /** Business levels: lifetime sales and reputation needed (matches the client). */
     public const TIERS = [
         ['Roadside Buka', 0, 0], ['Busy Buka', 250000, 48], ['Popular Joint', 1200000, 56],
@@ -82,7 +122,7 @@ final class MamaputConfig
         'coins_daily_cap' => 100,
         'coin_naira_rate' => 200,
         'coins_exchange_min' => 10,
-        'lagoslife_products' => [],
+        'lagoslife_products' => self::SUGGESTED_PRODUCTS,
     ];
 
     /** @return array<string, mixed> */
@@ -108,10 +148,30 @@ final class MamaputConfig
         Cache::forget(self::CACHE_KEY);
     }
 
-    /** @return array{product_id: string, name: string, coins: int}|null */
+    /**
+     * A Lagos Life product with what it gives. Older coin packs stored only
+     * `coins`, so they read as type "coins".
+     *
+     * @return array{product_id: string, name: string, type: string, item: string, amount: int}|null
+     */
     public static function product(string $id): ?array
     {
-        return collect((array) self::get('lagoslife_products'))->first(fn (array $p): bool => $p['product_id'] === $id);
+        $p = collect((array) self::get('lagoslife_products'))->first(fn (array $p): bool => ($p['product_id'] ?? '') === $id);
+
+        return $p ? self::normalize($p) : null;
+    }
+
+    /** @return array{product_id: string, name: string, type: string, item: string, amount: int} */
+    public static function normalize(array $p): array
+    {
+        $type = isset(self::ITEMS[$p['type'] ?? '']) ? $p['type'] : 'coins';
+        $item = (string) ($p['item'] ?? '');
+
+        return [
+            'product_id' => (string) $p['product_id'], 'name' => (string) ($p['name'] ?? $p['product_id']),
+            'type' => $type, 'item' => isset(self::ITEMS[$type][$item]) ? $item : '',
+            'amount' => max(1, (int) ($p['amount'] ?? $p['coins'] ?? 1)),
+        ];
     }
 
     public static function tierOf(int $sales, float $reputation): int
@@ -185,9 +245,14 @@ final class MamaputConfig
                 'rate' => (int) $v['coin_naira_rate'],
                 'min' => (int) $v['coins_exchange_min'],
             ],
-            'lagoslifeProducts' => array_values(array_map(fn (array $p): array => [
-                'productId' => $p['product_id'], 'name' => $p['name'], 'coins' => (int) $p['coins'],
-            ], (array) $v['lagoslife_products'])),
+            'lagoslifeProducts' => array_values(array_map(function (array $p): array {
+                $p = self::normalize($p);
+
+                return ['productId' => $p['product_id'], 'name' => $p['name'], 'type' => $p['type'],
+                    'item' => $p['item'], 'amount' => $p['amount'],
+                    // Kept for game versions that only knew coin packs.
+                    'coins' => $p['type'] === 'coins' ? $p['amount'] : 0];
+            }, (array) $v['lagoslife_products'])),
         ];
     }
 }

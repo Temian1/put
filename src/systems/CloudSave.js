@@ -41,6 +41,7 @@ export function mergeSaves(local, remote) {
     "achievements",
     "taught",
     "branches",
+    "grantsApplied",
   ])
     merged[k] = union(local[k], remote[k]);
   const { food: lf, ...ls } = local.stats || {},

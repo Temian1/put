@@ -18,6 +18,7 @@ use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Validation\ValidationException;
@@ -159,12 +160,17 @@ class MamaputSettings extends Page
                                     TextInput::make('coins_exchange_min')->label('Smallest swap (coins)')->required()->integer()->minValue(1)->maxValue(100000)
                                         ->dehydrateStateUsing(fn (mixed $state): int => (int) $state),
                                 ]),
-                            Repeater::make('lagoslife_products')->label('Lagos Life coin packs')
-                                ->helperText('Create the same product IDs in the Lagos Life (Vatar) dashboard; Lagos Life sets the price. Each purchase adds its coins to the wallet once.')
-                                ->maxItems(20)->columns(3)->schema([
+                            Repeater::make('lagoslife_products')->label('Lagos Life products (Mama Put shop items)')
+                                ->helperText('Each product sells one of Mama Put\'s own shop items for Lagos Life money. Create the same product IDs as one-off products under the Mama Put game in the Lagos Life dashboard; Lagos Life sets the price. Inside Lagos Life, mapped items get a "Lagos Life" buy button in the game\'s shop. Each purchase is delivered once.')
+                                ->maxItems(40)->columns(5)->schema([
                                     TextInput::make('product_id')->required()->maxLength(32)->regex('/^[a-z0-9_-]+$/')->distinct(),
                                     TextInput::make('name')->required()->maxLength(60),
-                                    TextInput::make('coins')->required()->integer()->minValue(1)->maxValue(65000)
+                                    Select::make('type')->label('Gives')->options(MamaputConfig::ITEM_TYPES)->required()->live()->default('booster'),
+                                    Select::make('item')
+                                        ->options(fn (Get $get): array => MamaputConfig::ITEMS[$get('type')] ?? [])
+                                        ->required(fn (Get $get): bool => ! in_array($get('type'), ['cash', 'coins'], true))
+                                        ->visible(fn (Get $get): bool => ! in_array($get('type'), ['cash', 'coins'], true)),
+                                    TextInput::make('amount')->required()->integer()->minValue(1)->maxValue(6_500_000)->default(1)
                                         ->dehydrateStateUsing(fn (mixed $state): int => (int) $state),
                                 ]),
                             Section::make('Lagos Life game keys')

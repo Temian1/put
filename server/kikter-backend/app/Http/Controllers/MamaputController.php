@@ -123,7 +123,21 @@ class MamaputController extends Controller
         abort_unless($player->vatar_player_id === $vatar->id, 403, 'Sign in with Lagos Life first.');
         $result = MamaputAccounts::deliverPurchase($api, $data['purchaseId'], $vatar);
 
-        return response()->json(['granted' => $result['granted']] + $this->walletState($result['player']));
+        return response()->json(['granted' => $result['granted'], 'grants' => MamaputAccounts::pendingGrants($result['player'])]
+            + $this->walletState($result['player']));
+    }
+
+    /** Items bought on Lagos Life waiting to be added to the game's save. */
+    public function grants(Request $request): JsonResponse
+    {
+        return response()->json(['grants' => MamaputAccounts::pendingGrants($this->player($request))]);
+    }
+
+    public function ackGrants(Request $request): JsonResponse
+    {
+        $data = $request->validate(['ids' => ['required', 'array', 'max:50'], 'ids.*' => ['string', 'max:100']]);
+
+        return response()->json(['applied' => MamaputAccounts::ackGrants($this->player($request), $data['ids'])]);
     }
 
     /**

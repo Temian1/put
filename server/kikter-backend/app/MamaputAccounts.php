@@ -105,7 +105,11 @@ final class MamaputAccounts
         abort_unless(($remote['id'] ?? null) === $purchaseId && ($remote['mode'] ?? null) === $setting->mode, 403, 'Vatar purchase mode or ID mismatch.');
         abort_unless(in_array($remote['status'] ?? null, ['paid', 'delivered', 'refunded'], true), 422, 'Purchase is not paid.');
         $product = MamaputConfig::product((string) ($remote['productId'] ?? ''));
-        abort_unless($product, 422, 'This product is not on sale in Mama Put.');
+        abort_unless($product && ($product['type'] === 'coins' || $product['type'] === 'cash' || $product['item'] !== ''),
+            422, 'This product is not on sale in Mama Put.');
+        $coins = $product['type'] === 'coins';
+        // Naira is stored in hundreds so large amounts fit the quantity column.
+        $quantity = $product['type'] === 'cash' ? intdiv($product['amount'] + 99, 100) : $product['amount'];
         $owner ??= VatarPlayer::where('mode', $setting->mode)->where('player_id', (string) ($remote['playerId'] ?? ''))->first();
         // 503 asks Lagos Life (or the retry queue) to try again later.
         abort_unless($owner, 503, 'Player must open Mama Put before delivery.');
@@ -116,15 +120,19 @@ final class MamaputAccounts
             $row = VatarPurchase::firstOrCreate(
                 ['mode' => $owner->mode, 'game_id' => $owner->game_id, 'purchase_id' => $purchaseId],
                 ['vatar_player_id' => $owner->id, 'product_id' => $remote['productId'], 'status' => $remote['status'],
-                    'item' => 'mamaput_coins', 'quantity' => max(1, min(65000, (int) $product['coins']))],
+                    'item' => $coins ? 'mamaput_coins' : 'mamaput:'.$product['type'].':'.$product['item'],
+                    'quantity' => max(1, min(65000, $quantity))],
             );
             $row = VatarPurchase::whereKey($row->id)->lockForUpdate()->firstOrFail();
-            abort_unless($row->vatar_player_id === $owner->id && $row->item === 'mamaput_coins', 409, 'Purchase identity mismatch.');
+            abort_unless($row->vatar_player_id === $owner->id && str_starts_with((string) $row->item, 'mamaput'), 409, 'Purchase identity mismatch.');
             $row->status = $remote['status'];
             $grant = $row->status !== 'refunded' && ! $row->granted_at;
             if ($grant) {
                 $row->granted_at = now();
-                self::credit($player, $row->quantity, 'lagoslife_purchase', $row->purchase_id);
+                if ($row->item === 'mamaput_coins') {
+                    self::credit($player, $row->quantity, 'lagoslife_purchase', $row->purchase_id);
+                    $row->applied_at = now();
+                }
             }
             if ($row->status === 'delivered') {
                 $row->delivered_at ??= now();
@@ -138,6 +146,40 @@ final class MamaputAccounts
         abort_if($row->status === 'refunded', 409, 'Vatar: refunded');
 
         return ['granted' => $granted, 'player' => $player->fresh(), 'purchase' => $api->deliver($row)];
+    }
+
+    /**
+     * Game items bought on Lagos Life that the game has not applied yet.
+     *
+     * @return list<array{id: string, type: string, item: string, quantity: int}>
+     */
+    public static function pendingGrants(MamaputPlayer $player): array
+    {
+        if (! $player->vatar_player_id) {
+            return [];
+        }
+
+        return VatarPurchase::where('vatar_player_id', $player->vatar_player_id)
+            ->where('item', 'like', 'mamaput:%')->whereNotNull('granted_at')
+            ->whereNull('applied_at')->where('status', '!=', 'refunded')->orderBy('id')->limit(50)->get()
+            ->map(function (VatarPurchase $p): array {
+                [, $type, $item] = explode(':', (string) $p->item, 3) + [null, '', ''];
+
+                return ['id' => $p->purchase_id, 'type' => $type, 'item' => $item,
+                    'quantity' => $type === 'cash' ? $p->quantity * 100 : $p->quantity];
+            })->values()->all();
+    }
+
+    /** The game applied these grants to its save. */
+    public static function ackGrants(MamaputPlayer $player, array $ids): int
+    {
+        if (! $player->vatar_player_id || ! $ids) {
+            return 0;
+        }
+
+        return VatarPurchase::where('vatar_player_id', $player->vatar_player_id)
+            ->whereIn('purchase_id', array_slice(array_map('strval', $ids), 0, 50))
+            ->where('item', 'like', 'mamaput:%')->whereNull('applied_at')->update(['applied_at' => now()]);
     }
 
     public static function balance(MamaputPlayer $player): int

@@ -210,6 +210,16 @@ export function createOnline({
       }
       return r.ok ? r.data : { error: errorOf(r, "Could not deliver.") };
     },
+    // Shop items bought on Lagos Life that the game has not applied yet.
+    async grants() {
+      if (!base || !signedIn() || status.expired) return [];
+      const r = await req("GET", "/lagoslife/grants");
+      return r.ok ? r.data.grants || [] : [];
+    },
+    async ackGrants(ids) {
+      if (!base || !signedIn() || !ids.length) return false;
+      return (await req("POST", "/lagoslife/grants/ack", { ids })).ok;
+    },
     // Pull, merge, push. Retries once if another device saved in between.
     async sync(local) {
       if (!base || status.banned || !(await ensurePlayer())) return null;

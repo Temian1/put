@@ -30,6 +30,8 @@ export function createSave(storage = globalThis.localStorage) {
         till: {},
         // Equipment bought for each restaurant.
         equipBy: {},
+        // Lagos Life purchases already added to this save.
+        grantsApplied: [],
         reputation: 50,
         equip: {},
         pantry: {},

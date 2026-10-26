@@ -17,6 +17,8 @@ Route::prefix("mamaput")->middleware("throttle:120,1")->group(function () {
     Route::post("/wallet/exchange", [MamaputController::class, "exchange"])->middleware("throttle:20,1,mpwallet");
     Route::post("/lagoslife/purchase", [MamaputController::class, "purchase"]);
     Route::post("/lagoslife/webhook", [MamaputController::class, "lagosLifeWebhook"]);
+    Route::get("/lagoslife/grants", [MamaputController::class, "grants"]);
+    Route::post("/lagoslife/grants/ack", [MamaputController::class, "ackGrants"]);
     Route::get("/me", [MamaputController::class, "me"]);
     Route::patch("/me", [MamaputController::class, "rename"]);
     Route::get("/save", [MamaputController::class, "showSave"]);

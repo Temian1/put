@@ -225,7 +225,32 @@ export function LevelMap({
   );
 }
 
-function BuyButton({ cost, owned, label = "Owned", coins, onClick }) {
+// Pay with Lagos Life money instead of naira (only inside Lagos Life).
+function LagosButton({ offer }) {
+  if (!offer) return null;
+  return (
+    <button
+      className="btn lagosBuy"
+      onClick={(e) => {
+        e.stopPropagation();
+        offer.buy(e.currentTarget);
+      }}
+      title={offer.name}
+    >
+      <Icon name="star" />
+      Lagos Life
+    </button>
+  );
+}
+
+function BuyButton({ cost, owned, label = "Owned", coins, onClick, lagos }) {
+  if (lagos && !owned)
+    return (
+      <div className="buyCol">
+        <BuyButton cost={cost} coins={coins} onClick={onClick} />
+        <LagosButton offer={lagos} />
+      </div>
+    );
   return owned ? (
     <button className="btn plain" disabled>
       <Icon name="check" />
@@ -389,6 +414,7 @@ export function Shop({
   equipment = [],
   equipLevel,
   buyEquip,
+  lagos = () => null,
 }) {
   const buy = (fn, item) => (e) =>
     fn(item, e.currentTarget.closest(".card"), e);
@@ -412,6 +438,7 @@ export function Shop({
           </div>
           <BuyButton
             cost={u.costs[level]}
+            lagos={max ? null : lagos("upgrade", u.id)}
             owned={max}
             label="Max"
             coins={save.coins}
@@ -503,6 +530,7 @@ export function Shop({
               </div>
               <BuyButton
                 cost={it.costs[lv]}
+                lagos={max ? null : lagos("equipment", it.id)}
                 owned={max}
                 label={it.costs.length > 1 ? "Max" : "Owned"}
                 coins={save.coins}
@@ -530,6 +558,7 @@ export function Shop({
             </div>
             <BuyButton
               cost={b.cost}
+              lagos={lagos("booster", b.id)}
               coins={save.coins}
               onClick={buy(buyBooster, b)}
             />
@@ -568,6 +597,7 @@ export function Shop({
             ) : (
               <BuyButton
                 cost={o.cost}
+                lagos={lagos("outfit", o.id)}
                 coins={save.coins}
                 onClick={buy(buyOutfit, o)}
               />
@@ -587,6 +617,7 @@ export function Shop({
           </div>
           <BuyButton
             cost={d.cost}
+            lagos={lagos("decor", d.id)}
             owned={save.decor.includes(d.id)}
             coins={save.coins}
             onClick={buy(buyDecor, d)}

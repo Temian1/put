@@ -116,6 +116,7 @@ import {
 import { fmtNaira, fmtNairaShort, roundNaira } from "../game/currency.js";
 import { createOnline } from "../systems/Online.js";
 import { createLagosLife, lagosLifeHinted } from "../systems/LagosLife.js";
+import { applyGrants, grantLabel } from "../game/grants.js";
 import { LIVE, applyLiveConfig } from "../game/live.js";
 import {
   EQUIPMENT,
@@ -6400,6 +6401,12 @@ export function mountGame(canvas, host, bridge) {
       upgrades: UPGRADES,
       outfits: OUTFITS,
       decor: DECOR,
+      lagos: (type, item) => {
+        const p = lagosProduct(type, item);
+        return p
+          ? { name: p.name, amount: p.amount, buy: (btn) => buyPack(p, btn) }
+          : null;
+      },
       crew: {
         place: crewPlace,
         places: PLACES.filter((p) => Save.d.branches.includes(p.id)),
@@ -7357,23 +7364,26 @@ export function mountGame(canvas, host, bridge) {
       `Shared with Lagos War${acc.lagoslife ? " and Lagos Life" : ""}. Win shifts to earn ${w.perWin} coins (up to ${w.dailyCap} a day). 1 coin = ${fmtNaira(w.rate)} in your buka, swap at least ${w.min}.`;
     $("#accSwap").min = String(w.min);
     if (!$("#accSwap").value) $("#accSwap").value = String(w.min);
-    // Lagos Life coin packs, bought with Lagos Life checkout.
+    // Coins and naira bought with Lagos Life checkout. Shop items (boosters,
+    // outfits, equipment...) have their own Lagos Life buttons in the shop.
     const packs = $("#accPacks");
-    const show =
-      Lagos.state.active &&
-      !!acc.lagoslife &&
-      LIVE.lagoslifeProducts.length > 0;
-    packs.hidden = !show;
+    const money = canBuyWithLagos()
+      ? LIVE.lagoslifeProducts.filter((p) => moneyType(p) !== "")
+      : [];
+    packs.hidden = !money.length;
     packs.replaceChildren(
-      ...(show ? LIVE.lagoslifeProducts : []).map((p) => {
+      ...money.map((p) => {
         const b = document.createElement("button");
         b.type = "button";
         b.className = "btn gold";
         const name = document.createElement("b");
         name.textContent = p.name;
-        const coins = document.createElement("small");
-        coins.textContent = `${p.coins.toLocaleString()} coins`;
-        b.append(name, coins);
+        const what = document.createElement("small");
+        what.textContent =
+          moneyType(p) === "cash"
+            ? fmtNaira(p.amount) + " for your buka"
+            : `${(p.amount || p.coins).toLocaleString()} coins`;
+        b.append(name, what);
         b.onclick = () => buyPack(p, b);
         return b;
       }),
@@ -7448,16 +7458,59 @@ export function mountGame(canvas, host, bridge) {
     await afterSignIn(
       `Signed in with Lagos Life as ${r.player.lagoslife?.name || r.player.name}`,
     );
-    claimPurchases();
+    await claimPurchases();
+    collectGrants();
     return true;
   }
-  // Delivers Lagos Life purchases; the server adds each one's coins once.
+  // Lagos Life sells Mama Put's own shop items. Older coin packs only had
+  // `coins`, so they count as coins.
+  const moneyType = (p) =>
+    p.type === "cash" ? "cash" : p.type === "coins" || !p.type ? "coins" : "";
+  const canBuyWithLagos = () =>
+    Lagos.state.active &&
+    !!Online.account?.lagoslife &&
+    !Online.status.expired &&
+    LIVE.lagoslifeProducts.length > 0;
+  const lagosProduct = (type, item) =>
+    canBuyWithLagos()
+      ? LIVE.lagoslifeProducts.find((p) => p.type === type && p.item === item)
+      : null;
+  // Adds items bought on Lagos Life to the save, once each, then tells the
+  // server they arrived. Also picks up purchases delivered by webhook.
+  let collecting = null;
+  function collectGrants(list) {
+    if (collecting) return collecting;
+    collecting = (async () => {
+      const grants = list || (await Online.grants());
+      if (!grants.length) return;
+      const { handled, applied } = applyGrants(Save.d, grants);
+      Save.save();
+      await Online.ackGrants(handled);
+      if (!applied.length) return;
+      Sound.play("buy");
+      UI.toast(
+        "Lagos Life purchase added: " +
+          applied.map((g) => grantLabel(g, fmtNaira)).join(", "),
+      );
+      UI.coins();
+      envKey = "";
+      showMenuEnvRefresh();
+      if (Game.state === "menu" || Game.state === "map") buildChef();
+      if ($("#ovShop").classList.contains("show")) buildShop();
+      syncNow();
+    })().finally(() => (collecting = null));
+    return collecting;
+  }
+  // Delivers a Lagos Life purchase: the server verifies it with Lagos Life,
+  // adds coins to the wallet and returns any shop items to add here.
   async function claimPurchase(purchaseId) {
     const r = await Online.claimPurchase(await Lagos.session(), purchaseId);
-    if (r?.granted) {
+    if (r?.error) UI.toast(r.error);
+    else if (r?.granted && !r.grants?.length) {
       Sound.play("coin");
       UI.toast("Coins added to your wallet!");
-    } else if (r?.error) UI.toast(r.error);
+    }
+    if (r?.grants) await collectGrants(r.grants);
     renderAccount();
   }
   async function claimPurchases() {
@@ -7483,8 +7536,10 @@ export function mountGame(canvas, host, bridge) {
     });
     if (!r || lifetime.disposed) return;
     const acc = Online.account;
-    if (acc?.lagoslife && !Online.status.expired) claimPurchases();
-    else await signInLagos(true);
+    if (acc?.lagoslife && !Online.status.expired) {
+      await claimPurchases();
+      collectGrants();
+    } else await signInLagos(true);
   }
   setAccMode("login");
   on("#btnAccount", () => {
