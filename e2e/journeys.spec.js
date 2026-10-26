@@ -18,6 +18,7 @@ const saved = (page) =>
 test("fresh player: reward in naira, tutorial hand, wins level 1 by tapping", async ({
   page,
 }) => {
+  test.setTimeout(180_000);
   const errors = await boot(page);
   await expect(page.locator("#rewardAmt")).toHaveText("₦1,500");
   await collectReward(page);
@@ -27,14 +28,14 @@ test("fresh player: reward in naira, tutorial hand, wins level 1 by tapping", as
   await waitPlaying(page);
   await expect(page.locator(".food .pr").first()).toHaveText(/^₦/);
   await expect.poll(() => page.locator("#hand").isVisible()).toBe(true);
-  await playByTapping(page);
+  await playByTapping(page, { maxMs: 150_000 });
   await expect(page.locator("#ovWin")).toHaveClass(/show/, { timeout: 15_000 });
   const s = await gameState(page);
-  expect(s).toMatchObject({ won: true, served: 5, lost: 0 });
+  expect(s).toMatchObject({ won: true, served: 15, lost: 0 });
   const save = await saved(page);
   expect(save.unlocked).toBe(2);
   expect(save.coins).toBeGreaterThan(4500);
-  expect(save.stats.serve).toBe(5);
+  expect(save.stats.serve).toBe(15);
   expect(errors).toEqual([]);
 });
 

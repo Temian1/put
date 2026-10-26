@@ -68,12 +68,23 @@ describe("menu and prices", () => {
 
 describe("level configuration", () => {
   it("keeps tutorials, lanes and bosses", () => {
-    expect(levelCfg(1)).toMatchObject({ lanes: 1, goal: 5, tutorial: true });
+    expect(levelCfg(1)).toMatchObject({ lanes: 1, goal: 15, tutorial: true });
     expect(levelCfg(2).tutorial).toBe(true);
     expect(levelCfg(3).tutorial).toBe(false);
     expect(levelCfg(11).lanes).toBe(2);
     expect(levelCfg(23).lanes).toBe(3);
     for (const n of [10, 20, 30, 40, 50]) expect(levelCfg(n).boss).toBe(true);
+  });
+  it("grows customer targets from 15 past 100 without chapter resets", () => {
+    expect(levelCfg(4).goal).toBe(30);
+    expect(levelCfg(62).goal).toBe(320);
+    expect(levelCfg(100).goal).toBe(510);
+    for (let n = 2; n <= 100; n++) {
+      const previous = levelCfg(n - 1),
+        current = levelCfg(n);
+      expect(current.goal - previous.goal).toBe(5);
+      expect(current.duration).toBeGreaterThan(current.goal * 1.9);
+    }
   });
   it("unlocks assembly, frying and dishes in order and teaches each once", () => {
     expect(levelCfg(UNLOCKS.assembly - 1).assembly).toBe(false);

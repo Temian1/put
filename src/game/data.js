@@ -927,9 +927,9 @@ function levelCfg(n) {
     imax = ch.items[1];
   const p2 = ci === 0 ? Math.min(0.8, 0.3 + local * 0.06) : 0.5;
   const foods = ch.foods.slice();
-  const goal =
-    (ci === 0 ? 5 + Math.floor(local * 0.7) : 6 + local + ci * 2) +
-    (boss ? 4 : 0);
+  // Grow the service target across the whole campaign, without resetting
+  // it when the player opens a new restaurant: 15, 20, ... 320 at level 62.
+  const goal = 15 + 5 * (n - 1);
   const patience = Math.max(8.5, 24 - ci * 2.2 - local * 0.55 - (boss ? 2 : 0));
   const avgItems = imax - imin === 1 ? imin + p2 : (imin + imax) / 2;
   const cycle = 3.2 + avgItems * 1.3 + 1;

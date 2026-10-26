@@ -3495,7 +3495,22 @@ export function mountGame(canvas, host, bridge) {
       if (this.state === "happy" || this.state === "sad") {
         if (this.st > 1.05) {
           if (this.state === "happy" && this.seat) this.goSit();
-          else this.leave();
+          else if (this.state === "happy") {
+            this.state = "seatWait";
+            this.st = 0;
+            this.el.style.opacity = "0";
+          } else this.leave();
+        }
+      }
+      // A busy dining room should not make every newly served customer
+      // immediately leave. Give an occupied chair time to become available.
+      if (this.state === "seatWait") {
+        this.seat = Game.claimSeat(this);
+        if (this.seat) this.goSit();
+        else if (this.st >= 8) {
+          // They take the food away; do not dirty a counter lane that may
+          // already belong to another customer while they waited for a seat.
+          this.leave();
         }
       }
       // animation
@@ -4790,7 +4805,6 @@ export function mountGame(canvas, host, bridge) {
       tray.userData.items = [];
       // Customers with a free, clean chair carry their plate to the table.
       c.seat = this.claimSeat(c);
-      if (this.cfg.dishes && !c.seat) this.leaveDirty(c.lane);
       Sound.play("serve");
       Haptics.play("serve");
       const sp = screenPos(_v.set(c.root.position.x, 2.6, c.root.position.z));
@@ -5264,7 +5278,10 @@ export function mountGame(canvas, host, bridge) {
       if (!t || !t.plates.length || this.state !== "playing") return false;
       while (t.plates.length && !sinkFull(this.sink)) {
         addPlate(this.sink);
-        t.g.remove(t.plates.pop());
+        const plate = t.plates.pop();
+        t.g.remove(plate);
+        const seat = t.seats.find((s) => s.plate === plate);
+        if (seat) seat.plate = null;
       }
       if (t.plates.length) {
         if (!byHelper) {
