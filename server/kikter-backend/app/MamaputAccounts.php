@@ -116,7 +116,7 @@ final class MamaputAccounts
         abort_unless(($remote['playerId'] ?? null) === $owner->player_id && $owner->mode === $setting->mode, 403, 'Purchase belongs to another player.');
         $player = MamaputPlayer::where('vatar_player_id', $owner->id)->first();
         abort_unless($player, 503, 'Player must open Mama Put before delivery.');
-        $granted = DB::transaction(function () use ($purchaseId, $owner, $remote, $product, $player): bool {
+        $granted = DB::transaction(function () use ($purchaseId, $owner, $remote, $product, $player, $coins, $quantity): bool {
             $row = VatarPurchase::firstOrCreate(
                 ['mode' => $owner->mode, 'game_id' => $owner->game_id, 'purchase_id' => $purchaseId],
                 ['vatar_player_id' => $owner->id, 'product_id' => $remote['productId'], 'status' => $remote['status'],
