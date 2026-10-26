@@ -807,3 +807,26 @@ svg.star.on {
 .openHours.open {
   color: var(--teal);
 }
+/* Health inspector conversation */
+.inspSay {
+  margin: 6px 0 4px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #fff;
+  border: 2px solid #e2c9a0;
+  font-weight: 800;
+  font-size: 17px;
+  color: var(--ink);
+  text-align: center;
+}
+.inspBtns {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+.inspBtns .btn {
+  width: 100%;
+}
+.inspBtns .btn:disabled {
+  opacity: 0.45;
+}

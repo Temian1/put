@@ -46,6 +46,92 @@ export function inspect(score, tier) {
   return { result: "sealed", fine: 12000 * (tier + 1), rep: -8 };
 }
 
+// Talking to a health inspector who found a dirty kitchen. Each inspector
+// has a hidden price (a share of the fine) and some are honest: offering
+// them money only makes things worse.
+export const INSPECTOR_LINES = {
+  intro: [
+    "Madam, this kitchen no clean at all o.",
+    "Hmm. Na so una dey run food business?",
+    "Government go hear about this place.",
+  ],
+  lowball: [
+    "No rage bait me!",
+    "You dey whine me?",
+    "Na this one you wan give me? Abeg!",
+    "Oga, I no be small boy o.",
+    "This one na transport money. Add am!",
+  ],
+  accept: [
+    "Okay... I no see anything today.",
+    "You be correct person. Clean am sha!",
+    "Make I no come back meet am like this o.",
+  ],
+  honest: [
+    "You wan bribe government officer? Double fine!",
+    "I no dey collect. Pay your fine!",
+  ],
+  angry: [
+    "You dey play with me? Fine don increase!",
+    "Enough! Pay the full fine and extra.",
+  ],
+  begYes: [
+    "Hmm. I go give you warning this time.",
+    "Because of your face, na warning. Clean am now!",
+  ],
+  begNo: ["Oga, no story. Pay up!", "Tears no dey wash plate!"],
+};
+
+export function inspectorMood(rand = Math.random) {
+  return {
+    honest: rand() < 0.2,
+    // Accepts an offer of at least this share of the fine.
+    price: 0.4 + rand() * 0.3,
+    tries: 0,
+    begged: false,
+  };
+}
+
+const pickLine = (list, rand) => list[Math.floor(rand() * list.length)];
+
+/**
+ * The player offers `offer` naira against a `fine`. Results: "accept" (pay
+ * the offer, no fine), "lowball" (try again), "honest" or "angry" (the fine
+ * goes up by half and reputation drops).
+ */
+export function offerInspector(mood, fine, offer, rand = Math.random) {
+  mood.tries++;
+  if (mood.honest)
+    return {
+      result: "honest",
+      line: pickLine(INSPECTOR_LINES.honest, rand),
+      fine: Math.round(fine * 1.5),
+    };
+  if (offer >= fine * mood.price)
+    return {
+      result: "accept",
+      line: pickLine(INSPECTOR_LINES.accept, rand),
+      cost: offer,
+    };
+  if (mood.tries >= 3)
+    return {
+      result: "angry",
+      line: pickLine(INSPECTOR_LINES.angry, rand),
+      fine: Math.round(fine * 1.5),
+    };
+  return { result: "lowball", line: pickLine(INSPECTOR_LINES.lowball, rand) };
+}
+
+// Begging works once, and more often when the kitchen is nearly clean.
+export function begInspector(mood, score, rand = Math.random) {
+  mood.begged = true;
+  const ok = rand() < (score >= 45 ? 0.5 : 0.2);
+  return {
+    result: ok ? "warning" : "no",
+    line: pickLine(ok ? INSPECTOR_LINES.begYes : INSPECTOR_LINES.begNo, rand),
+  };
+}
+
 // Haggling: some customers argue the bill down.
 export function makeOffer(base, rand = Math.random) {
   return roundNaira(base * (0.65 + rand() * 0.2), 50);

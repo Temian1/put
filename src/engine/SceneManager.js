@@ -131,6 +131,7 @@ import { fmtNaira, fmtNairaShort, roundNaira } from "../game/currency.js";
 import { createOnline } from "../systems/Online.js";
 import { createLagosLife, lagosLifeHinted } from "../systems/LagosLife.js";
 import { applyGrants, grantLabel } from "../game/grants.js";
+import { tablesAt, canPlace, saveLayout, snap } from "../game/layout.js";
 import { LIVE, applyLiveConfig } from "../game/live.js";
 import {
   EQUIPMENT,
@@ -155,6 +156,10 @@ import {
   taxes,
   hygieneScore,
   inspect,
+  inspectorMood,
+  offerInspector,
+  begInspector,
+  INSPECTOR_LINES,
   makeOffer,
   haggle as haggleOutcome,
   absenceDecay,
@@ -1976,6 +1981,8 @@ export function mountGame(canvas, host, bridge) {
       "|" +
       Save.d.decor.slice().sort().join() +
       "|" +
+      JSON.stringify(tablesAt(Save.d, Save.d.place)) +
+      "|" +
       JSON.stringify(equipAt(Save.d)) +
       "|" +
       tierOf(Save.d);
@@ -2590,10 +2597,13 @@ export function mountGame(canvas, host, bridge) {
     diningTables.length = 0;
     const plastic =
       ci === 4 || ci === 3 ? ["#FFFFFF", "#FFFFFF"] : ["#E53935", "#FFFFFF"];
+    // Tables stand where the player arranged them, else in the default slots.
+    const custom = tablesAt(Save.d, Save.d.place);
     for (let i = 0; i < Math.min(eff.tables, DINING_SLOTS.length); i++) {
-      const [x, z] = DINING_SLOTS[i];
+      const [x, z] = custom[i] || DINING_SLOTS[i];
       const t = new T3.Group();
       t.position.set(x, 0, z);
+      t.userData.table = i;
       t.add(
         mesh(
           rbox(0.74, 0.05, 0.74, 0.03),
@@ -4341,6 +4351,7 @@ export function mountGame(canvas, host, bridge) {
       this.washTime = eff.washTime;
       this.claimed = new Set();
       this.fines = 0;
+      this.settlements = 0;
       this.busFees = 0;
       this.hygiene = 80;
       this.litter.forEach((l) => this.removeLitter(l));
@@ -5394,36 +5405,138 @@ export function mountGame(canvas, host, bridge) {
         ins.P.armR.rotation.x = -1.2;
       } else if (ins.state === "checking" && ins.t > 6) {
         const res = inspect(this.hygiene, this.tierStart);
-        this.fines += res.fine;
-        this.rep(res.rep);
-        const sp = screenPos(_v.set(r.position.x, 2.6, r.position.z));
-        if (res.result === "pass") {
-          floatText(sp.x, sp.y, "Clean kitchen! Passed", "green small");
-          Sound.play("star");
-        } else if (res.result === "warning") {
-          floatText(sp.x, sp.y, "Warning: clean up!", "small");
-          UI.toast("Inspector warning: dirty plates and tables. Clean up!");
-        } else {
-          floatText(sp.x, sp.y, "Fined " + fmtNaira(res.fine), "bad small");
-          UI.toast(
-            res.result === "sealed"
-              ? `Very dirty kitchen! Fined ${fmtNaira(res.fine)} and customers scared off`
-              : `Hygiene fine: ${fmtNaira(res.fine)}. Buy a handwash station, hire a cleaner`,
-          );
-          Sound.play("lose");
-          if (res.result === "sealed") {
-            this.lives--;
-            this.updateHUD();
-            if (this.lives <= 0) this.finish(false, "lives");
-          }
+        if (res.fine > 0) {
+          ins.state = "talking";
+          this.talkToInspector(res);
+          return;
         }
-        ins.state = "out";
-        ins.path = [V(INSPECT_POS.x, STREET_Z), V(10, STREET_Z)];
-        ins.P.armR.rotation.x = 0;
+        this.applyInspection(res);
       } else if (ins.state === "out") {
         world.remove(r);
         this.inspector = null;
       }
+    },
+    // The inspector's verdict: fines, reputation and, if sealed, a life.
+    applyInspection(res) {
+      const ins = this.inspector;
+      if (!ins) return;
+      const r = ins.P.root;
+      this.fines += res.fine;
+      this.rep(res.rep);
+      const sp = screenPos(_v.set(r.position.x, 2.6, r.position.z));
+      if (res.result === "settled") {
+        floatText(sp.x, sp.y, "No fine today", "small");
+      } else if (res.result === "pass") {
+        floatText(sp.x, sp.y, "Clean kitchen! Passed", "green small");
+        Sound.play("star");
+      } else if (res.result === "warning") {
+        floatText(sp.x, sp.y, "Warning: clean up!", "small");
+        UI.toast("Inspector warning: dirty plates and tables. Clean up!");
+      } else {
+        floatText(sp.x, sp.y, "Fined " + fmtNaira(res.fine), "bad small");
+        UI.toast(
+          res.result === "sealed"
+            ? `Very dirty kitchen! Fined ${fmtNaira(res.fine)} and customers scared off`
+            : `Hygiene fine: ${fmtNaira(res.fine)}. Buy a handwash station, hire a cleaner`,
+        );
+        Sound.play("lose");
+        if (res.result === "sealed") {
+          this.lives--;
+          this.updateHUD();
+          if (this.lives <= 0) this.finish(false, "lives");
+        }
+      }
+      ins.state = "out";
+      ins.path = [V(INSPECT_POS.x, STREET_Z), V(10, STREET_Z)];
+      ins.P.armR.rotation.x = 0;
+    },
+    /* ---- talking to the inspector: pay, "settle" him, or beg ---- */
+    talkToInspector(res) {
+      const fine = res.fine;
+      this.talk = {
+        res,
+        fine,
+        mood: inspectorMood(),
+        offers: [0.3, 0.5, 0.7].map((k) => roundNaira(fine * k, 500)),
+        last: 0,
+      };
+      this.prevState = this.state;
+      this.state = "talk";
+      setFace(this.inspector.P, "sad");
+      this.showTalk(pick(INSPECTOR_LINES.intro));
+      UI.open("ovInspect");
+      Sound.play("tick");
+    },
+    showTalk(line) {
+      const t = this.talk;
+      $("#inspLine").textContent = `“${line}”`;
+      $("#inspInfo").textContent =
+        `Hygiene ${Math.round(this.hygiene)}. Official fine: ${fmtNaira(t.fine)}` +
+        (t.res.result === "sealed"
+          ? ", and customers will be scared off."
+          : ".");
+      $("#inspPay .buttonLabel").textContent =
+        `Pay the fine (${fmtNaira(t.fine)})`;
+      t.offers.forEach((v, i) => {
+        const b = $("#inspOffer" + i);
+        b.querySelector(".buttonLabel").textContent = `Offer ${fmtNaira(v)}`;
+        b.disabled = v <= t.last;
+      });
+      $("#inspBeg").disabled = t.mood.begged;
+    },
+    endTalk(res, line, cls) {
+      UI.close("ovInspect");
+      this.state = this.prevState === "talk" ? "playing" : this.prevState;
+      this.talk = null;
+      const ins = this.inspector;
+      if (ins && line) {
+        const sp = screenPos(
+          _v.set(ins.P.root.position.x, 2.6, ins.P.root.position.z),
+        );
+        floatText(sp.x, sp.y, line, cls || "small");
+      }
+      this.applyInspection(res);
+    },
+    payInspector() {
+      if (!this.talk) return;
+      this.endTalk(this.talk.res);
+    },
+    bribeInspector(i) {
+      const t = this.talk;
+      if (!t) return;
+      const amount = t.offers[i];
+      const r = offerInspector(t.mood, t.fine, amount);
+      if (r.result === "lowball") {
+        t.last = amount;
+        Sound.play("wrong");
+        this.showTalk(r.line);
+        return;
+      }
+      if (r.result === "accept") {
+        this.settlements += amount;
+        Sound.play("coin");
+        UI.toast(`“${r.line}”`);
+        // He leaves without writing anything; word still gets around a bit.
+        this.endTalk({ result: "settled", fine: 0, rep: -1 });
+        return;
+      }
+      // An honest or annoyed inspector raises the fine.
+      Sound.play("lose");
+      UI.toast(`“${r.line}”`);
+      this.endTalk({ ...t.res, fine: r.fine, rep: t.res.rep - 3 });
+    },
+    begInspector() {
+      const t = this.talk;
+      if (!t || t.mood.begged) return;
+      const r = begInspector(t.mood, this.hygiene);
+      if (r.result === "warning") {
+        Sound.play("star");
+        UI.toast(`“${r.line}”`);
+        this.endTalk({ result: "warning", fine: 0, rep: -1 });
+        return;
+      }
+      Sound.play("wrong");
+      this.showTalk(r.line);
     },
     /* ---- tables and the sink ---- */
     leaveDirty(lane) {
@@ -5572,7 +5685,8 @@ export function mountGame(canvas, host, bridge) {
           tax.vat +
           rent +
           upkeep +
-          (this.fines || 0),
+          (this.fines || 0) +
+          (this.settlements || 0),
         net = sales + extra - costs;
       const place = this.place || placeFor(this.cfg);
       // A working day: staff here earn their wage into what they are owed.
@@ -5592,7 +5706,7 @@ export function mountGame(canvas, host, bridge) {
       if (this.complaints >= 3) this.repNow = clampRep(this.repNow - 2);
       const repBefore = this.repStart;
       d.reputation = Math.round(this.repNow * 10) / 10;
-      const market = advanceMarket(d, this.eff.fridge);
+      const market = advanceMarket(d, this.eff.fridgeCap);
       d.lastPlayed = today();
       const rows = [];
       const neg = (label, v) =>
@@ -5605,6 +5719,7 @@ export function mountGame(canvas, host, bridge) {
       neg("Rent & NEPA light", rent);
       neg("Equipment upkeep", upkeep);
       neg("Hygiene fine", this.fines);
+      neg("Inspector “settlement”", this.settlements);
       if (this.complaints >= 3)
         rows.push({
           label: `${this.complaints} complaints about dirt`,
@@ -5647,7 +5762,9 @@ export function mountGame(canvas, host, bridge) {
         rows.push({ label: "Debt cleared", value: "✓", cls: "pos" });
       if (market.spoiled)
         rows.push({
-          label: "Spoiled stock (no freezer)",
+          label: this.eff.fridgeCap
+            ? "Spoiled stock (freezer full)"
+            : "Spoiled stock (no freezer)",
           value: market.spoiled + " units",
           cls: "warn",
         });
@@ -6306,10 +6423,123 @@ export function mountGame(canvas, host, bridge) {
       $("#camCenter").hidden = false;
     }
   });
+  /* ---- rearrange: hold a dining table to pick it up and drag it ---- */
+  const ground = new T3.Plane(new T3.Vector3(0, 1, 0), 0);
+  let press = null,
+    moving = null;
+  const floorAt = (e) => {
+    const r = canvas.getBoundingClientRect();
+    ndc.set(
+      ((e.clientX - r.left) / r.width) * 2 - 1,
+      -((e.clientY - r.top) / r.height) * 2 + 1,
+    );
+    ray.setFromCamera(ndc, camera);
+    return ray.ray.intersectPlane(ground, new T3.Vector3());
+  };
+  const othersThan = (t) =>
+    diningTables.filter((o) => o !== t).map((o) => [o.x, o.z]);
+  listen(canvas, "pointerdown", (e) => {
+    if (Game.state !== "menu" || touches.size > 1) return;
+    const r = canvas.getBoundingClientRect();
+    ndc.set(
+      ((e.clientX - r.left) / r.width) * 2 - 1,
+      -((e.clientY - r.top) / r.height) * 2 + 1,
+    );
+    ray.setFromCamera(ndc, camera);
+    const hit = ray.intersectObjects(
+      diningTables.map((t) => t.g),
+      true,
+    )[0];
+    if (!hit) return;
+    let o = hit.object;
+    while (o && o.userData.table === undefined) o = o.parent;
+    const t = o && diningTables[o.userData.table];
+    if (!t) return;
+    // Where the finger meets the floor, so the table keeps its offset from
+    // the finger instead of jumping when it is picked up.
+    const grab = floorAt(e);
+    press = {
+      t,
+      x: e.clientX,
+      y: e.clientY,
+      timer: setTimeout(() => {
+        // Picked up: the camera stops panning and the table follows.
+        drag = null;
+        moving = {
+          t,
+          from: [t.x, t.z],
+          ok: true,
+          off: grab ? [t.x - grab.x, t.z - grab.z] : [0, 0],
+        };
+        t.g.position.y = 0.25;
+        Haptics.play("tap");
+        Sound.play("click");
+        if (!Save.d.taught.includes("arrange")) {
+          Save.d.taught.push("arrange");
+          UI.toast("Drag the table, then let go to place it");
+        }
+      }, 450),
+    };
+  });
+  listen(window, "pointermove", (e) => {
+    if (
+      press &&
+      !moving &&
+      Math.hypot(e.clientX - press.x, e.clientY - press.y) > 10
+    ) {
+      clearTimeout(press.timer);
+      press = null;
+    }
+    if (!moving) return;
+    const p = floorAt(e);
+    if (!p) return;
+    const t = moving.t;
+    t.g.position.x = clamp(p.x + moving.off[0], -4.4, 4.4);
+    t.g.position.z = clamp(p.z + moving.off[1], -2.2, 0);
+    moving.ok = canPlace(t.g.position.x, t.g.position.z, othersThan(t));
+    // Lifted tables tilt slightly; a bad spot shows by tilting the other way.
+    t.g.rotation.z = moving.ok ? 0.04 : -0.08;
+  });
+  function dropTable() {
+    const { t, from } = moving;
+    moving = null;
+    const x = snap(t.g.position.x),
+      z = snap(t.g.position.z);
+    t.g.rotation.z = 0;
+    t.g.position.y = 0;
+    if (!canPlace(x, z, othersThan(t))) {
+      t.g.position.set(from[0], 0, from[1]);
+      Sound.play("wrong");
+      UI.toast("Keep the counter queue, the walkway and other tables clear");
+      return;
+    }
+    t.g.position.set(x, 0, z);
+    const dx = x - t.x,
+      dz = z - t.z;
+    t.x = x;
+    t.z = z;
+    for (const seat of t.seats) {
+      seat.x += dx;
+      seat.z += dz;
+    }
+    saveLayout(
+      Save.d,
+      Save.d.place,
+      diningTables.map((o) => [o.x, o.z]),
+    );
+    envKey = "";
+    Save.save();
+    Sound.play("place");
+  }
   const lift = (e) => {
     touches.delete(e.pointerId);
     if (touches.size < 2) pinch0 = 0;
     if (!touches.size) drag = null;
+    if (press) {
+      clearTimeout(press.timer);
+      press = null;
+    }
+    if (moving) dropTable();
   };
   listen(window, "pointerup", lift);
   listen(window, "pointercancel", lift);
@@ -6864,7 +7094,7 @@ export function mountGame(canvas, host, bridge) {
       news: Save.d.market.news,
       index: Save.d.market.index,
       cap,
-      fridge: effects(Save.d).fridge,
+      fridge: effects(Save.d).fridgeCap,
       buy: (id, n, e) => {
         const discount =
           crewCount(Save.d, Save.d.place, "errand") > 0 ? 0.8 : 1;
@@ -7071,6 +7301,10 @@ export function mountGame(canvas, host, bridge) {
     }
   });
   on("#btnPause", () => Game.pause());
+  on("#inspPay", () => Game.payInspector());
+  for (let i = 0; i < 3; i++)
+    on("#inspOffer" + i, () => Game.bribeInspector(i));
+  on("#inspBeg", () => Game.begInspector());
   on("#pResume", () => Game.resume());
   on("#pRestart", () => {
     UI.close("ovPause");
@@ -7412,6 +7646,7 @@ export function mountGame(canvas, host, bridge) {
         camera,
         scene,
         dyn,
+        diningTables,
         Online,
         syncNow,
       };

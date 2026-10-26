@@ -533,7 +533,8 @@ export function Shop({
         <p className="hintText">
           Everything you buy appears in that restaurant only. Most items cost
           upkeep (gas, light, repairs) after every shift. At a restaurant a
-          manager runs, equipment raises its takings.
+          manager runs, equipment raises its takings. Tip: on the menu screen,
+          hold a table in your restaurant to pick it up and move it.
         </p>
         {equipment.map((it) => {
           const lv = equipLevel(it.id),
@@ -1135,7 +1136,7 @@ export function Market({ items, news, index, cap, fridge, buy, place }) {
         Every pot or pan you cook uses one unit from your store. With none in
         store you buy on the spot for 40% more. Store holds {cap} of each.
         {fridge
-          ? ""
+          ? ` Your deep freezer keeps ${fridge} perishable units fresh; any more lose a quarter after every shift.`
           : " Without a deep freezer, perishables lose a quarter after every shift."}
       </p>
       {items.map((it) => (

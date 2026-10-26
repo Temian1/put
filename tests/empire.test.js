@@ -111,6 +111,14 @@ describe("market and inflation", () => {
     advanceMarket(cold, true);
     expect(cold.pantry.meat).toBe(8);
   });
+  it("the deep freezer only keeps as much as it holds", () => {
+    const d = fresh({ pantry: { meat: 10, chicken: 10 } });
+    // A level 1 freezer (12 units): 10 meat and 2 chicken stay fresh.
+    const r = advanceMarket(d, 12);
+    expect(d.pantry.meat).toBe(10);
+    expect(d.pantry.chicken).toBe(8);
+    expect(r.spoiled).toBe(2);
+  });
   it("sold-out items cannot be bought", () => {
     const d = fresh({
       coins: 1e6,

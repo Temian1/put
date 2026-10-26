@@ -52,7 +52,7 @@ describe("items bought with Lagos Life", () => {
     applyGrant(d, { id: "a", type: "upgrade", item: "fast", quantity: 99 });
     expect(d.up.fast).toBe(5);
     applyGrant(d, { id: "b", type: "equipment", item: "fridge", quantity: 5 });
-    expect(level(d, "fridge")).toBe(1);
+    expect(level(d, "fridge")).toBe(3);
   });
   it("ignores unknown items but remembers them, and labels grants", () => {
     const d = fresh();

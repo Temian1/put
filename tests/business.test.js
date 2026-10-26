@@ -14,6 +14,12 @@ import {
 } from "../src/game/data.js";
 import { UNPAID_LIMIT } from "../src/game/staff.js";
 import {
+  inspectorMood,
+  offerInspector,
+  begInspector,
+  INSPECTOR_LINES,
+} from "../src/game/business.js";
+import {
   EQUIPMENT,
   effects,
   buyEquipment,
@@ -271,6 +277,40 @@ describe("each restaurant's own crew", () => {
     const base = effects(d).spawn;
     d.equipBy.ch0.tables = 3;
     expect(effects(d).spawn).toBeLessThan(base);
+  });
+  it("inspectors: lowball offers get slang, a fair one settles it", () => {
+    const seq =
+      (...v) =>
+      () =>
+        v.shift() ?? 0;
+    // Not honest, price 55% of the fine.
+    const mood = inspectorMood(seq(0.9, 0.5));
+    let r = offerInspector(mood, 10000, 3000, seq(0));
+    expect(r.result).toBe("lowball");
+    expect(INSPECTOR_LINES.lowball).toContain(r.line);
+    expect(INSPECTOR_LINES.lowball).toContain("No rage bait me!");
+    r = offerInspector(mood, 10000, 7000, seq(0));
+    expect(r).toMatchObject({ result: "accept", cost: 7000 });
+  });
+  it("inspectors: honest ones raise the fine; three lowballs anger him", () => {
+    const honest = inspectorMood(() => 0.1);
+    expect(offerInspector(honest, 10000, 9000).result).toBe("honest");
+    expect(offerInspector(honest, 10000, 9000).fine).toBe(15000);
+    const greedy = inspectorMood(
+      (
+        (v) => () =>
+          v.shift() ?? 0.99
+      )([0.9, 0.99]),
+    );
+    offerInspector(greedy, 10000, 1000);
+    offerInspector(greedy, 10000, 2000);
+    expect(offerInspector(greedy, 10000, 3000)).toMatchObject({
+      result: "angry",
+      fine: 15000,
+    });
+    const mood = inspectorMood(() => 0.9);
+    expect(begInspector(mood, 50, () => 0.1).result).toBe("warning");
+    expect(mood.begged).toBe(true);
   });
   it("moves staff from older saves to the restaurant you were running", () => {
     const out = migrateCrew({

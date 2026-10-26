@@ -12,9 +12,9 @@ export const EQUIPMENT = [
   {
     id: "fridge",
     name: "Deep freezer",
-    desc: "Meat, fish, plantain and drinks stop spoiling. +5 hygiene",
+    desc: "Keeps 12 units of meat, fish, plantain and drinks fresh per level. +5 hygiene",
     icon: "🧊",
-    costs: [85000],
+    costs: [85000, 160000, 300000],
     upkeep: 500,
   },
   {
@@ -121,6 +121,8 @@ export function effects(d, place) {
     tables: 1 + L("tables"),
     seats: 2 * (1 + L("tables")),
     fridge: L("fridge") > 0,
+    // Perishable units the freezer keeps fresh between shifts.
+    fridgeCap: 12 * L("fridge"),
     cookSpeed: 1 + 0.25 * L("burner"),
     batchBonus: 3 * L("bigpots"),
     sinkCap: 4 + 3 * L("sink"),

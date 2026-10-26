@@ -569,6 +569,32 @@ export const GameLayout = memo(function GameLayout({
           </div>
         </div>
       </Surface>
+      <Surface className="overlay scroll" id="ovInspect" tag="div">
+        <div className="panel inspectPanel">
+          <div className="ribbon small">{"Health Inspector"}</div>
+          <p className="inspSay" id="inspLine"></p>
+          <p className="sub small" id="inspInfo"></p>
+          <div className="inspBtns">
+            <button className="btn coral" id="inspPay" type="button">
+              <i className="note" />
+              <span className="buttonLabel">{"Pay the fine"}</span>
+            </button>
+            <button className="btn gold" id="inspOffer0" type="button">
+              <span className="buttonLabel"></span>
+            </button>
+            <button className="btn gold" id="inspOffer1" type="button">
+              <span className="buttonLabel"></span>
+            </button>
+            <button className="btn gold" id="inspOffer2" type="button">
+              <span className="buttonLabel"></span>
+            </button>
+            <button className="btn plain" id="inspBeg" type="button">
+              <Icon name="heart" />
+              <span className="buttonLabel">{"Beg for a warning"}</span>
+            </button>
+          </div>
+        </div>
+      </Surface>
       <Surface className="overlay scroll" id="ovAccount" tag="div">
         <div className="panel accountPanel">
           <div className="ribbon small">{"Account"}</div>

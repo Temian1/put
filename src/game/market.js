@@ -103,8 +103,11 @@ export function ingredientsForBatch(d, food, discount = 1) {
 }
 
 // After each shift: prices creep up (Nigerian food inflation), some days a
-// shock hits, a couple of items sell out, and perishables spoil without a freezer.
+// shock hits, a couple of items sell out, and perishables spoil. The deep
+// freezer keeps up to `fridge` perishable units fresh (true = no limit,
+// for older callers); the rest lose a quarter.
 export function advanceMarket(d, fridge) {
+  let room = fridge === true ? Infinity : Math.max(0, Number(fridge) || 0);
   const m = d.market || freshMarket();
   const rng = seeded(hashStr("market" + m.shift));
   m.shift++;
@@ -127,12 +130,13 @@ export function advanceMarket(d, fridge) {
   if (LIVE.news) m.news = LIVE.news;
   d.market = m;
   let spoiled = 0;
-  if (!fridge)
-    for (const g of groups)
-      if (INGREDIENTS[g].perish && d.pantry[g] > 0) {
-        const lost = Math.ceil(d.pantry[g] * 0.25);
-        d.pantry[g] -= lost;
-        spoiled += lost;
-      }
+  for (const g of groups)
+    if (INGREDIENTS[g].perish && d.pantry[g] > 0) {
+      const kept = Math.min(d.pantry[g], room);
+      room -= kept;
+      const lost = Math.ceil((d.pantry[g] - kept) * 0.25);
+      d.pantry[g] -= lost;
+      spoiled += lost;
+    }
   return { spoiled, news: m.news };
 }
