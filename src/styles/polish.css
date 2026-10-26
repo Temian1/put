@@ -830,3 +830,11 @@ svg.star.on {
 .inspBtns .btn:disabled {
   opacity: 0.45;
 }
+.placeClass {
+  margin: 0 0 2px;
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--plum);
+}

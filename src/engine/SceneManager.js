@@ -132,6 +132,7 @@ import { createOnline } from "../systems/Online.js";
 import { createLagosLife, lagosLifeHinted } from "../systems/LagosLife.js";
 import { applyGrants, grantLabel } from "../game/grants.js";
 import { tablesAt, canPlace, saveLayout, snap } from "../game/layout.js";
+import { styleFor } from "../game/styles.js";
 import { LIVE, applyLiveConfig } from "../game/live.js";
 import {
   EQUIPMENT,
@@ -1522,9 +1523,9 @@ export function mountGame(canvas, host, bridge) {
       x.fillText(t.sign[1], 512, 226);
     });
   }
-  function floorTex(t, i) {
+  function floorTex(t, i, key = i) {
     return canvasTex(
-      "floor" + i,
+      "floor" + key,
       256,
       256,
       (x) => {
@@ -1568,8 +1569,8 @@ export function mountGame(canvas, host, bridge) {
       [4, 2],
     );
   }
-  function skyTex(t, i) {
-    return canvasTex("sky" + i, 4, 256, (x) => {
+  function skyTex(t, i, key = i) {
+    return canvasTex("sky" + key, 4, 256, (x) => {
       const g = x.createLinearGradient(0, 0, 0, 256);
       g.addColorStop(0, t.sky[0]);
       g.addColorStop(1, t.sky[1]);
@@ -1972,10 +1973,15 @@ export function mountGame(canvas, host, bridge) {
     );
   }
 
-  function buildEnv(ci, sign) {
+  // `styleKey` is the restaurant (ch0..ch9) or "endless": each has its own
+  // colours, furniture and decorations on top of the chapter theme.
+  function buildEnv(ci, sign, styleKey = Save.d.place) {
+    const style = styleFor(styleKey);
     // Equipment and business size change the buka, so they are part of the key.
     const decorKey =
       ci +
+      "|" +
+      styleKey +
       "|" +
       (sign || "") +
       "|" +
@@ -1995,8 +2001,13 @@ export function mountGame(canvas, host, bridge) {
     dyn.length = 0;
     env = new T3.Group();
     scene.add(env);
-    const t = sign ? { ...THEMES[ci], sign } : THEMES[ci];
-    scene.background = skyTex(t, ci);
+    const t = {
+      ...THEMES[ci],
+      ...(style.colors || {}),
+      ...(sign ? { sign } : {}),
+    };
+    const texKey = ci + "-" + styleKey;
+    scene.background = skyTex(t, ci, texKey);
     scene.fog = new T3.Fog(new T3.Color(t.sky[1]), 34, 70);
     hemi.intensity = t.light[0];
     sun.intensity = t.light[1];
@@ -2014,7 +2025,10 @@ export function mountGame(canvas, host, bridge) {
     // kitchen floor
     const kf = new T3.Mesh(
       G("kfloor", () => new T3.PlaneGeometry(8.4, 3.4)),
-      new T3.MeshStandardMaterial({ map: floorTex(t, ci), roughness: 0.6 }),
+      new T3.MeshStandardMaterial({
+        map: floorTex(t, ci, texKey),
+        roughness: 0.6,
+      }),
     );
     kf.rotation.x = -Math.PI / 2;
     kf.position.set(0, 0.012, 1.7);
@@ -2268,7 +2282,8 @@ export function mountGame(canvas, host, bridge) {
       env.add(fac);
       plant(env, -5.6, -2.6, 1.4);
       plant(env, 5.6, -2.6, 1.4);
-      [-4.4, 0, 4.4].forEach((x) => {
+      // Endless keeps the middle clear for its scoreboard.
+      (styleKey === "endless" ? [-4.4, 4.4] : [-4.4, 0, 4.4]).forEach((x) => {
         const l = new T3.Group();
         l.position.set(x, 4.6, -3.8);
         l.add(mesh(cyl(0.01, 0.01, 1, 4), M("#FFC531"), 0, 0.5, 0, false));
@@ -2372,7 +2387,8 @@ export function mountGame(canvas, host, bridge) {
     }
     const eff = effects(Save.d);
     buildBackKitchen(env, eff);
-    buildDining(env, eff, ci);
+    buildDining(env, eff, ci, style.furniture);
+    buildExtras(env, style.extras || [], t, ci);
     buildTraffic(env, ci);
     buildGrowth(env, ci);
   }
@@ -2593,8 +2609,165 @@ export function mountGame(canvas, host, bridge) {
     [3.15, -0.2],
   ];
   const diningTables = [];
-  function buildDining(g, eff, ci) {
+  // Dining furniture by restaurant class: plastic, wood, café, banquet,
+  // first-class (luxury) and the neon tables of the Endless night market.
+  const FURNITURE = {
+    plastic: {
+      table(t, c) {
+        t.add(
+          mesh(
+            rbox(0.74, 0.05, 0.74, 0.03),
+            M(c, { roughness: 0.4 }),
+            0,
+            0.72,
+            0,
+          ),
+        );
+        legs(t, c);
+      },
+    },
+    wood: {
+      top: "#8D5A2E",
+      chair: () => "#7A4B2A",
+      table(t) {
+        t.add(
+          mesh(
+            rbox(0.8, 0.07, 0.8, 0.03),
+            M("#8D5A2E", { roughness: 0.7 }),
+            0,
+            0.72,
+            0,
+          ),
+        );
+        legs(t, "#6B4226", 0.035);
+      },
+    },
+    cafe: {
+      chair: () => "#455A64",
+      table(t) {
+        t.add(
+          mesh(
+            cyl(0.42, 0.42, 0.04, 20),
+            M("#FAFAFA", { roughness: 0.25 }),
+            0,
+            0.73,
+            0,
+          ),
+        );
+        t.add(
+          mesh(
+            cyl(0.04, 0.04, 0.7, 8),
+            M("#37474F", { metalness: 0.6 }),
+            0,
+            0.36,
+            0,
+          ),
+        );
+        t.add(
+          mesh(
+            cyl(0.22, 0.22, 0.03, 16),
+            M("#37474F", { metalness: 0.6 }),
+            0,
+            0.02,
+            0,
+          ),
+        );
+      },
+    },
+    banquet: {
+      chair: () => "#D4A537",
+      table(t) {
+        t.add(
+          mesh(
+            rbox(0.84, 0.7, 0.84, 0.04),
+            M("#FFFFFF", { roughness: 0.8 }),
+            0,
+            0.37,
+            0,
+          ),
+        );
+        t.add(
+          mesh(
+            rbox(0.22, 0.012, 0.86, 0.005),
+            M("#D4A537", { metalness: 0.5 }),
+            0,
+            0.725,
+            0,
+          ),
+        );
+      },
+    },
+    luxury: {
+      chair: () => "#3E2723",
+      table(t) {
+        t.add(
+          mesh(
+            rbox(0.86, 0.7, 0.86, 0.04),
+            M("#7B1F2A", { roughness: 0.6 }),
+            0,
+            0.36,
+            0,
+          ),
+        );
+        t.add(
+          mesh(
+            rbox(0.88, 0.02, 0.88, 0.01),
+            M("#F5F0E6", { roughness: 0.4 }),
+            0,
+            0.725,
+            0,
+          ),
+        );
+        t.add(mesh(cyl(0.02, 0.02, 0.14, 8), M("#FFF8E1"), 0, 0.8, 0));
+        t.add(
+          mesh(
+            sph(0.026, 8, 6),
+            M("#FFC107", { emissive: "#FFB300", emissiveIntensity: 1.2 }),
+            0,
+            0.89,
+            0,
+            false,
+          ),
+        );
+      },
+    },
+    neon: {
+      chair: () => "#FF2E88",
+      table(t) {
+        t.add(
+          mesh(
+            rbox(0.74, 0.05, 0.74, 0.03),
+            M("#1E1E2E", { roughness: 0.3 }),
+            0,
+            0.72,
+            0,
+          ),
+        );
+        t.add(
+          mesh(
+            rbox(0.77, 0.02, 0.77, 0.01),
+            M("#00E5FF", { emissive: "#00E5FF", emissiveIntensity: 1.1 }),
+            0,
+            0.695,
+            0,
+            false,
+          ),
+        );
+        legs(t, "#111111");
+      },
+    },
+  };
+  function legs(t, c, r = 0.025) {
+    [
+      [-0.3, -0.3],
+      [0.3, -0.3],
+      [-0.3, 0.3],
+      [0.3, 0.3],
+    ].forEach(([a, b]) => t.add(mesh(cyl(r, r, 0.7, 6), M(c), a, 0.36, b)));
+  }
+  function buildDining(g, eff, ci, kind = "plastic") {
     diningTables.length = 0;
+    const F = FURNITURE[kind] || FURNITURE.plastic;
     const plastic =
       ci === 4 || ci === 3 ? ["#FFFFFF", "#FFFFFF"] : ["#E53935", "#FFFFFF"];
     // Tables stand where the player arranged them, else in the default slots.
@@ -2604,26 +2777,14 @@ export function mountGame(canvas, host, bridge) {
       const t = new T3.Group();
       t.position.set(x, 0, z);
       t.userData.table = i;
-      t.add(
-        mesh(
-          rbox(0.74, 0.05, 0.74, 0.03),
-          M(plastic[0], { roughness: 0.4 }),
-          0,
-          0.72,
-          0,
-        ),
-      );
-      [
-        [-0.3, -0.3],
-        [0.3, -0.3],
-        [-0.3, 0.3],
-        [0.3, 0.3],
-      ].forEach(([a, b]) =>
-        t.add(mesh(cyl(0.025, 0.025, 0.7, 6), M(plastic[0]), a, 0.36, b)),
-      );
+      F.table(t, plastic[0]);
       const seats = [-1, 1].map((side) => {
         const c = chair(
-          plastic[1] === "#FFFFFF" && i % 2 ? "#12A99F" : plastic[1],
+          F.chair
+            ? F.chair(i)
+            : plastic[1] === "#FFFFFF" && i % 2
+              ? "#12A99F"
+              : plastic[1],
         );
         c.position.set(side * 0.58, 0, 0);
         // Backrest away from the table, so the diner faces their food.
@@ -2642,6 +2803,227 @@ export function mountGame(canvas, host, bridge) {
     }
   }
 
+  /* ---- decorations that set each restaurant apart ---- */
+  let scoreboard = null;
+  function buildExtras(g, extras, t, ci) {
+    scoreboard = null;
+    const glow = (c, k = 1) => M(c, { emissive: c, emissiveIntensity: k });
+    for (const kind of extras) {
+      if (kind === "awning") {
+        // A striped canopy over the street front.
+        for (let i = 0; i < 9; i++) {
+          const a = mesh(
+            rbox(1.0, 0.05, 0.75, 0.02),
+            M(i % 2 ? "#FFFFFF" : t.trim),
+            -4 + i,
+            2.45,
+            -2.5,
+          );
+          a.rotation.x = 0.28;
+          g.add(a);
+        }
+        [-4.45, 4.45].forEach((x) =>
+          g.add(mesh(cyl(0.05, 0.05, 2.4, 8), M("#5D4037"), x, 1.2, -2.75)),
+        );
+      } else if (kind === "lanterns") {
+        [-4.1, -3.2, 3.2, 4.1].forEach((x, i) => {
+          g.add(
+            mesh(cyl(0.006, 0.006, 0.5, 4), M("#333"), x, 2.85, -2.45, false),
+          );
+          g.add(
+            mesh(
+              sph(0.16, 10, 8),
+              glow(i % 2 ? "#FF7043" : "#FFCA28", 0.9),
+              x,
+              2.55,
+              -2.45,
+              false,
+            ),
+          );
+        });
+      } else if (kind === "bunting") {
+        for (let i = 0; i < 16; i++) {
+          const f = mesh(
+            cone(0.13, 0.26, 3),
+            M(["#FF5A5F", "#FFC531", "#12A99F", "#6B2D8C"][i % 4]),
+            -4.5 + i * 0.6,
+            2.7,
+            -2.45,
+            false,
+          );
+          f.rotation.x = Math.PI;
+          g.add(f);
+        }
+      } else if (kind === "planters") {
+        [
+          [-4.6, -0.45],
+          [4.6, -0.45],
+          [-4.6, -2.05],
+          [4.6, -2.05],
+        ].forEach(([x, z]) => {
+          g.add(mesh(cyl(0.26, 0.2, 0.42, 12), M("#8D6E63"), x, 0.21, z));
+          g.add(
+            mesh(
+              sph(0.36, 10, 8),
+              M("#2E7D32", { roughness: 0.9 }),
+              x,
+              0.72,
+              z,
+            ),
+          );
+        });
+      } else if (kind === "palms") {
+        palm(g, -4.95, -2.6, 3.2);
+        palm(g, 4.95, -2.6, 3.4);
+      } else if (kind === "pillars") {
+        [-4.8, 4.8].forEach((x) =>
+          [-2.45, 0.25].forEach((z) => {
+            g.add(
+              mesh(
+                cyl(0.16, 0.18, 3, 14),
+                M("#F5F0E6", { roughness: 0.3 }),
+                x,
+                1.5,
+                z,
+              ),
+            );
+            g.add(
+              mesh(
+                rbox(0.46, 0.12, 0.46, 0.03),
+                M(t.trim, { metalness: 0.6, roughness: 0.3 }),
+                x,
+                3.02,
+                z,
+              ),
+            );
+            g.add(
+              mesh(
+                rbox(0.46, 0.1, 0.46, 0.03),
+                M(t.trim, { metalness: 0.6, roughness: 0.3 }),
+                x,
+                0.05,
+                z,
+              ),
+            );
+          }),
+        );
+      } else if (kind === "chandelier") {
+        [-2.1, 2.1].forEach((x) => {
+          g.add(
+            mesh(cyl(0.01, 0.01, 0.6, 4), M("#B8860B"), x, 3.25, -1.25, false),
+          );
+          const ring = mesh(
+            tor(0.32, 0.03, 8, 20),
+            M("#D4A537", { metalness: 0.8, roughness: 0.25 }),
+            x,
+            2.92,
+            -1.25,
+            false,
+          );
+          ring.rotation.x = Math.PI / 2;
+          g.add(ring);
+          for (let k = 0; k < 6; k++) {
+            const a = (k / 6) * Math.PI * 2;
+            g.add(
+              mesh(
+                sph(0.05, 8, 6),
+                glow("#FFF3C4", 1.4),
+                x + Math.cos(a) * 0.32,
+                2.98,
+                -1.25 + Math.sin(a) * 0.32,
+                false,
+              ),
+            );
+          }
+        });
+      } else if (kind === "carpet") {
+        const c = mesh(
+          rbox(1.15, 0.012, 2.2, 0.005),
+          M("#9B1B30", { roughness: 0.9 }),
+          0,
+          0.095,
+          -1.25,
+          false,
+        );
+        g.add(c);
+        [-0.6, 0.6].forEach((x) =>
+          g.add(
+            mesh(
+              rbox(0.06, 0.014, 2.2, 0.005),
+              M("#D4A537", { metalness: 0.5 }),
+              x,
+              0.097,
+              -1.25,
+              false,
+            ),
+          ),
+        );
+      } else if (kind === "neon") {
+        // Glowing strips along the counter front.
+        [0.22, 0.92].forEach((y, i) =>
+          g.add(
+            mesh(
+              rbox(7.1, 0.035, 0.03, 0.01),
+              glow(i ? t.trim : t.tray || "#00E5FF", 1.3),
+              0,
+              y,
+              0.08,
+              false,
+            ),
+          ),
+        );
+      } else if (kind === "scoreboard") {
+        // It covers the signboard, where the camera always sees it: the
+        // high score and this run's score.
+        const cv = document.createElement("canvas");
+        cv.width = 1024;
+        cv.height = 300;
+        const tex = new T3.CanvasTexture(cv);
+        tex.colorSpace = T3.SRGBColorSpace;
+        const face = new T3.Mesh(
+          new T3.PlaneGeometry(5.2, 1.52),
+          new T3.MeshBasicMaterial({ map: tex, toneMapped: false }),
+        );
+        face.position.set(
+          0,
+          ci === 4 ? 3.75 : 3.25,
+          (ci === 0 ? -4.3 : ci === 4 ? -5.0 : -3.4) + 0.12,
+        );
+        g.add(face);
+        scoreboard = { cv, tex, last: "" };
+        drawScoreboard(Save.d.endlessBest || 0, 0);
+      }
+    }
+  }
+  // Redraws the Endless scoreboard when the numbers change.
+  function drawScoreboard(best, now) {
+    if (!scoreboard) return;
+    const key = best + "|" + now;
+    if (key === scoreboard.last) return;
+    scoreboard.last = key;
+    const x = scoreboard.cv.getContext("2d");
+    x.fillStyle = "#0B0B1A";
+    x.fillRect(0, 0, 1024, 300);
+    x.strokeStyle = "#FF2E88";
+    x.lineWidth = 10;
+    x.strokeRect(8, 8, 1008, 284);
+    x.textBaseline = "middle";
+    x.textAlign = "center";
+    x.font = "bold 50px sans-serif";
+    x.fillStyle = "#FFE14D";
+    x.fillText("ENDLESS RUSH", 512, 54);
+    x.font = "bold 40px sans-serif";
+    x.fillStyle = "#FF2E88";
+    x.fillText("HIGH SCORE", 270, 120);
+    x.fillStyle = "#00E5FF";
+    x.fillText("THIS RUN", 754, 120);
+    x.font = "bold 84px sans-serif";
+    x.fillStyle = "#FFFFFF";
+    x.fillText(fmtNaira(best), 270, 210);
+    x.fillStyle = now > best ? "#FFE14D" : "#FFFFFF";
+    x.fillText(fmtNaira(now), 754, 210);
+    scoreboard.tex.needsUpdate = true;
+  }
   /* ---- traffic: cars, kekes, danfos and okadas on every street ---- */
   const TRAFFIC_LANES = {
     0: [-4.7, -5.5],
@@ -4265,6 +4647,7 @@ export function mountGame(canvas, host, bridge) {
       return (1 + 0.08 * Save.d.up.fast) * (this.eff ? this.eff.cookSpeed : 1);
     },
     track(ev, n) {
+      if (this.cfg?.mode === "watch") return;
       track(Save.d, ev, n, today());
     },
     // Reputation moves live during a shift and is saved at the end.
@@ -4305,7 +4688,11 @@ export function mountGame(canvas, host, bridge) {
         cfg.goal += 2 * this.tierStart;
         cfg.duration += 6 * this.tierStart;
       }
-      buildEnv(cfg.theme ?? cfg.ci, cfg.sign);
+      buildEnv(
+        cfg.theme ?? cfg.ci,
+        cfg.sign,
+        cfg.mode === "endless" ? "endless" : Save.d.place,
+      );
       setupStations(cfg.foods);
       this.laneX =
         cfg.lanes === 1
@@ -4340,6 +4727,22 @@ export function mountGame(canvas, host, bridge) {
       this.toolsT = 0;
       this.freezeT = 0;
       this.handActs = 0;
+      this.runT = 3;
+      this.watchT = 1.5;
+      this.toldEmpty = false;
+      // Endless continues where it stopped when the game was closed.
+      if (cfg.mode === "endless") {
+        const run = cfg.resume;
+        if (run) {
+          this.score = this.dispScore = run.score || 0;
+          this.coinsEarned = this.dispCoins = run.coinsEarned || 0;
+          this.served = run.served || 0;
+          this.lost = run.lost || 0;
+          this.lives = Math.max(1, run.lives || 3);
+          this.combo = run.combo || 0;
+          this.bestCombo = run.bestCombo || 0;
+        } else delete Save.d.endlessRun;
+      }
       this.teaching =
         cfg.tutorial || (!!cfg.teach && !Save.d.taught.includes(cfg.teach));
       // Fried food starts raw. From the stock unlock, every pot, basin and
@@ -4427,9 +4830,11 @@ export function mountGame(canvas, host, bridge) {
       $("#notify").classList.remove("show");
       bridge.caption(cfg, fmtNairaShort(Save.d.endlessBest));
       $("#hudTimer").hidden = !isFinite(this.time);
+      // Watching an old restaurant: no buttons to press, it runs itself.
+      $("#foodBar").hidden = cfg.mode === "watch";
       $("#btnWash").hidden = !cfg.dishes;
       const sb = $("#hudSbar").querySelectorAll("i");
-      if (cfg.mode === "endless") {
+      if (cfg.mode === "endless" || cfg.mode === "watch") {
         $("#hudSbar").parentElement.hidden = true;
       } else {
         $("#hudSbar").parentElement.hidden = false;
@@ -4449,15 +4854,34 @@ export function mountGame(canvas, host, bridge) {
         cfg.mode === "endless"
           ? "Serve as many customers as you can!"
           : `Serve ${cfg.goal} customers`;
-      banner(
-        cfg.mode === "level" ? `Level ${cfg.n}` : cfg.title,
-        goalTxt +
-          (cfg.mode === "level" && cfg.local === 0
-            ? " · " + CHAPTERS[cfg.ci].name
-            : ""),
-        cfg.challenge ||
-          (cfg.tutorial ? "Tap the food each customer wants" : ""),
-      );
+      if (cfg.mode === "watch") {
+        const m = managerAt(Save.d, Save.d.place);
+        banner(
+          `Watching ${cfg.title}`,
+          m
+            ? `${m.name} is running it today`
+            : "No manager here: only its staff are working",
+          "Pause to leave",
+        );
+        return;
+      }
+      if (cfg.resume)
+        banner(
+          "Welcome back!",
+          `Your Endless Rush continues: ${fmtNaira(this.score)}`,
+          "",
+          false,
+        );
+      else
+        banner(
+          cfg.mode === "level" ? `Level ${cfg.n}` : cfg.title,
+          goalTxt +
+            (cfg.mode === "level" && cfg.local === 0
+              ? " · " + CHAPTERS[cfg.ci].name
+              : ""),
+          cfg.challenge ||
+            (cfg.tutorial ? "Tap the food each customer wants" : ""),
+        );
     },
     clear() {
       this.customers.forEach((c) => c.dispose());
@@ -4612,7 +5036,7 @@ export function mountGame(canvas, host, bridge) {
         Save.d.taught.push(this.cfg.teach);
     },
     tapFood(id, btn) {
-      if (this.state !== "playing") return;
+      if (this.state !== "playing" || this.cfg.mode === "watch") return;
       btn = btn || document.querySelector(`.food[data-id="${id}"]`);
       const ck = this.cookers[id];
       if (ck && !hasPortion(ck)) {
@@ -4868,6 +5292,11 @@ export function mountGame(canvas, host, bridge) {
       this.laneBusy[c.lane] = null;
       if (this.selected === c) this.selected = null;
       this.clearTray(c.lane);
+      if (this.cfg.mode === "watch") {
+        c.say(pick(LINES.leave), 1.2);
+        this.updateHUD();
+        return;
+      }
       this.lives--;
       this.lost++;
       this.combo = 0;
@@ -5467,6 +5896,65 @@ export function mountGame(canvas, host, bridge) {
       ins.path = [V(INSPECT_POS.x, STREET_Z), V(10, STREET_Z)];
       ins.P.armR.rotation.x = 0;
     },
+    // Keeps an Endless run so closing the game does not lose it.
+    saveRun(active = true) {
+      if (this.cfg?.mode !== "endless" || this.state === "over") return;
+      Save.d.endlessRun = {
+        active,
+        score: Math.round(this.score),
+        coinsEarned: Math.round(this.coinsEarned),
+        served: this.served,
+        lost: this.lost,
+        lives: this.lives,
+        combo: this.combo,
+        bestCombo: this.bestCombo,
+        at: Date.now(),
+      };
+      Save.save();
+    },
+    // Watching: the manager covers the counter and the pots so the
+    // restaurant runs by itself; staff work as usual.
+    watchTick(dt) {
+      const m = managerAt(Save.d, Save.d.place);
+      this.watchT -= dt;
+      if (this.watchT > 0) return;
+      this.watchT = m ? [0, 2.4, 1.8, 1.3][m.stars] : 1;
+      if (!m && !this.helpers.length && !this.toldEmpty) {
+        this.toldEmpty = true;
+        this.notify(
+          "🪑",
+          "Nobody works here yet. Hire staff or a manager in Grow → Staff",
+        );
+      }
+      if (!m) return;
+      for (const id in this.cookers) {
+        const ck = this.cookers[id];
+        if (
+          ck.stage === "burnt" ||
+          (ck.stage === "raw" && FOODS[id].station !== "cooler")
+        )
+          this.tapCookerFor(id, true);
+        else if (ck.stage === "raw") ck.stock = ck.spec.batch;
+      }
+      const c = this.customers
+        .filter((x) => x.state === "wait")
+        .sort((a, b) => a.p / a.max - b.p / b.max)[0];
+      if (!c) return;
+      for (let guard = 0; c.state === "wait" && guard < 8; guard++) {
+        const it = nextNeeded(c.order).find((o) => {
+          const k = this.cookers[o.f];
+          return !!stations[o.f] && (!k || hasPortion(k));
+        });
+        if (!it) break;
+        const k = this.cookers[it.f];
+        if (k) takePortion(k);
+        this.deliver(
+          c,
+          it.f,
+          stations[it.f].getWorldPosition(new T3.Vector3()).setY(1.4),
+        );
+      }
+    },
     /* ---- talking to the inspector: pay, "settle" him, or beg ---- */
     talkToInspector(res) {
       const fine = res.fine;
@@ -5607,7 +6095,7 @@ export function mountGame(canvas, host, bridge) {
     },
     /* ---- boosters ---- */
     fireBooster(id) {
-      if (this.state !== "playing") return;
+      if (this.state !== "playing" || this.cfg.mode === "watch") return;
       if (!(Save.d.boosters[id] > 0)) {
         Sound.play("wrong");
         UI.toast("No boosters left. Buy more in the shop!");
@@ -5867,6 +6355,7 @@ export function mountGame(canvas, host, bridge) {
       this.orders = [];
       this.renderOrders();
       if (cfg.mode === "endless") {
+        delete Save.d.endlessRun;
         const shift = this.settle(roundNaira(this.coinsEarned * 0.6), 0),
           coins = shift.net;
         bridge.ledger("winLedger", shift.rows);
@@ -6052,6 +6541,14 @@ export function mountGame(canvas, host, bridge) {
         }
         this.updateInspector(dt);
         this.updateLitter(dt);
+        if (this.cfg.mode === "watch") this.watchTick(dt);
+        if (this.cfg.mode === "endless") {
+          this.runT -= dt;
+          if (this.runT <= 0) {
+            this.runT = 3;
+            this.saveRun();
+          }
+        }
         if (washed) {
           Sound.play("place");
           this.track("wash", washed);
@@ -6059,6 +6556,8 @@ export function mountGame(canvas, host, bridge) {
         this.toolsT -= dt;
         if (this.toolsT <= 0) {
           this.toolsT = 0.1;
+          if (this.cfg.mode === "endless")
+            drawScoreboard(Save.d.endlessBest || 0, Math.round(this.score));
           this.syncStations();
           this.updateTools();
           this.updateHand();
@@ -6232,8 +6731,13 @@ export function mountGame(canvas, host, bridge) {
   let tapHit = false;
   listen(canvas, "pointerdown", (e) => {
     tapHit = false;
-    // A second finger is a pinch, not a tap.
-    if (Game.state !== "playing" || e.isPrimary === false) return;
+    // A second finger is a pinch, not a tap. Watching is hands-off.
+    if (
+      Game.state !== "playing" ||
+      Game.cfg.mode === "watch" ||
+      e.isPrimary === false
+    )
+      return;
     const r = canvas.getBoundingClientRect();
     ndc.set(
       ((e.clientX - r.left) / r.width) * 2 - 1,
@@ -6284,6 +6788,7 @@ export function mountGame(canvas, host, bridge) {
   listen(document, "gesturestart", (e) => e.preventDefault());
   listen(document, "visibilitychange", () => {
     if (document.hidden) {
+      Game.saveRun();
       Game.pause();
       if (Sound.ctx) Sound.ctx.suspend();
       Save.save();
@@ -6576,6 +7081,29 @@ export function mountGame(canvas, host, bridge) {
       places: PLACES,
       openPlace: (ci) => promptOpen(PLACES[ci]),
     });
+  }
+  // Watching a restaurant you own: its menu and lanes, no goal or clock.
+  function watchCfg(pl) {
+    const n = Math.max(
+      pl.firstLevel,
+      Math.min(Save.d.unlocked, pl.firstLevel + 9, MAX_LEVEL),
+    );
+    return {
+      ...levelCfg(n),
+      mode: "watch",
+      n: 0,
+      title: pl.name,
+      goal: Infinity,
+      duration: Infinity,
+      tutorial: false,
+      teach: "",
+      challenge: "",
+      event: "",
+      online: false,
+      inspect: false,
+      haggle: false,
+      litter: false,
+    };
   }
   // Levels in a restaurant you have not paid to open cannot be played.
   function startLevel(n) {
@@ -7043,8 +7571,7 @@ export function mountGame(canvas, host, bridge) {
         Save.save();
         Sound.play("click");
         UI.close("ovGrow");
-        showMenuEnvRefresh();
-        UI.toast(`Welcome to ${pl.name}, ${pl.area}`);
+        Game.start(watchCfg(pl));
       },
     });
   }
@@ -7311,7 +7838,8 @@ export function mountGame(canvas, host, bridge) {
   });
   on("#dailyClose", () => UI.close("ovDaily"));
   on("#btnEndless", () => {
-    if (Save.d.unlocked > 50) Game.start(endlessCfg());
+    if (Save.d.unlocked > 50)
+      Game.start({ ...endlessCfg(), resume: Save.d.endlessRun || null });
     else {
       Sound.play("wrong");
       UI.toast("Beat Level 50 to unlock Endless Rush!");
@@ -7335,6 +7863,7 @@ export function mountGame(canvas, host, bridge) {
   });
   on("#pMenu", () => {
     UI.close("ovPause");
+    if (Game.cfg.mode === "endless") Game.saveRun(false);
     Save.save();
     Game.cfg.mode === "level" ? (Game.clear(), openMap()) : showMenu();
   });
@@ -7646,6 +8175,13 @@ export function mountGame(canvas, host, bridge) {
     // Managers' earnings for the opening hours you were away.
     catchUpAway();
     goOnline();
+    if (Save.d.endlessRun?.active && Save.d.unlocked > 50)
+      setTimeout(
+        () =>
+          Game.state === "menu" &&
+          Game.start({ ...endlessCfg(), resume: Save.d.endlessRun }),
+        600,
+      );
     requestAnimationFrame((t) => {
       last = t;
       requestAnimationFrame(loop);

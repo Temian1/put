@@ -353,14 +353,17 @@ test("grow: open the next restaurant, then visit the old one", async ({
   });
   await junction.locator(".btn").click();
   // Opening moves you to the new restaurant.
-  await expect(junction.locator(".btn", { hasText: "Here" })).toBeVisible();
+  await expect(
+    junction.locator(".btn", { hasText: "Watch here" }),
+  ).toBeVisible();
   let d = await saved(page);
   expect(d).toMatchObject({ coins: 150000, place: "ch1" });
   expect(d.branches).toContain("ch1");
-  // Go back and visit the first buka.
+  // Go back and watch the first buka run by itself.
   const first = page.locator("#growList .card", { hasText: "Roadside Buka" });
-  await first.locator(".btn", { hasText: "Visit" }).click();
+  await first.locator(".btn", { hasText: "Watch" }).click();
   await expect(page.locator("#ovGrow")).not.toHaveClass(/show/);
+  await page.waitForFunction(() => window.__mp.Game.cfg?.mode === "watch");
   d = await saved(page);
   expect(d.place).toBe("ch0");
 });

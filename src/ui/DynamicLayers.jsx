@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Icon } from "./Icon.jsx";
+import { styleFor } from "../game/styles.js";
 import { fmtNaira } from "../game/currency.js";
 
 export function FoodButtons({ foods, data, tap }) {
@@ -1016,6 +1017,7 @@ export function Grow({
               <h4>
                 {p.name} <small>· {p.area}</small>
               </h4>
+              <p className="placeClass">{styleFor(p.id).label}</p>
               <p>
                 Levels {p.firstLevel}–{p.firstLevel + 9}
                 {p.income
@@ -1046,13 +1048,9 @@ export function Grow({
                   <Icon name="play" />
                   Play
                 </button>
-                <button
-                  className={"btn " + (here ? "plain" : "teal")}
-                  disabled={here}
-                  onClick={() => visit(p)}
-                >
+                <button className="btn teal" onClick={() => visit(p)}>
                   <Icon name="map" />
-                  {here ? "Here" : "Visit"}
+                  {here ? "Watch here" : "Watch"}
                 </button>
               </div>
             ) : reached ? (

@@ -109,12 +109,8 @@ test("dishwashing: dirty tables block lanes until cleared and washed", async ({
   await boot(page, fresh());
   await startLevel(page, 11);
   await waitPlaying(page);
-  // Every chair taken, so the served customer eats at the counter.
-  await page.evaluate(() =>
-    window.__mp.Game.tables.forEach((t) =>
-      t.seats.forEach((st) => (st.taken = {})),
-    ),
-  );
+  // Served customers sit at a table; when they finish, their dirty plate
+  // stays on the table until it is cleared to the sink.
   await expect(page.locator("#btnWash")).toBeVisible();
   await page.waitForFunction(() =>
     window.__mp.Game.customers.some((c) => c.state === "wait"),
@@ -132,7 +128,7 @@ test("dishwashing: dirty tables block lanes until cleared and washed", async ({
     await page.waitForTimeout(350);
   }
   await expect(page.locator(".dirtyChip").first()).toBeVisible({
-    timeout: 5000,
+    timeout: 25_000,
   });
   await page.locator(".dirtyChip").first().dispatchEvent("pointerdown");
   await expect(page.locator("#washTxt")).toHaveText("1/4");

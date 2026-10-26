@@ -5,7 +5,11 @@ async function startDining(page, level) {
   await startLevel(page, level);
   // Skip only the intro countdown so software-rendered browser tests do not
   // spend their timeout waiting for a couple of seconds of animation.
-  await page.evaluate(() => { const G=window.__mp.Game; G.introT=0; G.update(.05); });
+  await page.evaluate(() => {
+    const G = window.__mp.Game;
+    G.introT = 0;
+    G.update(0.05);
+  });
   await waitPlaying(page);
 }
 
