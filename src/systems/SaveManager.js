@@ -32,6 +32,10 @@ export function createSave(storage = globalThis.localStorage) {
         equipBy: {},
         // Lagos Life purchases already added to this save.
         grantsApplied: [],
+        // Working days played (salaries are paid monthly) and when the game
+        // was last open (managed restaurants earn while you are away).
+        day: 0,
+        awayFrom: 0,
         reputation: 50,
         equip: {},
         pantry: {},
@@ -67,6 +71,8 @@ export function createSave(storage = globalThis.localStorage) {
     },
     save() {
       this.d.updatedAt = Date.now();
+      // The game was open until now; managers' away earnings start here.
+      this.d.awayFrom = this.d.updatedAt;
       try {
         storage.setItem(this.key, JSON.stringify(this.d));
       } catch (e) {}

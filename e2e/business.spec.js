@@ -269,10 +269,31 @@ test("food finishes: customers complain until the pot is cooked again", async ({
   );
 });
 
-test("shift ledger: salaries paid, unpaid strike when broke, quit at three", async ({
+test("payday: salaries build up, the player pays them, unpaid workers quit", async ({
   page,
 }) => {
-  await boot(page, fresh({ coins: 0, staff: ["chidi"], unpaid: { chidi: 2 } }));
+  // Day 9 of the month, with Chidi already unpaid once.
+  await boot(
+    page,
+    fresh({
+      coins: 0,
+      day: 9,
+      crew: {
+        ch0: [
+          {
+            uid: "c1",
+            job: "chidi",
+            name: "Chidi",
+            off: false,
+            owed: 5000,
+            strikes: 1,
+          },
+          { uid: "c2", job: "bisi", name: "Aunty Bisi", off: false, owed: 0 },
+        ],
+      },
+      crewSeq: 2,
+    }),
+  );
   await startLevel(page, 1);
   await waitPlaying(page);
   await page.evaluate(() => window.__mp.Game.finish(false, "time"));
@@ -280,11 +301,24 @@ test("shift ledger: salaries paid, unpaid strike when broke, quit at three", asy
     timeout: 10_000,
   });
   const ledger = page.locator("#failLedger");
-  await expect(ledger).toContainText("Reputation");
-  const d = await saved(page);
-  // Nothing sold and nothing saved, so Chidi was not paid a third time and quit.
-  expect(d.staff).toEqual([]);
+  // Month end: still unpaid twice, so Chidi quits; Bisi earned a day's wage.
   await expect(ledger).toContainText("Chidi quit");
+  await expect(ledger).toContainText("Aunty Bisi was not paid this month");
+  const d = await saved(page);
+  expect(d.crew.ch0.map((m) => m.name)).toEqual(["Aunty Bisi"]);
+  // Pay Bisi from the Staff screen.
+  await page.evaluate(() => {
+    window.__mp.Save.d.coins = 100000;
+    window.__mp.Save.save();
+  });
+  await page.reload();
+  await expect(page.locator("#boot")).toHaveClass(/gone/, { timeout: 30_000 });
+  await expect(page.locator("#staffBadge")).toBeVisible();
+  await page.locator("#btnStaff").click({ force: true });
+  await page.locator(".payday .btn", { hasText: "Pay all" }).click();
+  const after = await saved(page);
+  expect(after.crew.ch0[0]).toMatchObject({ owed: 0, strikes: 0 });
+  expect(after.coins).toBeLessThan(100000);
 });
 
 test("sack staff from the shop", async ({ page }) => {

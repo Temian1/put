@@ -36,8 +36,22 @@ import {
   sack as sackCrew,
   toggleDuty,
   wageBill as crewWages,
-  payCrew,
   runBranches,
+  workDay,
+  payMember,
+  payAll,
+  owedAt,
+  owedTotal,
+  daysToPayday,
+  dayOfMonth,
+  monthOf,
+  MONTH_DAYS,
+  QUIT_STRIKES,
+  UNPAID_SLOWDOWN,
+  earnWhileAway,
+  isOpenAt,
+  OPEN_HOUR,
+  CLOSE_HOUR,
   tillAt,
   tillTotal,
   collect as collectTill,
@@ -3581,8 +3595,11 @@ export function mountGame(canvas, host, bridge) {
       this.job = null;
       this.work = 0;
       this.away = 0;
+      // Workers owed last month's pay drag their feet.
+      this.slow = spec.strikes > 0 ? UNPAID_SLOWDOWN : 1;
       this.speed =
-        spec.role === "errand" ? 3.4 : spec.role === "cleaner" ? 3.9 : 3.1;
+        (spec.role === "errand" ? 3.4 : spec.role === "cleaner" ? 3.9 : 3.1) /
+        this.slow;
       const uni = effects(Save.d).uniforms && spec.role !== "rider";
       const mat = uni
         ? M("#F4F7FA", { roughness: 0.6 })
@@ -3936,7 +3953,7 @@ export function mountGame(canvas, host, bridge) {
         if (this.t <= 0) {
           const assigned = this.act();
           // Don't spend a whole serving interval waiting for an order to arrive.
-          this.t = assigned ? this.spec.interval : 0.25;
+          this.t = assigned ? this.spec.interval * this.slow : 0.25;
           if (!assigned && r.position.distanceTo(this.home) > 0.05)
             this.path = returningPath.length ? returningPath : this.homePath();
         }
@@ -5532,6 +5549,9 @@ export function mountGame(canvas, host, bridge) {
     wageBill() {
       return crewWages(Save.d, this.place || placeFor(this.cfg));
     },
+    owedNow() {
+      return owedAt(Save.d, this.place || placeFor(this.cfg));
+    },
     // Settles the shift: costs and salaries are paid from the takings, then
     // savings. Unpaid staff get a strike and quit at the limit.
     settle(sales, extra) {
@@ -5555,7 +5575,9 @@ export function mountGame(canvas, host, bridge) {
           (this.fines || 0),
         net = sales + extra - costs;
       const place = this.place || placeFor(this.cfg);
-      const pay = payCrew(d, place, d.coins + net, UNPAID_LIMIT);
+      // A working day: staff here earn their wage into what they are owed.
+      // You pay them yourself from the Staff screen before month end.
+      const day = workDay(d, place);
       // Other restaurants with a manager bank their takings in the safe.
       // They earn less when the brand's reputation slips.
       const away = runBranches(
@@ -5565,7 +5587,7 @@ export function mountGame(canvas, host, bridge) {
         UNPAID_LIMIT,
       );
       const debtBefore = d.debt;
-      d.coins = settleDebt(d, d.coins + net - pay.paid);
+      d.coins = settleDebt(d, d.coins + net);
       if (d.debt > 0) this.repNow = clampRep(this.repNow - 3);
       if (this.complaints >= 3) this.repNow = clampRep(this.repNow - 2);
       const repBefore = this.repStart;
@@ -5589,7 +5611,13 @@ export function mountGame(canvas, host, bridge) {
           value: "★ -2",
           cls: "warn",
         });
-      if (pay.bill) neg("Staff salaries", pay.paid);
+      const owed = owedAt(d, place);
+      if (owed)
+        rows.push({
+          label: `Salaries owed (payday in ${daysToPayday(d)} day${daysToPayday(d) === 1 ? "" : "s"})`,
+          value: fmtNaira(owed),
+          cls: daysToPayday(d) <= 2 ? "warn" : "",
+        });
       if (waste)
         rows.push({
           label: `${this.manager.name} saved on waste`,
@@ -5636,28 +5664,24 @@ export function mountGame(canvas, host, bridge) {
           value: TIERS[tierNow].name,
           cls: tierNow > tier ? "pos" : "warn",
         });
-      const strikes = Object.fromEntries(
-        crewAt(d, place).map((m) => [m.name, m.unpaid || 0]),
-      );
-      pay.unpaid
-        .filter((n) => !pay.quit.includes(n))
-        .forEach((n) =>
-          rows.push({
-            label: `${n} not paid`,
-            value: `${strikes[n] || 0}/${UNPAID_LIMIT}`,
-            cls: "warn",
-          }),
-        );
-      [...pay.quit, ...away.flatMap((b) => b.quit)].forEach((n) =>
+      day.warned.forEach((m) =>
         rows.push({
-          label: `${n} quit: unpaid`,
-          value: "Gone",
+          label: `${m.name} was not paid this month`,
+          value: `Strike ${m.strikes}/${QUIT_STRIKES}`,
           cls: "warn",
         }),
       );
+      [...day.quit.map((m) => m.name), ...away.flatMap((b) => b.quit)].forEach(
+        (n) =>
+          rows.push({
+            label: `${n} quit: unpaid`,
+            value: "Gone",
+            cls: "warn",
+          }),
+      );
       if (market.news)
         rows.push({ label: "Market news", value: market.news, cls: "news" });
-      return { net: net - pay.paid, rows, quit: pay.quit };
+      return { net, rows, quit: day.quit.map((m) => m.name) };
     },
     finish(won, why) {
       if (this.state !== "playing") return;
@@ -6128,7 +6152,11 @@ export function mountGame(canvas, host, bridge) {
     if (document.hidden) {
       Game.pause();
       if (Sound.ctx) Sound.ctx.suspend();
-    } else if (Sound.ctx) Sound.ctx.resume();
+      Save.save();
+    } else {
+      if (Sound.ctx) Sound.ctx.resume();
+      catchUpAway();
+    }
   });
 
   /* ================= CAMERA ================= */
@@ -6369,6 +6397,7 @@ export function mountGame(canvas, host, bridge) {
     Game.clear();
     Game.state = "menu";
     updateTillBadge();
+    updateStaffBadge();
     UI.close("ovWin");
     UI.close("ovFail");
     UI.close("ovPause");
@@ -6417,6 +6446,49 @@ export function mountGame(canvas, host, bridge) {
         check: (job) => canHire(Save.d, crewPlace, job.id),
         till: tillAt(Save.d, crewPlace),
         here: crewPlace === Save.d.place,
+        payday: {
+          day: dayOfMonth(Save.d),
+          month: monthOf(Save.d),
+          days: MONTH_DAYS,
+          left: daysToPayday(Save.d),
+          owed: owedAt(Save.d, crewPlace),
+          strikes: QUIT_STRIKES,
+        },
+        pay: (m) => {
+          const r = payMember(Save.d, crewPlace, m.uid);
+          if (!r.ok) {
+            Sound.play("wrong");
+            UI.toast(
+              r.why === "Not enough money"
+                ? `You need ${fmtNaira(m.owed - Save.d.coins)} more to pay ${m.name}`
+                : r.why,
+            );
+            return;
+          }
+          Save.save();
+          Sound.play("coin");
+          UI.coins();
+          UI.toast(`${m.name} has been paid ${fmtNaira(r.paid)}`);
+          updateStaffBadge();
+          buildShop();
+        },
+        payAll: () => {
+          const r = payAll(Save.d, crewPlace);
+          Save.save();
+          if (!r.paid) {
+            Sound.play("wrong");
+            UI.toast("Not enough money to pay anyone yet");
+            return;
+          }
+          Sound.play("coin");
+          UI.coins();
+          UI.toast(
+            `Paid ${fmtNaira(r.paid)} in salaries` +
+              (r.left ? `. Still owed: ${fmtNaira(r.left)}` : ""),
+          );
+          updateStaffBadge();
+          buildShop();
+        },
         setPlace: (id) => {
           crewPlace = id;
           Sound.play("click");
@@ -6463,7 +6535,6 @@ export function mountGame(canvas, host, bridge) {
         );
       },
       art: ART,
-      unpaidLimit: UNPAID_LIMIT,
       sackStaff: (m) => {
         sackCrew(Save.d, crewPlace, m.uid);
         Save.save();
@@ -6686,6 +6757,8 @@ export function mountGame(canvas, host, bridge) {
       manager: (pl) => managerAt(Save.d, pl.id),
       till: (pl) => tillAt(Save.d, pl.id),
       tillTotal: tillTotal(Save.d),
+      openNow: isOpenAt(Date.now()),
+      hours: `${OPEN_HOUR}am–${CLOSE_HOUR - 12}pm`,
       collect: (pl) => {
         const v = pl ? collectTill(Save.d, pl.id) : collectAll();
         if (!v) return;
@@ -6728,6 +6801,32 @@ export function mountGame(canvas, host, bridge) {
       },
     });
   }
+  // The Staff button shows when salaries are waiting to be paid.
+  function updateStaffBadge() {
+    const b = $("#staffBadge");
+    if (!b) return;
+    const owed = owedTotal(Save.d);
+    b.hidden = !owed;
+    b.textContent = owed ? fmtNairaShort(owed) : "";
+    b.classList.toggle("due", owed > 0 && daysToPayday(Save.d) <= 2);
+  }
+  // Restaurants with a manager keep earning during opening hours while you
+  // are away; this catches them up when you come back.
+  function catchUpAway() {
+    const r = earnWhileAway(
+      Save.d,
+      Date.now(),
+      clamp((Save.d.reputation || 50) / 60, 0.4, 1.2),
+      UNPAID_LIMIT,
+    );
+    Save.save();
+    updateTillBadge();
+    if (r.made > 0)
+      UI.toast(
+        `While you were away your managers made ${fmtNaira(r.made)} in ${r.hours} opening hour${r.hours === 1 ? "" : "s"}. Collect it in Grow!`,
+      );
+    if (r.quit.length) UI.toast(`${r.quit.join(", ")} quit: not paid`);
+  }
   function collectAll() {
     return PLACES.reduce((t, p) => t + collectTill(Save.d, p.id), 0);
   }
@@ -6743,18 +6842,25 @@ export function mountGame(canvas, host, bridge) {
   function buildMarket() {
     UI.coins();
     const cap = effects(Save.d).pantryCap;
+    const pl = PLACES.find((x) => x.id === Save.d.place) || PLACES[0];
+    const needed = new Set(
+      CHAPTERS[pl.chapter].foods.map((f) => FOOD_GROUP[f]).filter(Boolean),
+    );
     bridge.market({
-      items: Object.entries(INGREDIENTS).map(([id, g]) => ({
-        id,
-        ...g,
-        have: Save.d.pantry[id] || 0,
-        price: marketPrice(Save.d, id),
-        out: isOut(Save.d, id),
-        uses: Object.keys(FOOD_GROUP)
-          .filter((f) => FOOD_GROUP[f] === id)
-          .map((f) => FOODS[f].short)
-          .join(", "),
-      })),
+      place: pl.name,
+      items: Object.entries(INGREDIENTS)
+        .filter(([id]) => needed.has(id))
+        .map(([id, g]) => ({
+          id,
+          ...g,
+          have: Save.d.pantry[id] || 0,
+          price: marketPrice(Save.d, id),
+          out: isOut(Save.d, id),
+          uses: Object.keys(FOOD_GROUP)
+            .filter((f) => FOOD_GROUP[f] === id)
+            .map((f) => FOODS[f].short)
+            .join(", "),
+        })),
       news: Save.d.market.news,
       index: Save.d.market.index,
       cap,
@@ -7286,6 +7392,8 @@ export function mountGame(canvas, host, bridge) {
     buildChef();
     fitCamera();
     showMenu();
+    // Managers' earnings for the opening hours you were away.
+    catchUpAway();
     goOnline();
     requestAnimationFrame((t) => {
       last = t;

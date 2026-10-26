@@ -321,33 +321,40 @@ function JobCard({ job, have, max, check, coins, art, hire }) {
 }
 
 // Someone working at the chosen restaurant.
-function CrewRow({ m, job, toggle, sack, unpaidLimit }) {
+function CrewRow({ m, job, toggle, sack, pay, strikesMax }) {
   const [arm, setArm] = useState(false);
-  const owed = m.unpaid || 0,
+  const strikes = m.strikes || 0,
     manager = job.role === "manager";
   return (
-    <div className={"card crew" + (owed ? " owed" : "")}>
+    <div className={"card crew" + (strikes ? " owed" : "")}>
       <Portrait a={job.a} b={job.b} icon={ROLE_ICON[job.role] || "staff"} />
       <div>
         <h4>
           {m.name} <small>· {job.title}</small>
         </h4>
-        {owed ? (
-          <p className="owedNote">
-            Unpaid {owed} of {unpaidLimit} shifts. Keep enough cash or {m.name}{" "}
-            quits!
+        <p className="wage">
+          {manager
+            ? "Runs this restaurant while you are away and pays its staff from the safe"
+            : m.off
+              ? "Off duty: no salary"
+              : `On duty · ${fmtNaira(job.wage)} a day`}
+        </p>
+        {m.owed > 0 ? (
+          <p className={strikes ? "owedNote" : "wage owedLine"}>
+            Owed {fmtNaira(m.owed)}
+            {strikes
+              ? ` · not paid last month (strike ${strikes}/${strikesMax}). Working slowly until paid!`
+              : ""}
           </p>
-        ) : (
-          <p className="wage">
-            {manager
-              ? "Runs this restaurant while you are away"
-              : m.off
-                ? "Off duty: no salary"
-                : `On duty · ${fmtNaira(job.wage)} per shift`}
-          </p>
-        )}
+        ) : null}
       </div>
       <div className="staffBtns">
+        {m.owed > 0 ? (
+          <button className="btn green" onClick={() => pay(m)}>
+            <i className="note" />
+            Pay {fmtNaira(m.owed)}
+          </button>
+        ) : null}
         {manager ? null : (
           <button
             className={"btn " + (m.off ? "plain" : "teal")}
@@ -408,7 +415,6 @@ export function Shop({
   hireStaff,
   toggleStaff,
   sackStaff,
-  unpaidLimit,
   art = {},
   buyBooster,
   equipment = [],
@@ -454,11 +460,34 @@ export function Shop({
       <>
         <div className="sectionLabel">Staff for each restaurant</div>
         <PlacePicker crew={crew} />
+        <div className={"payday" + (crew.payday.left <= 2 ? " soon" : "")}>
+          <div>
+            <small>
+              Month {crew.payday.month} · day {crew.payday.day} of{" "}
+              {crew.payday.days}
+            </small>
+            <b>
+              Payday in {crew.payday.left} day
+              {crew.payday.left === 1 ? "" : "s"}
+            </b>
+            <span>Owed here: {fmtNaira(crew.payday.owed)}</span>
+          </div>
+          <button
+            className={"btn " + (crew.payday.owed ? "green" : "plain")}
+            disabled={!crew.payday.owed}
+            onClick={() => crew.payAll()}
+          >
+            <i className="note" />
+            Pay all
+          </button>
+        </div>
         <p className="hintText">
-          {here ? here.name : "This restaurant"} has its own crew. They work
-          every shift you play here and are paid after it. Unpaid {unpaidLimit}{" "}
-          shifts in a row, they quit.
-          {" A manager keeps it open while you play elsewhere."}
+          {here ? here.name : "This restaurant"} has its own crew. Each shift
+          you play is one working day and every worker on duty earns a
+          day&apos;s wage. You pay them yourself; a month is {crew.payday.days}{" "}
+          days. Anyone still owed at month end works slowly, and after{" "}
+          {crew.payday.strikes} unpaid months they quit. A manager keeps the
+          restaurant open while you play elsewhere.
         </p>
         {crew.members.length ? (
           <>
@@ -473,7 +502,8 @@ export function Shop({
                   job={jobOf(m.job)}
                   toggle={toggleStaff}
                   sack={sackStaff}
-                  unpaidLimit={unpaidLimit}
+                  pay={crew.pay}
+                  strikesMax={crew.payday.strikes}
                 />
               ) : null,
             )}
@@ -922,6 +952,8 @@ export function Grow({
   tillTotal,
   collect,
   staffAt,
+  openNow,
+  hours,
 }) {
   return (
     <>
@@ -945,6 +977,11 @@ export function Grow({
           You run a Food Empire. Keep the bills paid and reputation high.
         </p>
       )}
+      <p className={"openHours" + (openNow ? " open" : "")}>
+        {openNow ? "Open now" : "Closed now"} · restaurants open {hours} Lagos
+        time. Those with a manager earn during opening hours, even while you are
+        offline.
+      </p>
       {tillTotal ? (
         <button className="btn gold collectAll" onClick={() => collect()}>
           <i className="note" />
@@ -1083,7 +1120,7 @@ export function Board({ rows, unit, fmt, note }) {
 }
 
 // Market stalls: stock up before prices rise. Perishables spoil without a freezer.
-export function Market({ items, news, index, cap, fridge, buy }) {
+export function Market({ items, news, index, cap, fridge, buy, place }) {
   return (
     <>
       <div className="marketNews">
@@ -1094,6 +1131,7 @@ export function Market({ items, news, index, cap, fridge, buy }) {
         <span>{news || "Normal market day."}</span>
       </div>
       <p className="hintText">
+        Only what {place || "your restaurant"}&apos;s menu needs is on sale.
         Every pot or pan you cook uses one unit from your store. With none in
         store you buy on the spot for 40% more. Store holds {cap} of each.
         {fridge

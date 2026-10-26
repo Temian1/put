@@ -32,6 +32,15 @@ import {
   migrateCrew,
   CREW_LIMIT,
   TILL_SHIFTS,
+  workDay,
+  payMember,
+  payAll,
+  owedAt,
+  daysToPayday,
+  MONTH_DAYS,
+  QUIT_STRIKES,
+  openHoursBetween,
+  earnWhileAway,
 } from "../src/game/crew.js";
 import {
   REP,
@@ -196,6 +205,72 @@ describe("each restaurant's own crew", () => {
     expect(runBranches(e, "ch1", 1, UNPAID_LIMIT)[0].net).toBeGreaterThan(
       plain.net,
     );
+  });
+  it("salaries build up each working day and you pay them yourself", () => {
+    const d = fresh({ coins: 100000 });
+    const chidi = hire(d, "ch0", "chidi");
+    const bisi = hire(d, "ch0", "bisi");
+    toggleDuty(d, "ch0", bisi.uid);
+    const coins = d.coins;
+    workDay(d, "ch0");
+    workDay(d, "ch0");
+    // Nothing is taken automatically; only on-duty staff earn.
+    expect(d.coins).toBe(coins);
+    expect(owedAt(d, "ch0")).toBe(2 * STAFF.find((x) => x.id === "chidi").wage);
+    expect(daysToPayday(d)).toBe(MONTH_DAYS - 2);
+    expect(payMember(d, "ch0", chidi.uid)).toMatchObject({ ok: true });
+    expect(d.coins).toBe(coins - 2 * STAFF.find((x) => x.id === "chidi").wage);
+    expect(owedAt(d, "ch0")).toBe(0);
+    expect(payMember(d, "ch0", chidi.uid).ok).toBe(false);
+  });
+  it("unpaid at month end: a strike and slower work, then they quit", () => {
+    const d = fresh({ coins: 0 });
+    hire(d, "ch0", "chidi");
+    let r;
+    for (let i = 0; i < MONTH_DAYS; i++) r = workDay(d, "ch0");
+    expect(r.payday).toBe(true);
+    expect(r.warned.map((m) => m.name)).toEqual(["Chidi"]);
+    expect(onShift(d, "ch0")[0].strikes).toBe(1);
+    for (let i = 0; i < MONTH_DAYS * (QUIT_STRIKES - 1); i++)
+      r = workDay(d, "ch0");
+    expect(r.quit.map((m) => m.name)).toEqual(["Chidi"]);
+    expect(onShift(d, "ch0")).toEqual([]);
+  });
+  it("paying clears strikes; pay all stops when the money runs out", () => {
+    const d = fresh({ coins: 0 });
+    hire(d, "ch0", "chidi");
+    hire(d, "ch0", "tunde");
+    for (let i = 0; i < MONTH_DAYS; i++) workDay(d, "ch0");
+    d.coins = owedAt(d, "ch0") - 1;
+    const r = payAll(d, "ch0");
+    expect(r.paid).toBeGreaterThan(0);
+    expect(r.left).toBeGreaterThan(0);
+    expect(onShift(d, "ch0").filter((m) => m.strikes === 0)).toHaveLength(1);
+  });
+  it("managed restaurants earn only in opening hours while you are away", () => {
+    const H = 3600000;
+    // 06:00 to 09:00 UTC is 07:00 to 10:00 in Lagos: three open hours.
+    const day = Date.UTC(2026, 9, 26);
+    expect(openHoursBetween(day + 6 * H, day + 9 * H)).toBe(3);
+    // 22:00 to 05:00 Lagos is closed all night.
+    expect(openHoursBetween(day + 21 * H, day + 28 * H)).toBe(0);
+    // A week away counts at most 48 hours.
+    expect(openHoursBetween(day, day + 7 * 24 * H)).toBeLessThanOrEqual(48);
+    const d = fresh({ branches: ["ch0", "ch1"], awayFrom: day + 6 * H });
+    hire(d, "ch1", "mgr2");
+    const r = earnWhileAway(d, day + 9 * H, 1, UNPAID_LIMIT);
+    expect(r.hours).toBe(3);
+    expect(r.made).toBeGreaterThan(0);
+    expect(d.till.ch1).toBe(r.made);
+    expect(d.awayFrom).toBe(day + 9 * H);
+    // Coming back again straight away adds nothing.
+    expect(earnWhileAway(d, day + 9 * H, 1, UNPAID_LIMIT).made).toBe(0);
+  });
+  it("every table level brings more customers", () => {
+    const d = fresh({ equipBy: { ch0: {} } });
+    const base = effects(d).spawn;
+    d.equipBy.ch0.tables = 3;
+    expect(effects(d).spawn).toBeLessThan(base);
   });
   it("moves staff from older saves to the restaurant you were running", () => {
     const out = migrateCrew({

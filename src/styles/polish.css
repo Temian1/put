@@ -759,3 +759,51 @@ svg.star.on {
   padding: 5px 10px;
   box-shadow: 0 3px 0 #3b1434;
 }
+/* Payday */
+.payday {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border-radius: 14px;
+  background: #f1fbf9;
+  border: 2px solid #bfe9e3;
+  color: var(--ink);
+}
+.payday > div {
+  display: grid;
+  gap: 1px;
+}
+.payday small {
+  font-weight: 800;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+.payday b {
+  font: 400 19px var(--display);
+}
+.payday span {
+  font-weight: 800;
+  font-size: 13px;
+}
+.payday.soon {
+  background: #fff1e6;
+  border-color: #ffc59a;
+}
+.owedLine {
+  color: #b25a00;
+}
+.badge.cash.due {
+  background: var(--coral);
+}
+.openHours {
+  margin: 6px 0;
+  font-weight: 800;
+  font-size: 13px;
+  color: #b25a00;
+}
+.openHours.open {
+  color: var(--teal);
+}

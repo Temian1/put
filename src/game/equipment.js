@@ -4,7 +4,7 @@ export const EQUIPMENT = [
   {
     id: "tables",
     name: "Plastic table & chairs",
-    desc: "Seats 2 more customers. Seated customers free the counter sooner",
+    desc: "Seats 2 more customers and brings 6% more customers in every level",
     icon: "🪑",
     costs: [15000, 35000, 70000, 140000, 280000],
     upkeep: 150,
@@ -135,7 +135,8 @@ export function effects(d, place) {
     litterRate: 1 - 0.2 * L("building"),
     comfort: 1 + 0.04 * L("building"),
     pantryCap: 10 + 10 * L("store"),
-    spawn: L("sign") ? 0.92 : 1,
+    // Lower is busier: a lit sign and every table level bring more people.
+    spawn: (L("sign") ? 0.92 : 1) * (1 - 0.06 * L("tables")),
     bikes: L("bike"),
     bus: L("bus") > 0,
     uniforms: L("uniforms") > 0,

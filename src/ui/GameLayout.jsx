@@ -111,6 +111,7 @@ export const GameLayout = memo(function GameLayout({
             <button className="btn plain" id="btnStaff">
               <Icon name="staff" />
               <span className="buttonLabel">{"Staff"}</span>
+              <span className="badge cash" id="staffBadge" hidden></span>
             </button>
             <button className="btn plain" id="btnGrow">
               <Icon name="map" />

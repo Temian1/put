@@ -88,7 +88,13 @@ export const crewAt = (d, place) => (d.crew && d.crew[place]) || [];
 export function onShift(d, place) {
   return crewAt(d, place)
     .filter((m) => !m.off && jobOf(m.job))
-    .map((m) => ({ ...jobOf(m.job), id: m.uid, job: m.job, name: m.name }));
+    .map((m) => ({
+      ...jobOf(m.job),
+      id: m.uid,
+      job: m.job,
+      name: m.name,
+      strikes: m.strikes || 0,
+    }));
 }
 
 export const roleCount = (d, place, role) =>
@@ -258,4 +264,121 @@ export function migrateCrew(out) {
   out.staff = [];
   out.staffOff = [];
   return out;
+}
+
+/* ---- Payday: salaries build up and you pay them yourself ---- */
+// Each shift you play is one working day; a game month is MONTH_DAYS days.
+// Staff at the restaurant you run earn their daily wage into what they are
+// owed. Pay them from the Staff screen. Anyone still owed money when the
+// month ends gets a strike and works slower; at QUIT_STRIKES they quit.
+// Managers pay the staff of the restaurants they run from the safe.
+export const MONTH_DAYS = 10;
+export const QUIT_STRIKES = 2;
+// Unpaid workers take this much longer over every job.
+export const UNPAID_SLOWDOWN = 1.35;
+
+export const dayOfMonth = (d) => ((d.day || 0) % MONTH_DAYS) + 1;
+export const daysToPayday = (d) => MONTH_DAYS - ((d.day || 0) % MONTH_DAYS);
+export const monthOf = (d) => Math.floor((d.day || 0) / MONTH_DAYS) + 1;
+
+export const owedAt = (d, place) =>
+  crewAt(d, place).reduce((s, m) => s + (m.owed || 0), 0);
+export const owedTotal = (d) =>
+  Object.keys(d.crew || {}).reduce((s, p) => s + owedAt(d, p), 0);
+
+/**
+ * Ends a working day at `place`: everyone on duty there earns a day's wage.
+ * When the month ends, anyone at any restaurant still owed money gets a
+ * strike and those at the limit quit. Returns who was warned and who left.
+ */
+export function workDay(d, place) {
+  for (const m of crewAt(d, place))
+    if (!m.off && wageOf(m) > 0) m.owed = (m.owed || 0) + wageOf(m);
+  d.day = (d.day || 0) + 1;
+  const warned = [],
+    quit = [];
+  if (d.day % MONTH_DAYS === 0)
+    for (const p of Object.keys(d.crew || {})) {
+      for (const m of crewAt(d, p)) {
+        if (!(m.owed > 0)) continue;
+        m.strikes = (m.strikes || 0) + 1;
+        (m.strikes >= QUIT_STRIKES ? quit : warned).push({ ...m, place: p });
+      }
+      if (quit.some((q) => q.place === p))
+        d.crew[p] = d.crew[p].filter(
+          (m) => !quit.some((q) => q.uid === m.uid && q.place === p),
+        );
+    }
+  return { warned, quit, payday: d.day % MONTH_DAYS === 0 };
+}
+
+// Pays one worker everything they are owed, if you have the money.
+export function payMember(d, place, uid) {
+  const m = crewAt(d, place).find((x) => x.uid === uid);
+  if (!m || !(m.owed > 0)) return { ok: false, why: "Nothing owed" };
+  if (d.coins < m.owed) return { ok: false, why: "Not enough money" };
+  const paid = m.owed;
+  d.coins -= paid;
+  m.owed = 0;
+  m.strikes = 0;
+  return { ok: true, paid };
+}
+
+// Pays everyone at a restaurant, in hiring order, while the money lasts.
+export function payAll(d, place) {
+  let paid = 0,
+    left = 0;
+  for (const m of crewAt(d, place)) {
+    if (!(m.owed > 0)) continue;
+    const r = payMember(d, place, m.uid);
+    if (r.ok) paid += r.paid;
+    else left += m.owed;
+  }
+  return { paid, left };
+}
+
+// Unpaid workers are slower until they get their money.
+export const isUnpaid = (m) => (m.strikes || 0) > 0;
+
+/* ---- Opening hours: managed restaurants earn while you are away ---- */
+export const OPEN_HOUR = 7;
+export const CLOSE_HOUR = 22;
+// Most offline time counted at once, in hours.
+export const AWAY_CAP_HOURS = 48;
+const LAGOS_OFFSET = 1; // West Africa Time, UTC+1, no daylight saving.
+
+export const lagosHour = (ms) =>
+  (new Date(ms).getUTCHours() + LAGOS_OFFSET) % 24;
+export const isOpenAt = (ms) => {
+  const h = lagosHour(ms);
+  return h >= OPEN_HOUR && h < CLOSE_HOUR;
+};
+
+// Whole opening hours between two moments (each counts as one shift).
+export function openHoursBetween(from, to) {
+  if (!(from > 0) || !(to > from)) return 0;
+  const H = 3600000,
+    start = Math.max(from, to - AWAY_CAP_HOURS * H);
+  let n = 0;
+  for (let t = Math.ceil(start / H) * H; t + H <= to; t += H)
+    if (isOpenAt(t)) n++;
+  return n;
+}
+
+/**
+ * Catches up every restaurant with a manager for the opening hours since
+ * `d.awayFrom`, one shift per hour (the safe still stops filling when full).
+ * Returns what they made in total.
+ */
+export function earnWhileAway(d, now, repFactor, limit) {
+  const hours = openHoursBetween(d.awayFrom || 0, now);
+  d.awayFrom = now;
+  let made = 0;
+  const quit = [];
+  for (let i = 0; i < hours; i++)
+    for (const b of runBranches(d, null, repFactor, limit)) {
+      made += Math.max(0, b.net);
+      quit.push(...b.quit);
+    }
+  return { hours, made, quit };
 }
