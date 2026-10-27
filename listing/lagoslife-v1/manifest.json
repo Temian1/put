@@ -1,0 +1,56 @@
+{
+  "images": [
+    {
+      "file": "icon-512.png",
+      "width": 512,
+      "height": 512,
+      "format": "PNG",
+      "bytes": 496978,
+      "sha256": "7cffa76cd55837bbfd79daecf2be743514c7874961791945907eda1ffeb86669"
+    },
+    {
+      "file": "01-mama-put-home.jpg",
+      "width": 720,
+      "height": 1280,
+      "format": "JPEG",
+      "bytes": 154685,
+      "sha256": "468d8cbd7d1a93782664fcbf82925d5711f44a1cbb606f5b5542673aa29ac61d"
+    },
+    {
+      "file": "02-serve-nigerian-favourites.jpg",
+      "width": 720,
+      "height": 1280,
+      "format": "JPEG",
+      "bytes": 212529,
+      "sha256": "c4b79c6f49502ae1311e4406b5530e25469202961b67fbbbb1feb6de5aa496ff"
+    },
+    {
+      "file": "03-owambe-catering.jpg",
+      "width": 720,
+      "height": 1280,
+      "format": "JPEG",
+      "bytes": 236645,
+      "sha256": "703b8898d45fb215487ee3fce5d3a0bed45c919d54dfc65edc5df53defdaba4a"
+    },
+    {
+      "file": "04-build-your-crew.jpg",
+      "width": 720,
+      "height": 1280,
+      "format": "JPEG",
+      "bytes": 169754,
+      "sha256": "809e4a4810a21da523587768759afd0459e8c13c7708989f3b2cf83b746bdddd"
+    },
+    {
+      "file": "05-grow-your-food-empire.jpg",
+      "width": 720,
+      "height": 1280,
+      "format": "JPEG",
+      "bytes": 202675,
+      "sha256": "ed948c742549683c2c78eb9c2f4262b57694348da2f9b457d2be0a5c734650ea"
+    }
+  ],
+  "totalBytes": 1473266,
+  "screenshots": "Actual game captures using prepared local showcase progress.",
+  "iconGenerator": "built-in image_gen",
+  "iconPrompt": "../../art/listing/mama-put-icon-v1.json"
+}
