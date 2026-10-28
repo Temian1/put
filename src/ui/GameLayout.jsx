@@ -13,6 +13,63 @@ function Toggle({ id, label }) {
   );
 }
 
+// The first-time guide: one page per part of running the buka.
+const GUIDE_PAGES = [
+  {
+    art: "🍲",
+    title: "Welcome to your buka",
+    points: [
+      "You run a Nigerian food spot, from a roadside stall to a first-class restaurant.",
+      "Serve each level's customers before the day ends to earn stars and naira.",
+    ],
+  },
+  {
+    art: "👆",
+    title: "Serve customers",
+    points: [
+      "Each customer shows the food they want in a bubble.",
+      "Tap that food at the counter to serve them. Fast service earns bigger tips.",
+      "Wrong food or long waits make customers angry and cost you reputation.",
+    ],
+  },
+  {
+    art: "🔥",
+    title: "Cook and keep stock",
+    points: [
+      "Some food must be cooked first. Take it off the fire when it is ready, before it burns.",
+      "Pots run empty. Cook a new batch before the counter runs out.",
+      "Wash dirty plates at the sink so you always have plates to serve on.",
+    ],
+  },
+  {
+    art: "👩🏾‍🍳",
+    title: "Hire your crew",
+    points: [
+      "Hire cooks, servers, cleaners and errand staff in the shop.",
+      "During service, choose where the crew should focus: counter, delivery or restock.",
+      "Staff get tired. Pay them on payday and they keep working well.",
+    ],
+  },
+  {
+    art: "📒",
+    title: "Run the business",
+    points: [
+      "Buy ingredients at the market. Every plate costs money to make.",
+      "Open the Business Books to see what you earned, what you spent and your cost per plate.",
+      "Opportunity cards, contracts and surprises test your decisions. The journal shows how each one worked out.",
+    ],
+  },
+  {
+    art: "🏆",
+    title: "Grow and keep going",
+    points: [
+      "Earn naira to upgrade equipment and open new restaurants on the map.",
+      "Come back every day for rewards and daily missions.",
+      "Beat Level 50 to unlock Endless Rush. Tap the ⓘ button any time to read this guide again.",
+    ],
+  },
+];
+
 function CashPill({ id, pillId }) {
   return (
     <div className="pill" id={pillId}>
@@ -46,6 +103,13 @@ export const GameLayout = memo(function GameLayout({
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <path d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.5 7.5 0 0 0-1.7-1L15 3h-4l-.4 2.8a7.5 7.5 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1c.5.4 1.1.7 1.7 1L11 21h4l.4-2.8c.6-.3 1.2-.6 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"></path>
             </svg>
+          </button>
+          <button
+            className="iconBtn gold helpBtn"
+            id="btnHelp"
+            aria-label="How to play"
+          >
+            <Icon name="info" />
           </button>
           <button
             className="iconBtn plum accountBtn"
@@ -884,6 +948,42 @@ export const GameLayout = memo(function GameLayout({
               <span className="buttonLabel">{"Close"}</span>
             </button>
           </div>
+        </div>
+      </Surface>
+      <Surface className="overlay scroll" id="ovGuide" tag="div">
+        <div className="panel guidePanel">
+          <div className="ribbon small">{"How to Play"}</div>
+          {GUIDE_PAGES.map((p, i) => (
+            <div className="guidePage" data-page={i} key={i} hidden={i > 0}>
+              <div className="guideArt" aria-hidden="true">
+                {p.art}
+              </div>
+              <h3>{p.title}</h3>
+              <ul>
+                {p.points.map((t) => (
+                  <li key={t}>{t}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+          <div className="guideDots" id="guideDots" aria-hidden="true">
+            {GUIDE_PAGES.map((p, i) => (
+              <i key={i} className={i ? "" : "on"}></i>
+            ))}
+          </div>
+          <div className="btnRow">
+            <button className="btn plain" id="guideBack" disabled>
+              <Icon name="back" />
+              <span className="buttonLabel">{"Back"}</span>
+            </button>
+            <button className="btn gold" id="guideNext">
+              <span className="buttonLabel">{"Next"}</span>
+              <Icon name="next" />
+            </button>
+          </div>
+          <button className="linkBtn" id="guideSkip">
+            {"Skip guide"}
+          </button>
         </div>
       </Surface>
       <Surface className="overlay scroll" id="ovReward" tag="div">

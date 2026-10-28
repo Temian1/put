@@ -54,6 +54,7 @@ export function createSave(storage = globalThis.localStorage) {
         streak: 0,
         dailyDone: "",
         tutorialDone: false,
+        guideSeen: false,
         taught: [],
         stats: emptyStats(),
         missions: null,

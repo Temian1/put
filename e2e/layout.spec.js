@@ -18,13 +18,17 @@ const OVERLAYS = [
   ["#btnBoard", "#ovBoard", "#boardClose"],
   ["#btnGrow", "#ovGrow", "#growClose"],
   ["#btnAccount", "#ovAccount", "#accClose"],
+  ["#btnHelp", "#ovGuide", "#guideSkip"],
 ];
 
 async function expectFits(page, overlay) {
   const box = await page.evaluate((sel) => {
     const r = document.querySelector(sel + " .panel").getBoundingClientRect();
     const ov = document.querySelector(sel);
+    const panel = document.querySelector(sel + " .panel");
     return {
+      // Nothing inside the panel is cut off at its sides.
+      inner: panel.scrollWidth - panel.clientWidth,
       left: r.left,
       right: r.right,
       top: r.top,
@@ -33,6 +37,7 @@ async function expectFits(page, overlay) {
       scrolls: ov.scrollHeight <= ov.clientHeight + 1 || ov.scrollHeight > 0,
     };
   }, overlay);
+  expect(box.inner).toBeLessThanOrEqual(1);
   expect(box.left).toBeGreaterThanOrEqual(0);
   expect(box.right).toBeLessThanOrEqual(box.vw);
   // A panel taller than the screen must start on screen and scroll, not clip.

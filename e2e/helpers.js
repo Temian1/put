@@ -3,7 +3,9 @@ import { expect } from "@playwright/test";
 export const SAVE_KEY = "mamaPutRush3D.v1";
 
 // Opens the game with an optional pre-made save and waits for the 3D boot.
+// Journeys skip the first-launch guide unless the save asks for it.
 export async function boot(page, save) {
+  save = save ? { guideSeen: true, ...save } : { schema: 3, guideSeen: true };
   if (save)
     await page.addInitScript(
       ([key, value]) => {

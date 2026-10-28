@@ -1023,13 +1023,19 @@ export function mountGame(canvas, host, bridge) {
             ([id, file]) =>
               FOODS[id] &&
               new Promise((done) => {
-                const img = new Image();
-                img.onload = () => {
-                  FOODS[id].img = base + file;
-                  done();
+                // One retry: a dropped request on a busy connection should
+                // not leave a dish on its fallback thumbnail.
+                const load = (tries) => {
+                  const img = new Image();
+                  img.onload = () => {
+                    FOODS[id].img = base + file;
+                    done();
+                  };
+                  img.onerror = () =>
+                    tries ? setTimeout(() => load(tries - 1), 300) : done();
+                  img.src = base + file;
                 };
-                img.onerror = done;
-                img.src = base + file;
+                load(1);
               }),
           ),
         ),
@@ -4841,24 +4847,28 @@ export function mountGame(canvas, host, bridge) {
       this.tt = setTimeout(() => t.classList.remove("show"), 2200);
     },
     coins() {
-      // Header pills share their row with buttons; narrow phones get ₦85k.
-      const narrow = innerWidth < 400;
-      ["#menuCoins", "#mapCoins"].forEach(
-        (s) =>
-          ($(s).textContent = (narrow ? fmtNairaShort : fmtNaira)(
-            Save.d.coins,
-          )),
-      );
-      ["#shopCoins", "#missionCoins"].forEach(
-        (s) => ($(s).textContent = fmtNaira(Save.d.coins)),
-      );
+      // Every cash pill uses short amounts (₦85k, ₦3.4m, ₦1.2b, ₦2t); the
+      // exact figure is in the pill's tooltip.
+      [
+        "#menuCoins",
+        "#mapCoins",
+        "#shopCoins",
+        "#missionCoins",
+        "#growCoins",
+        "#marketCoins",
+      ].forEach((s) => {
+        const el = $(s);
+        if (!el) return;
+        el.textContent = fmtNairaShort(Save.d.coins);
+        el.parentElement.title = fmtNaira(Save.d.coins);
+      });
       $("#mapStarCount").textContent =
         Object.values(Save.d.stars).reduce((a, b) => a + b, 0) +
         " / " +
         MAX_LEVEL * 3;
       $("#menuRep").textContent = Math.round(Save.d.reputation);
       $("#repPill").title = "Reputation · " + TIERS[tierOf(Save.d)].name;
-      $("#growCoins").textContent = fmtNaira(Save.d.coins);
+      $("#growCoins").textContent = fmtNairaShort(Save.d.coins);
       const n = claimable(Save.d).count,
         b = $("#missionBadge");
       b.hidden = !n;
@@ -5052,7 +5062,7 @@ export function mountGame(canvas, host, bridge) {
         return;
       }
       this.clear();
-      ["ovReward", "ovDaily", "ovShop", "ovMissions"].forEach((id) =>
+      ["ovReward", "ovDaily", "ovShop", "ovMissions", "ovGuide"].forEach((id) =>
         UI.close(id),
       );
       this.cfg = cfg;
@@ -7951,7 +7961,8 @@ export function mountGame(canvas, host, bridge) {
     const el = Save.d.unlocked > 50;
     $("#endlessLock").hidden = el;
     $("#btnEndless").classList.toggle("pulse", el);
-    if (Save.d.lastClaim !== today()) setTimeout(openReward, 700);
+    if (firstLaunch()) setTimeout(openGuide, 700);
+    else if (Save.d.lastClaim !== today()) setTimeout(openReward, 700);
   }
   let shopTab = "up",
     crewPlace = "";
@@ -8191,6 +8202,37 @@ export function mountGame(canvas, host, bridge) {
     $("#sQuality").classList.toggle("on", HQ());
     $("#sHaptics").classList.toggle("on", Save.d.haptics && Haptics.supported);
   }
+  // The How to Play guide: shown once on a new player's first launch and
+  // any time from the ⓘ button in the menu header.
+  let guideAt = 0;
+  function guidePage(i) {
+    const pages = [...document.querySelectorAll("#ovGuide .guidePage")];
+    if (i >= pages.length) return closeGuide();
+    guideAt = Math.max(0, i);
+    pages.forEach((p, k) => (p.hidden = k !== guideAt));
+    document
+      .querySelectorAll("#guideDots i")
+      .forEach((d, k) => d.classList.toggle("on", k === guideAt));
+    $("#guideBack").disabled = guideAt === 0;
+    $("#guideNext .buttonLabel").textContent =
+      guideAt === pages.length - 1 ? "Let's cook!" : "Next";
+    Sound.play("click");
+  }
+  function openGuide() {
+    guidePage(0);
+    UI.open("ovGuide");
+  }
+  function closeGuide() {
+    UI.close("ovGuide");
+    if (!Save.d.guideSeen) {
+      Save.d.guideSeen = true;
+      Save.save();
+      // The first daily reward waits until the guide is closed.
+      if (Save.d.lastClaim !== today()) setTimeout(openReward, 400);
+    }
+  }
+  const firstLaunch = () =>
+    !Save.d.guideSeen && !Save.d.tutorialDone && Save.d.unlocked <= 1;
   function openReward() {
     // The reward is queued from the menu; never pop it over a level in progress.
     if (Game.state !== "menu" && Game.state !== "map") return;
@@ -8575,7 +8617,7 @@ export function mountGame(canvas, host, bridge) {
         buildMarket();
       },
     });
-    $("#marketCoins").textContent = fmtNaira(Save.d.coins);
+    $("#marketCoins").textContent = fmtNairaShort(Save.d.coins);
   }
   on("#btnMarket", () => {
     Sound.play("click");
@@ -8748,6 +8790,10 @@ export function mountGame(canvas, host, bridge) {
     UI.open("ovSettings");
   });
   on("#sClose", () => UI.close("ovSettings"));
+  on("#btnHelp", () => openGuide());
+  on("#guideNext", () => guidePage(guideAt + 1));
+  on("#guideBack", () => guidePage(guideAt - 1));
+  on("#guideSkip", () => closeGuide());
   on("#sAccount", () => {
     UI.close("ovSettings");
     openAccount();

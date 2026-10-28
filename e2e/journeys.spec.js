@@ -22,7 +22,7 @@ test("fresh player: reward in naira, tutorial hand, wins level 1 by tapping", as
   const errors = await boot(page);
   await expect(page.locator("#rewardAmt")).toHaveText("₦1,500");
   await collectReward(page);
-  await expect(page.locator("#menuCoins")).toHaveText("₦4,500");
+  await expect(page.locator("#menuCoins")).toHaveText("₦4.5k");
   await page.locator("#btnPlay").click({ force: true });
   await page.locator(".node.current").click();
   await waitPlaying(page);
@@ -180,7 +180,7 @@ test("hire help: staff are paid from the shift and serve customers", async ({
   await expect(
     chidi.getByRole("button", { name: "On duty", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator("#shopCoins")).toHaveText("₦5,000");
+  await expect(page.locator("#shopCoins")).toHaveText("₦5k");
   await page.locator("#shopClose").click({ force: true });
   await startLevel(page, 1);
   await waitPlaying(page);
@@ -217,7 +217,7 @@ test("old coin saves are converted to naira", async ({ page }) => {
     stars: { 1: 3 },
     lastClaim: claimedToday(),
   });
-  await expect(page.locator("#menuCoins")).toHaveText("₦10,000");
+  await expect(page.locator("#menuCoins")).toHaveText("₦10k");
   const save = await page.evaluate(() => window.__mp.Save.d);
   expect(save).toMatchObject({ schema: 3, unlocked: 7, coins: 10000 });
 });

@@ -1200,3 +1200,175 @@ svg.star.on {
 .btn:not(.plain) > :not(.badge):not(.lock) {
   position: relative;
 }
+/* Settings: rows never grow wider than the panel; the name row wraps on
+   narrow phones instead of pushing toggles off the screen. */
+#ovSettings .panel {
+  width: min(100%, 440px);
+  box-sizing: border-box;
+}
+#ovSettings .pauseList {
+  grid-template-columns: minmax(0, 1fr);
+}
+#ovSettings .pauseList > * {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+#ovSettings .toggle.nameRow {
+  flex-wrap: wrap;
+}
+#ovSettings .nameRow label {
+  flex: 1 0 100%;
+}
+#ovSettings .nameRow .nameInput {
+  flex: 1 1 120px;
+  min-width: 0;
+}
+#ovSettings .nameRow .btn {
+  flex: none;
+}
+/* How to Play guide */
+.iconBtn.helpBtn {
+  color: #fff;
+  background: linear-gradient(180deg, #ffd45a, #f2a516);
+  box-shadow:
+    0 5px 0 #b06f00,
+    0 8px 14px rgba(0, 0, 0, 0.25),
+    inset 0 2px 0 rgba(255, 255, 255, 0.55);
+}
+.iconBtn.helpBtn .buttonIcon {
+  width: 24px;
+  height: 24px;
+  stroke-width: 2.6;
+}
+.guidePanel {
+  text-align: center;
+}
+.guidePage h3 {
+  margin: 6px 0 8px;
+  font-size: 21px;
+}
+.guidePage ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+  display: grid;
+  gap: 8px;
+}
+.guidePage li {
+  background: rgba(255, 255, 255, 0.75);
+  border-radius: 14px;
+  padding: 9px 12px;
+  font-weight: 700;
+  font-size: 14.5px;
+  line-height: 1.35;
+}
+.guideArt {
+  width: 84px;
+  height: 84px;
+  margin: 4px auto 0;
+  display: grid;
+  place-items: center;
+  font-size: 46px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff, #ffe2a8 70%);
+  box-shadow:
+    0 4px 0 rgba(176, 111, 0, 0.35),
+    inset 0 -4px 0 rgba(0, 0, 0, 0.06);
+}
+.guideDots {
+  display: flex;
+  justify-content: center;
+  gap: 7px;
+  margin: 14px 0 10px;
+}
+.guideDots i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: rgba(74, 31, 12, 0.22);
+  transition:
+    width 0.2s,
+    background 0.2s;
+}
+.guideDots i.on {
+  width: 22px;
+  border-radius: 6px;
+  background: var(--teal);
+}
+#ovGuide .btnRow .btn {
+  flex: 1;
+}
+#ovGuide .btn:disabled {
+  opacity: 0.4;
+}
+.linkBtn {
+  margin-top: 10px;
+  background: none;
+  border: 0;
+  color: inherit;
+  opacity: 0.7;
+  font: inherit;
+  font-weight: 800;
+  text-decoration: underline;
+  cursor: pointer;
+}
+/* Narrow phones: three header buttons, reputation and cash share 320px. */
+@media (max-width: 400px) {
+  #scrMenu .topbar {
+    gap: 6px;
+  }
+  #scrMenu .topbar .iconBtn {
+    width: 40px;
+    height: 40px;
+    border-radius: 14px;
+  }
+  #scrMenu .topbar .iconBtn svg,
+  #scrMenu .topbar .iconBtn .buttonIcon {
+    width: 21px;
+    height: 21px;
+  }
+  #scrMenu .topRight {
+    gap: 5px;
+  }
+  #scrMenu .repPill {
+    padding: 0 8px 0 6px;
+    font-size: 16px;
+  }
+  #scrMenu .repStar {
+    width: 17px;
+    height: 17px;
+  }
+  #scrMenu .repPill {
+    flex: none;
+  }
+  #scrMenu .cashGroup .pill {
+    gap: 4px;
+    font-size: 17px;
+    padding-right: 32px;
+  }
+  #scrMenu .cashGroup .pill .note {
+    width: 30px;
+    height: 20px;
+  }
+}
+@media (max-width: 360px) {
+  #scrMenu .topbar {
+    gap: 4px;
+  }
+  #scrMenu .topbar .iconBtn {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+  }
+  #scrMenu .topRight {
+    gap: 4px;
+  }
+  #scrMenu .cashGroup .pill .note {
+    display: none;
+  }
+  #scrMenu .cashGroup .pill {
+    padding-left: 12px;
+  }
+}

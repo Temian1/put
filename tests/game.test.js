@@ -188,6 +188,11 @@ describe("currency formatting", () => {
     expect(fmtNairaShort(950)).toBe("₦950");
     expect(fmtNairaShort(4800)).toBe("₦4.8k");
     expect(fmtNairaShort(125000)).toBe("₦125k");
+    expect(fmtNairaShort(3400000)).toBe("₦3.4m");
+    expect(fmtNairaShort(1250000000)).toBe("₦1.25b");
+    expect(fmtNairaShort(2e12)).toBe("₦2t");
+    expect(fmtNairaShort(-45000)).toBe("-₦45k");
+    expect(fmtNairaShort(125000)).toBe("₦125k");
     expect(fmtNairaShort(1250000)).toBe("₦1.25m");
     expect(roundNaira(1274)).toBe(1250);
   });

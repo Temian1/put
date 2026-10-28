@@ -5,12 +5,28 @@ export const fmtNaira = (n) =>
   (n < 0 ? "-₦" : "₦") + grouped.format(Math.round(Math.abs(n)));
 
 // Short form for tight HUD pills: ₦950, ₦4.8k, ₦125k, ₦1.25m.
+// Short amounts for tight spaces: ₦950, ₦4.8k, ₦125k, ₦3.4m, ₦1.25b, ₦2t.
+const UNITS = [
+  [1e12, "t"],
+  [1e9, "b"],
+  [1e6, "m"],
+  [1e3, "k"],
+];
 export function fmtNairaShort(n) {
   const a = Math.abs(n),
     sign = n < 0 ? "-₦" : "₦";
   if (a < 1000) return sign + Math.round(a);
-  if (a < 1e6) return sign + +(a / 1000).toFixed(a < 1e5 ? 1 : 0) + "k";
-  return sign + +(a / 1e6).toFixed(a < 1e7 ? 2 : 1) + "m";
+  for (const [size, unit] of UNITS)
+    if (a >= size) {
+      const v = a / size;
+      // Two decimals under 10, one under 100, whole numbers above.
+      return (
+        sign +
+        +v.toFixed(v < 10 ? (unit === "k" ? 1 : 2) : v < 100 ? 1 : 0) +
+        unit
+      );
+    }
+  return sign + Math.round(a);
 }
 
 // Cash at a buka is counted to the nearest ₦50 note.
