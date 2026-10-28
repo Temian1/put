@@ -282,12 +282,14 @@ export function mountGame(canvas, host, bridge) {
   }
   const scene = new T3.Scene();
   const camera = new T3.PerspectiveCamera(36, 1, 0.5, 140);
-  const hemi = new T3.HemisphereLight(0xfff1d6, 0xc98a5a, 0.85);
+  // Bright storybook daylight: sky-blue fill from above, green bounce from
+  // the lawns, a warm sun with soft shadows.
+  const hemi = new T3.HemisphereLight(0xe6f4ff, 0x9fc46e, 0.95);
   scene.add(hemi);
-  const sun = new T3.DirectionalLight(0xfff0d8, 0.95);
+  const sun = new T3.DirectionalLight(0xfff4de, 1.15);
   sun.position.set(6, 12, 8);
   sun.castShadow = HQ();
-  sun.shadow.mapSize.set(1024, 1024);
+  sun.shadow.mapSize.set(HQ() ? 2048 : 1024, HQ() ? 2048 : 1024);
   Object.assign(sun.shadow.camera, {
     left: -10,
     right: 10,
@@ -300,7 +302,7 @@ export function mountGame(canvas, host, bridge) {
   sun.shadow.normalBias = 0.02;
   scene.add(sun);
   scene.add(sun.target);
-  const fillL = new T3.DirectionalLight(0xbfe8ff, 0.3);
+  const fillL = new T3.DirectionalLight(0xcfe9ff, 0.22);
   fillL.position.set(-6, 5, -4);
   scene.add(fillL);
 
@@ -1476,8 +1478,8 @@ export function mountGame(canvas, host, bridge) {
   /* ================= KITCHEN SCENE / ENVIRONMENTS ================= */
   const THEMES = [
     {
-      sky: ["#FFE2A8", "#FFB45E"],
-      ground: "#E39A5B",
+      sky: ["#5DBBF6", "#E2F5FF"],
+      ground: "#5A9C3B",
       floor: ["#F7E3C3", "#EBC896"],
       counter: "#B86B35",
       top: "#FFE9C7",
@@ -1486,11 +1488,11 @@ export function mountGame(canvas, host, bridge) {
       bench: "#8B4F2A",
       sign: ["MAMA PUT", "Roadside Buka"],
       signBg: "#12A99F",
-      light: [0.85, 0.95],
+      light: [0.66, 0.92],
     },
     {
-      sky: ["#BFE6FF", "#FFD7A0"],
-      ground: "#C98B5A",
+      sky: ["#56B4F3", "#DDF2FF"],
+      ground: "#57983A",
       floor: ["#FFF1D6", "#9FD6CF"],
       counter: "#12A99F",
       top: "#FFF4DE",
@@ -1499,11 +1501,11 @@ export function mountGame(canvas, host, bridge) {
       bench: "#5E6B73",
       sign: ["JUNCTION SPOT", "Mama Put • Chop Better"],
       signBg: "#FF7A1A",
-      light: [0.85, 0.95],
+      light: [0.66, 0.92],
     },
     {
-      sky: ["#9FDBFF", "#FFE0B0"],
-      ground: "#D9CBB3",
+      sky: ["#6CC4F8", "#E6F7FF"],
+      ground: "#62A443",
       floor: ["#FFFFFF", "#FFD9B0"],
       counter: "#FF5A5F",
       top: "#FFF4DE",
@@ -1512,11 +1514,11 @@ export function mountGame(canvas, host, bridge) {
       bench: "#4E4A57",
       sign: ["SWALLOW JOINT", "Mama Put Stall 12 • Amala Spot"],
       signBg: "#FF5A5F",
-      light: [0.85, 0.95],
+      light: [0.66, 0.92],
     },
     {
-      sky: ["#FFD0DD", "#FFE7B8"],
-      ground: "#7CC36B",
+      sky: ["#7FCBFA", "#FFF3E6"],
+      ground: "#5A9E48",
       floor: ["#FFF4DE", "#F3D9A4"],
       counter: "#6B2D8C",
       top: "#FFF4DE",
@@ -1525,11 +1527,11 @@ export function mountGame(canvas, host, bridge) {
       bench: "#4B2A5E",
       sign: ["OWAMBE CATERING", "Mama Put • Party Jollof Specialist"],
       signBg: "#7B2E8E",
-      light: [0.85, 0.95],
+      light: [0.66, 0.92],
     },
     {
       sky: ["#3B2E6E", "#FF9E6B"],
-      ground: "#3C4B5A",
+      ground: "#4F7C47",
       floor: ["#F4EFE6", "#D9D2C5"],
       counter: "#0F4C5C",
       top: "#F4EFE6",
@@ -1538,7 +1540,7 @@ export function mountGame(canvas, host, bridge) {
       bench: "#1F2A36",
       sign: ["MAMA PUT EMPIRE", "From Roadside Buka to Food Empire"],
       signBg: "#0F4C5C",
-      light: [0.7, 0.8],
+      light: [0.55, 0.72],
     },
   ];
   let env = null,
@@ -1739,27 +1741,72 @@ export function mountGame(canvas, host, bridge) {
     );
     return g;
   }
+  // A miniature town house: framed windows, a front door with a striped
+  // awning, and a pitched roof on low buildings (flat with a parapet on
+  // tall ones).
+  const ROOFS = ["#C8553D", "#3E7CB1", "#8E5B3E", "#2F8F6B", "#B5473A"];
   function building(g, x, z, w, h, d, c, win, roof) {
     const b = new T3.Group();
     b.position.set(x, 0, z);
     b.add(mesh(rbox(w, h, d, 0.06), M(c), 0, h / 2, 0));
     const cols = Math.max(1, Math.floor(w / 0.9)),
-      rows = Math.max(1, Math.floor((h - 1) / 1.1));
+      rows = Math.max(1, Math.floor((h - 1.6) / 1.1));
+    const frame = M("#FFFDF5", { roughness: 0.5 }),
+      glass = M(win || "#7FC8E8", { roughness: 0.15 });
     for (let i = 0; i < cols; i++)
       for (let j = 0; j < rows; j++) {
+        const wx = -w / 2 + ((i + 0.5) * w) / cols,
+          wy = 1.9 + j * 1.1;
         b.add(
           mesh(
-            rbox(0.5, 0.6, 0.06, 0.04),
-            M(win || "#7FC8E8", { roughness: 0.2 }),
-            -w / 2 + ((i + 0.5) * w) / cols,
-            1.3 + j * 1.1,
-            d / 2 + 0.02,
+            rbox(0.62, 0.72, 0.05, 0.03),
+            frame,
+            wx,
+            wy,
+            d / 2 + 0.01,
             false,
           ),
         );
+        b.add(
+          mesh(rbox(0.5, 0.6, 0.06, 0.04), glass, wx, wy, d / 2 + 0.03, false),
+        );
       }
-    if (roof)
-      b.add(mesh(rbox(w + 0.3, 0.18, d + 0.3, 0.05), M(roof), 0, h + 0.05, 0));
+    // Front door and a little striped awning over it.
+    b.add(
+      mesh(
+        rbox(0.7, 1.2, 0.08, 0.05),
+        M("#7A4B2A"),
+        0,
+        0.6,
+        d / 2 + 0.02,
+        false,
+      ),
+    );
+    for (let k = 0; k < 4; k++)
+      b.add(
+        mesh(
+          rbox(0.25, 0.05, 0.42, 0.01),
+          M(k % 2 ? "#FFFFFF" : "#FF5A5F"),
+          -0.375 + k * 0.25,
+          1.32,
+          d / 2 + 0.2,
+          false,
+        ),
+      );
+    const rc = roof || ROOFS[Math.abs(Math.round(x * 3 + z)) % ROOFS.length];
+    if (h <= 6.5) {
+      const r = mesh(
+        cone(0.72, 1, 4),
+        M(rc, { roughness: 0.55 }),
+        0,
+        h + 0.55,
+        0,
+      );
+      r.rotation.y = Math.PI / 4;
+      r.scale.set(w * 1.02, 1.1, d * 1.02);
+      b.add(r);
+    } else
+      b.add(mesh(rbox(w + 0.3, 0.22, d + 0.3, 0.05), M(rc), 0, h + 0.06, 0));
     g.add(b);
     return b;
   }
@@ -2064,9 +2111,36 @@ export function mountGame(canvas, host, bridge) {
     hemi.intensity = t.light[0];
     sun.intensity = t.light[1];
     sun.color.set(ci === 4 ? "#FFC59A" : "#FFF0D8");
+    // A lawn with soft blades of lighter and darker grass.
     const ground = mesh(
       G("ground", () => new T3.PlaneGeometry(120, 120)),
-      M(t.ground, { roughness: 1 }),
+      new T3.MeshStandardMaterial({
+        map: canvasTex(
+          "grass" + t.ground,
+          128,
+          128,
+          (x) => {
+            x.fillStyle = t.ground;
+            x.fillRect(0, 0, 128, 128);
+            const base = new T3.Color(t.ground);
+            for (let k = 0; k < 260; k++) {
+              const c = base
+                .clone()
+                .offsetHSL(0, 0, (k % 2 ? 0.06 : -0.05) * (0.5 + (k % 5) / 5));
+              x.strokeStyle = "#" + c.getHexString();
+              x.lineWidth = 1.5;
+              const px = (k * 53) % 128,
+                py = (k * 97) % 128;
+              x.beginPath();
+              x.moveTo(px, py);
+              x.lineTo(px + ((k % 3) - 1) * 2, py - 4);
+              x.stroke();
+            }
+          },
+          [40, 40],
+        ),
+        roughness: 1,
+      }),
       0,
       0,
       0,
@@ -2441,6 +2515,7 @@ export function mountGame(canvas, host, bridge) {
     buildBackKitchen(env, eff);
     buildDining(env, eff, ci, style.furniture);
     buildExtras(env, style.extras || [], t, ci);
+    buildGreenery(env, styleKey === "endless");
     buildTraffic(env, ci);
     buildGrowth(env, ci);
   }
@@ -2855,6 +2930,83 @@ export function mountGame(canvas, host, bridge) {
     }
   }
 
+  /* ---- the miniature world around the restaurant ---- */
+  function tree(g, x, z, s = 1) {
+    const t = new T3.Group();
+    t.position.set(x, 0, z);
+    t.scale.setScalar(s);
+    t.add(mesh(cyl(0.12, 0.16, 1.1, 8), M("#8A5A34"), 0, 0.55, 0));
+    [
+      [0, 1.55, 0, 0.62, "#5DB84A"],
+      [-0.35, 1.25, 0.15, 0.45, "#4FA63F"],
+      [0.36, 1.3, -0.1, 0.48, "#6CC653"],
+      [0.05, 1.95, -0.05, 0.4, "#78D25E"],
+    ].forEach(([a, y, b2, r, c]) =>
+      t.add(mesh(sph(r, 12, 10), M(c, { roughness: 0.85 }), a, y, b2)),
+    );
+    g.add(t);
+    return t;
+  }
+  const FLOWERS = ["#FF5A8A", "#FFD23F", "#FFFFFF", "#FF8C42", "#C77DFF"];
+  function hedge(g, x, z, flowers) {
+    g.add(mesh(sph(0.34, 10, 8), M("#4FA63F", { roughness: 0.9 }), x, 0.26, z));
+    if (flowers)
+      for (let k = 0; k < 3; k++)
+        g.add(
+          mesh(
+            sph(0.06, 6, 5),
+            M(
+              FLOWERS[
+                (Math.abs(Math.round(x * 7 + z * 5)) + k) % FLOWERS.length
+              ],
+            ),
+            x + Math.cos(k * 2.1) * 0.2,
+            0.5 + (k % 2) * 0.06,
+            z + Math.sin(k * 2.1) * 0.2,
+            false,
+          ),
+        );
+  }
+  function buildGreenery(g, night) {
+    // Trees on the lawns either side of the restaurant, clear of the
+    // walkway (z -2.3) and the road.
+    [
+      [6.3, 1.7, 1],
+      [7.9, -0.6, 1.15],
+      [9.6, 1.2, 0.95],
+      [11.4, -0.8, 1.1],
+      [13.2, 1.4, 1],
+    ].forEach(([x, z, sc]) => {
+      tree(g, x, z, sc);
+      tree(g, -x, z + 0.3, sc * 0.95);
+    });
+    // Low hedges with flowers framing the kitchen and dining area.
+    for (let zz = 3.1; zz >= -1.4; zz -= 0.75) {
+      hedge(g, 5.15, zz, !night);
+      hedge(g, -5.15, zz, !night);
+    }
+    if (night) return;
+    // Clouds drifting across the sky.
+    for (let i = 0; i < 6; i++) {
+      const c = new T3.Group();
+      const n = 4 + (i % 2);
+      for (let k = 0; k < n; k++)
+        c.add(
+          mesh(
+            sph(1.1 + (k % 3) * 0.35, 12, 10),
+            M("#FFFFFF", { roughness: 1 }),
+            k * 1.25 - n * 0.6,
+            Math.sin(k * 1.7) * 0.35,
+            Math.cos(k) * 0.4,
+            false,
+          ),
+        );
+      const x = -32 + i * 12;
+      c.position.set(x, 10 + (i % 3) * 2.2, -34 - (i % 2) * 6);
+      g.add(c);
+      dyn.push({ o: c, type: "cloud", x, speed: 0.25 + (i % 3) * 0.1 });
+    }
+  }
   /* ---- decorations that set each restaurant apart ---- */
   let scoreboard = null;
   function buildExtras(g, extras, t, ci) {
@@ -8783,6 +8935,11 @@ export function mountGame(canvas, host, bridge) {
         else if (d.type === "sway")
           d.o.rotation.z = Math.sin(T * 1.2 + d.ph) * 0.06;
         else if (d.type === "spin") d.o.rotation.z = T * 9 + d.ph;
+        else if (d.type === "cloud") {
+          d.x += d.speed * dt;
+          if (d.x > 40) d.x = -40;
+          d.o.position.x = d.x;
+        }
       });
     }
     updateCamera(dt, T);

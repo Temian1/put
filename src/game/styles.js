@@ -104,7 +104,7 @@ export const PLACE_STYLES = {
       bench: "#26263A",
       tray: "#00E5FF",
       signBg: "#FF2E88",
-      light: [0.6, 0.7],
+      light: [0.5, 0.62],
       sign: ["ENDLESS RUSH", "How long can you last?"],
     },
     furniture: "neon",

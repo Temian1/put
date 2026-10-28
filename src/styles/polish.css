@@ -1129,3 +1129,26 @@ svg.star.on {
   font-weight: 700;
   color: var(--ink-soft);
 }
+/* Glossy, plump buttons: a soft highlight across the top of coloured ones */
+.btn:not(.plain) {
+  position: relative;
+  overflow: hidden;
+}
+.btn:not(.plain)::before {
+  content: "";
+  position: absolute;
+  left: 7%;
+  right: 7%;
+  top: 3px;
+  height: 42%;
+  border-radius: 999px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.42),
+    rgba(255, 255, 255, 0)
+  );
+  pointer-events: none;
+}
+.btn:not(.plain) > :not(.badge):not(.lock) {
+  position: relative;
+}
