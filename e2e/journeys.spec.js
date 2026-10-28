@@ -131,9 +131,9 @@ test("dishwashing: dirty tables block lanes until cleared and washed", async ({
     timeout: 25_000,
   });
   await page.locator(".dirtyChip").first().dispatchEvent("pointerdown");
-  await expect(page.locator("#washTxt")).toHaveText("1/4");
+  await expect(page.locator("#washTxt")).toHaveText("1/14");
   await page.locator("#btnWash").click({ force: true });
-  await expect(page.locator("#washTxt")).toHaveText("0/4", {
+  await expect(page.locator("#washTxt")).toHaveText("0/14", {
     timeout: 3000,
   });
   expect((await saved(page)) ?? {}).toBeTruthy();

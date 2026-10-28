@@ -27,6 +27,8 @@ Playwright needs a browser once: `npx playwright install chromium`. To use an in
 
 ## Play
 
+Customer targets increase at **every level**: 15 at level 1, then five more per level (20 at level 2, 60 at level 10, 320 at level 62), before business-tier bonuses. Sink capacity grows by one for each five extra target customers; a purchased double sink adds another three. The wash button shows dirty plates/capacity even during washing. Delivery orders become more frequent, support up to four active online orders, and grow from one to four portions per food as the shift grows. Catering portions scale too; larger orders get proportionate deadlines and packaging costs.
+
 - Choose PLAY, then an unlocked level on the map. Tap a food button or its 3D station; keyboard **1–9** also serves. Tap a customer or bubble to pick who gets the food.
 - **Money is naira.** Each dish costs what a working-class Lagos mainland buka charges: rice and stew ₦800, beef ₦600, dodo ₦500, fried chicken ₦2,500, pure water ₦100. A typical plate comes to ₦1,500–₦2,500. Bills round to the nearest ₦50.
 - **The menu is real mama put food:** jollof, fried rice, rice and stew, ewa agoyin, eba, amala, pounded yam, egusi, efo riro, ewedu and gbegiri, goat pepper soup, beef, fried chicken, fried fish, boiled egg, dodo, moi moi, pure water, zobo, mineral and malt.
@@ -35,7 +37,7 @@ Playwright needs a browser once: `npx playwright install chromium`. To use an in
   - **Level 3 (plate assembly):** dish the main first; meat, dodo and soup go on top ("Jollof first!"). Every swallow comes with a soup. Tapping a topping too early is a hint, not a mistake.
   - **Level 4 (cooking stages):** dodo, chicken and fish must be fried. Tap to start frying; the finished batch goes straight into stock (e.g. 4 portions of dodo) and stays there until served.
   - **Level 6 (food finishes):** every pot, basin and cooler holds a batch (e.g. 8 plates of rice) that runs out. A finished food shows **Finished!**; tap it to cook a new batch, which costs ingredients (30% of menu price). Customers waiting only on finished food complain, lose patience faster and hurt your reputation.
-  - **Level 11 (dishwashing):** served customers leave dirty plates. Tap **Clear** (or the tray) to move a plate to the sink; the lane stays closed until you do. The sink holds four plates. Tap the blue sink button on the left rail (or press **W**) to wash.
+  - **Level 11 (dishwashing):** served customers leave dirty plates. Tap **Clear** (or the tray) to move a plate to the sink; a dirty chair or counter stays blocked until cleared. Sink capacity grows with the customer target (14 at level 11 before sink upgrades). Tap the blue sink button on the left rail (or press **W**) to wash.
   - **Level 15 (online orders):** orders pop up with a notification and appear as cards above the food buttons, with a deadline. Tap a card to select it, tap foods to pack them, then **Pack & send**. Packs cost ₦150 each. A hired dispatch rider delivers free; with none free, an outside rider is called for ₦1,000. Late orders are cancelled and cost reputation.
   - **Level 27 onward (catering events):** birthday parties, naming ceremonies, child dedications, owambe weddings, burial receptions, house warmings and chieftaincy titles order in bulk (8–16 portions) for a 40% premium. The day cannot close until the event is delivered or runs out of time.
 - **Boosters** (one of each to start, more in the shop): *Freeze Time* stops the clock and patience for 8 s, *Auto-Serve* completes the most urgent order, *Patience Boost* refills everyone waiting.
@@ -53,7 +55,7 @@ Playwright needs a browser once: `npx playwright install chromium`. To use an in
 
 ## Running a food empire
 
-The game runs for **100 levels in 10 chapters**. After the Mama Put Empire (levels 41–50) come Ikeja City Restaurant, Port Harcourt Branch, Abuja Food Court, Catering Company and Food Empire HQ, with up to nine dishes and 37 customers a shift. A bigger business also brings 2 more customers per business level to every shift.
+The game runs for **100 levels in 10 chapters**. After the Mama Put Empire (levels 41–50) come Ikeja City Restaurant, Port Harcourt Branch, Abuja Food Court, Catering Company and Food Empire HQ, with up to nine dishes. Customer targets grow from 15 at level 1 to 510 at level 100, increasing by five every level. A bigger business also brings 2 more customers per business level to every shift.
 
 - **Visible staff:** hired workers live in the back kitchen, the floor between the pots and the food buttons. They walk to the job and do it on arrival:
   - Cooks and servers step up to the pots.

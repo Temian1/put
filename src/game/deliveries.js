@@ -12,16 +12,17 @@ export const DELIVERY_FEE = 800; // charged to the online customer
 let seq = 0;
 const pickFrom = (list, rand) => list[Math.floor(rand() * list.length)];
 
-export function makeOnlineOrder(foods, rand = Math.random) {
+export function makeOnlineOrder(foods, rand = Math.random, quantity = 1) {
   const k = 1 + Math.floor(rand() * 3);
   const ids = buildOrder(foods, k, { rand });
-  const max = 38 + ids.length * 8;
+  const need = Math.max(1, Math.min(4, Math.floor(quantity) || 1));
+  const max = 38 + ids.length * need * 8;
   return {
     id: "o" + ++seq,
     kind: "online",
     who: pickFrom(NAMES, rand),
     where: pickFrom(AREAS, rand),
-    items: ids.map((f) => ({ f, need: 1, got: 0 })),
+    items: ids.map((f) => ({ f, need, got: 0 })),
     max,
     t: max,
     packing: 0,
@@ -30,7 +31,12 @@ export function makeOnlineOrder(foods, rand = Math.random) {
 }
 
 // Splits the event's size across up to three foods it likes that the level sells.
-export function makeEventOrder(eventId, foods, rand = Math.random) {
+export function makeEventOrder(
+  eventId,
+  foods,
+  rand = Math.random,
+  sizeMultiplier = 1,
+) {
   const ev = EVENTS[eventId];
   let menu = ev.menu.filter((f) => foods.includes(f));
   if (menu.length < 2)
@@ -39,13 +45,15 @@ export function makeEventOrder(eventId, foods, rand = Math.random) {
   const picks = [];
   while (picks.length < 3 && menu.length)
     picks.push(menu.splice(Math.floor(rand() * menu.length), 1)[0]);
-  const base = Math.floor(ev.size / picks.length);
+  const size =
+    ev.size * Math.max(1, Math.min(4, Math.floor(sizeMultiplier) || 1));
+  const base = Math.floor(size / picks.length);
   const items = picks.map((f, i) => ({
     f,
-    need: base + (i < ev.size % picks.length ? 1 : 0),
+    need: base + (i < size % picks.length ? 1 : 0),
     got: 0,
   }));
-  const max = 60 + ev.size * 4;
+  const max = 60 + size * 4;
   return {
     id: "e" + ++seq,
     kind: "event",
@@ -74,7 +82,9 @@ export const packComplete = (o) => o.items.every((it) => it.got >= it.need);
 export const portions = (o) => o.items.reduce((s, it) => s + it.need, 0);
 // Packs needed: one per online order, one cooler per four event portions.
 export const packsFor = (o) =>
-  o.kind === "event" ? Math.ceil(portions(o) / 4) : 1;
+  o.kind === "event"
+    ? Math.ceil(portions(o) / 4)
+    : Math.max(1, ...o.items.map((it) => it.need));
 
 // Event catering pays a 40% premium on menu price. Online adds the delivery fee.
 export function orderValue(o) {

@@ -1,4 +1,5 @@
 import * as T3 from "three";
+import { serviceLoad } from "../game/serviceLoad.js";
 import { rnd, ri, pick, clamp, lerp, today, fmtTime } from "../game/utils.js";
 import {
   FOODS as FOOD_DATA,
@@ -4765,7 +4766,8 @@ export function mountGame(canvas, host, bridge) {
             true,
           );
       });
-      this.sink = createSink(eff.sinkCap);
+      this.serviceLoad = serviceLoad(cfg);
+      this.sink = createSink(eff.sinkCap + this.serviceLoad.extraSinkCapacity);
       this.washTime = eff.washTime;
       this.claimed = new Set();
       this.fines = 0;
@@ -4796,7 +4798,9 @@ export function mountGame(canvas, host, bridge) {
       this.repStart = this.repNow = Save.d.reputation;
       this.orders = [];
       this.packSel = null;
-      this.orderT = cfg.online ? rnd(9, 14) : Infinity;
+      this.orderT = cfg.online
+        ? rnd(9, 14) * this.serviceLoad.onlineIntervalScale
+        : Infinity;
       this.eventT = cfg.event
         ? cfg.event === "random"
           ? 60
@@ -5577,15 +5581,32 @@ export function mountGame(canvas, host, bridge) {
         budget = c.mode === "endless" || this.served + this.pending() < c.goal;
       this.orderT -= dt;
       if (this.orderT <= 0) {
-        this.orderT = rnd(14, 22) * spawnFactor(this.repNow);
-        if (open < 2 && budget) this.addOrder(makeOnlineOrder(c.foods));
+        this.orderT =
+          rnd(14, 22) *
+          spawnFactor(this.repNow) *
+          this.serviceLoad.onlineIntervalScale;
+        if (open < this.serviceLoad.onlineLimit && budget)
+          this.addOrder(
+            makeOnlineOrder(
+              c.foods,
+              Math.random,
+              this.serviceLoad.onlinePortions,
+            ),
+          );
       }
       this.eventT -= dt;
       if (this.eventT <= 0) {
         this.eventT = c.event === "random" ? rnd(80, 120) : Infinity;
         if (budget || c.mode === "endless") {
           const id = c.event === "random" ? pick(Object.keys(EVENTS)) : c.event;
-          this.addOrder(makeEventOrder(id, c.foods));
+          this.addOrder(
+            makeEventOrder(
+              id,
+              c.foods,
+              Math.random,
+              this.serviceLoad.onlinePortions,
+            ),
+          );
         }
       }
     },
@@ -6148,9 +6169,12 @@ export function mountGame(canvas, host, bridge) {
     updateTools() {
       if (this.cfg?.dishes) {
         const s = this.sink;
-        $("#washTxt").textContent = s.washing
-          ? "…"
-          : `${s.plates}/${s.capacity}`;
+        // Keep the count visible while washing, too.
+        $("#washTxt").textContent = `${s.plates}/${s.capacity}`;
+        $("#btnWash").setAttribute(
+          "aria-label",
+          `${s.washing ? "Washing" : "Wash"} plates: ${s.plates} of ${s.capacity}; ${s.washed} washed this shift`,
+        );
         $("#btnWash").classList.toggle("full", sinkFull(s));
         $("#washBar").style.width = s.washing
           ? Math.min(100, (s.washing / this.washTime) * 100).toFixed(0) + "%"
