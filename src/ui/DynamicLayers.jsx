@@ -1443,7 +1443,26 @@ export function Books({
   placeName,
   fmt,
   journal = [],
+  side = [],
 }) {
+  // Money from the side games: Okada Rush deliveries and Market Match.
+  const sideRows = side.length ? (
+    <>
+      <div className="sectionLabel">Side jobs</div>
+      {side.slice(0, 8).map((e, i) => (
+        <div className="bookRow" key={i}>
+          <span>
+            <b>{e.label}</b>
+            <small>
+              {e.game === "run" ? "Okada delivery" : "Market Match"}
+              {e.cost ? ` · fuel ${fmt(e.cost)}` : ""}
+            </small>
+          </span>
+          <b className="good">{fmt(e.amount)}</b>
+        </div>
+      ))}
+    </>
+  ) : null;
   const decisions = journal.length ? (
     <>
       <div className="sectionLabel">Your decisions</div>
@@ -1485,6 +1504,7 @@ export function Books({
           every day you trade.
         </p>
         {decisions}
+        {sideRows}
       </>
     );
   const days = history.slice(-14);
@@ -1560,6 +1580,7 @@ export function Books({
         </div>
       ) : null}
       {decisions}
+      {sideRows}
       <div className="sectionLabel">Recent days</div>
       {history
         .slice(-10)

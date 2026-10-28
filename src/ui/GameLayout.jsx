@@ -64,6 +64,8 @@ const GUIDE_PAGES = [
     title: "Grow and keep going",
     points: [
       "Earn naira to upgrade equipment and open new restaurants on the map.",
+      "Play Market Match to win new recipe specials, ingredients and boosters.",
+      "From Level 10, ride Okada Rush: deliver orders yourself through Lagos traffic.",
       "Come back every day for rewards and daily missions.",
       "Beat Level 50 to unlock Endless Rush. Tap the ⓘ button any time to read this guide again.",
     ],
@@ -183,6 +185,30 @@ export const GameLayout = memo(function GameLayout({
               <span className="badge cash" id="growBadge" hidden></span>
             </button>
           </div>
+          <div className="row sideRow">
+            <button className="btn sideBtn match" id="btnMatch">
+              <span className="sideArt" aria-hidden="true">
+                {"🌶️"}
+              </span>
+              <span className="buttonLabel">
+                {"Market Match"}
+                <span className="lock" id="matchSub">
+                  {"Win recipes"}
+                </span>
+              </span>
+            </button>
+            <button className="btn sideBtn run" id="btnRun">
+              <span className="sideArt" aria-hidden="true">
+                {"🛵"}
+              </span>
+              <span className="buttonLabel">
+                {"Okada Rush"}
+                <span className="lock" id="runSub">
+                  {"Level 10"}
+                </span>
+              </span>
+            </button>
+          </div>
           <button className="btn gold" id="btnEndless">
             <Icon name="infinity" />
             <span className="buttonLabel">
@@ -219,6 +245,106 @@ export const GameLayout = memo(function GameLayout({
         </div>
         <div className="mapScroll scroll" id="mapScroll">
           <div className="mapInner" id="mapInner"></div>
+        </div>
+      </Surface>
+      <Surface
+        className="screen sideScreen"
+        id="scrMatch"
+        aria-label="Market Match"
+        tag="section"
+      >
+        <div className="m3Head">
+          <button className="iconBtn" id="m3Back" aria-label="Back">
+            <Icon name="back" />
+          </button>
+          <div className="m3Title">
+            <small>{"Market Match"}</small>
+            <b id="m3Level">{"Level 1"}</b>
+          </div>
+          <div className="m3Moves" aria-label="Moves left">
+            <b id="m3Moves">{"20"}</b>
+            <small>{"moves"}</small>
+          </div>
+        </div>
+        <div className="m3Goals" id="m3Goals"></div>
+        <div className="m3Wrap">
+          <div className="m3Board" id="m3Board"></div>
+          <div className="m3Cheer" id="m3Cheer" aria-live="polite"></div>
+        </div>
+        <div className="m3Tools">
+          <button className="m3Tool" id="m3Spoon" aria-label="Wooden spoon">
+            <span>{"🥄"}</span>
+            <b>0</b>
+          </button>
+          <button className="m3Tool" id="m3Stir" aria-label="Stir the pot">
+            <span>{"🌀"}</span>
+            <b>0</b>
+          </button>
+          <button
+            className="m3Tool"
+            id="m3MoreMoves"
+            aria-label="Five more moves"
+          >
+            <span>{"⏱️"}</span>
+            <b>0</b>
+          </button>
+          <div className="m3Score">
+            <small>{"Score"}</small>
+            <b id="m3Score">{"0"}</b>
+          </div>
+        </div>
+      </Surface>
+      <Surface
+        className="screen sideScreen"
+        id="scrRun"
+        aria-label="Okada Rush"
+        tag="section"
+      >
+        <div className="runHud">
+          <button className="iconBtn" id="runPause" aria-label="Pause">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <rect x="6" y="5" width="4" height="14" rx="1.5"></rect>
+              <rect x="14" y="5" width="4" height="14" rx="1.5"></rect>
+            </svg>
+          </button>
+          <div className="runStat" id="runClockBox">
+            <small id="runClockLabel">{"Time"}</small>
+            <b id="runClock">{"1:15"}</b>
+          </div>
+          <div className="runStat">
+            <small>{"Delivered"}</small>
+            <b id="runDelivered">{"0 / 5"}</b>
+          </div>
+          <div className="runStat cash">
+            <small>{"Earned"}</small>
+            <b id="runCash">{"₦0"}</b>
+          </div>
+        </div>
+        <div className="runRow">
+          <div className="runPacks" id="runPacks" aria-label="Food packs"></div>
+          <div
+            className="runLives"
+            id="runLives"
+            aria-label="Crashes left"
+          ></div>
+        </div>
+        <div className="runPowers" id="runPowers"></div>
+        <div className="runMsg" id="runMsg" aria-live="polite"></div>
+        <div className="runCombo" id="runCombo"></div>
+        <div className="runFloats" id="runFloats"></div>
+        <div className="runPad" id="runPad">
+          <button id="runLeft" aria-label="Left">
+            <Icon name="back" />
+          </button>
+          <button id="runJump" aria-label="Jump">
+            <Icon name="upgrade" />
+          </button>
+          <button id="runSlide" aria-label="Duck">
+            <Icon name="next" />
+          </button>
+          <button id="runRight" aria-label="Right">
+            <Icon name="next" />
+          </button>
         </div>
       </Surface>
       <Surface className="screen" id="scrGame" aria-label="Game" tag="section">
@@ -984,6 +1110,128 @@ export const GameLayout = memo(function GameLayout({
           <button className="linkBtn" id="guideSkip">
             {"Skip guide"}
           </button>
+        </div>
+      </Surface>
+      <Surface className="overlay scroll" id="ovMatchStart" tag="div">
+        <div className="panel sidePanel">
+          <div className="ribbon small">{"Market Match"}</div>
+          <div className="levelPick">
+            <button className="iconBtn" id="m3Prev" aria-label="Previous level">
+              <Icon name="back" />
+            </button>
+            <div>
+              <b id="m3StartLevel">{"Level 1"}</b>
+              <div className="sideStars" id="m3StartStars"></div>
+            </div>
+            <button className="iconBtn" id="m3Next" aria-label="Next level">
+              <Icon name="next" />
+            </button>
+          </div>
+          <div className="m3StartGoals" id="m3StartGoals"></div>
+          <p className="sub" id="m3StartPrize"></p>
+          <div className="sideShop" id="m3Shop"></div>
+          <button
+            className="btn green big"
+            id="m3Play"
+            style={{ width: "100%" }}
+          >
+            <Icon name="play" />
+            <span className="buttonLabel">{"Play"}</span>
+          </button>
+          <button className="linkBtn" id="m3StartClose">
+            {"Back to menu"}
+          </button>
+        </div>
+      </Surface>
+      <Surface className="overlay scroll" id="ovMatchEnd" tag="div">
+        <div className="panel sidePanel">
+          <div className="ribbon small" id="m3EndTitle">
+            {"Level complete!"}
+          </div>
+          <div className="sideStars big" id="m3EndStars"></div>
+          <p className="sub" id="m3EndSub"></p>
+          <div className="sideRewards" id="m3EndRewards"></div>
+          <div className="btnRow">
+            <button className="btn plain" id="m3EndMenu">
+              <Icon name="exit" />
+              <span className="buttonLabel">{"Menu"}</span>
+            </button>
+            <button className="btn green" id="m3EndNext">
+              <span className="buttonLabel">{"Next"}</span>
+              <Icon name="next" />
+            </button>
+          </div>
+        </div>
+      </Surface>
+      <Surface className="overlay scroll" id="ovRunStart" tag="div">
+        <div className="panel sidePanel">
+          <div className="ribbon small">{"Okada Rush"}</div>
+          <div className="runTier" id="runTier"></div>
+          <div className="howRun">
+            <span>
+              <b>{"⬅️ ➡️"}</b>
+              {"Swipe to change lane"}
+            </span>
+            <span>
+              <b>{"⬆️"}</b>
+              {"Swipe up to jump barriers and potholes"}
+            </span>
+            <span>
+              <b>{"⬇️"}</b>
+              {"Swipe down to duck under poles"}
+            </span>
+            <span>
+              <b>{"🟢"}</b>
+              {"Ride through a glowing ring to deliver"}
+            </span>
+          </div>
+          <div className="sideShop" id="runShop"></div>
+          <button
+            className="btn green big"
+            id="runGo"
+            style={{ width: "100%" }}
+          >
+            <Icon name="play" />
+            <span className="buttonLabel">{"Ride!"}</span>
+          </button>
+          <button className="linkBtn" id="runStartClose">
+            {"Back to menu"}
+          </button>
+        </div>
+      </Surface>
+      <Surface className="overlay scroll" id="ovRunPause" tag="div">
+        <div className="panel sidePanel">
+          <div className="ribbon small">{"Paused"}</div>
+          <div className="btnRow">
+            <button className="btn plain" id="runQuit">
+              <Icon name="exit" />
+              <span className="buttonLabel">{"Quit"}</span>
+            </button>
+            <button className="btn green" id="runResume">
+              <Icon name="play" />
+              <span className="buttonLabel">{"Resume"}</span>
+            </button>
+          </div>
+        </div>
+      </Surface>
+      <Surface className="overlay scroll" id="ovRunEnd" tag="div">
+        <div className="panel sidePanel">
+          <div className="ribbon small" id="runEndTitle">
+            {"Round over"}
+          </div>
+          <div className="sideStars big" id="runEndStars"></div>
+          <p className="sub" id="runEndSub"></p>
+          <div className="sideRewards" id="runEndRows"></div>
+          <div className="btnRow">
+            <button className="btn plain" id="runEndMenu">
+              <Icon name="exit" />
+              <span className="buttonLabel">{"Menu"}</span>
+            </button>
+            <button className="btn green" id="runAgain">
+              <Icon name="restart" />
+              <span className="buttonLabel">{"Again"}</span>
+            </button>
+          </div>
         </div>
       </Surface>
       <Surface className="overlay scroll" id="ovReward" tag="div">

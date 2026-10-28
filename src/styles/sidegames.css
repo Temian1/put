@@ -1,0 +1,1053 @@
+/* ---------- Side games: Market Match and Okada Rush ---------- */
+
+/* Menu buttons */
+.row.sideRow {
+  gap: 8px;
+}
+.btn.sideBtn {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  gap: 8px;
+  justify-content: flex-start;
+  color: #fff;
+  font-size: 16px;
+}
+.btn.sideBtn .buttonLabel {
+  white-space: nowrap;
+}
+.btn.sideBtn .buttonLabel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.05;
+  min-width: 0;
+}
+.btn.sideBtn .lock {
+  font-size: 11.5px;
+  opacity: 0.92;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.btn.sideBtn .sideArt {
+  font-size: 22px;
+  flex: none;
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.18));
+}
+.btn.sideBtn.match {
+  background: linear-gradient(180deg, #ff8fb1, #e0457b);
+  box-shadow:
+    0 5px 0 #a8285a,
+    0 8px 14px rgba(0, 0, 0, 0.2);
+}
+.btn.sideBtn.run {
+  background: linear-gradient(180deg, #7aa7ff, #3e63d8);
+  box-shadow:
+    0 5px 0 #263f98,
+    0 8px 14px rgba(0, 0, 0, 0.2);
+}
+.btn.sideBtn.locked {
+  filter: grayscale(0.55) brightness(0.95);
+}
+
+/* Shared screen frame */
+.sideScreen {
+  display: flex;
+  flex-direction: column;
+  padding: calc(env(safe-area-inset-top, 0px) + 10px)
+    max(12px, env(safe-area-inset-right, 0px))
+    calc(env(safe-area-inset-bottom, 0px) + 10px)
+    max(12px, env(safe-area-inset-left, 0px));
+  box-sizing: border-box;
+  gap: 8px;
+}
+.sideScreen.show {
+  pointer-events: auto;
+}
+
+/* ---------- Market Match ---------- */
+#scrMatch {
+  background:
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(255, 255, 255, 0.5),
+      transparent 45%
+    ),
+    repeating-linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.07) 0 14px,
+      transparent 14px 28px
+    ),
+    linear-gradient(180deg, #ffb35c 0%, #ff8a3d 55%, #e8662a 100%);
+  align-items: center;
+}
+.m3Head {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.m3Title {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  color: #fff;
+  text-shadow: 0 2px 0 rgba(74, 31, 12, 0.5);
+  font-family: var(--display);
+  line-height: 1;
+}
+.m3Title small {
+  font-size: 13px;
+  opacity: 0.9;
+}
+.m3Title b {
+  font-size: 24px;
+  font-weight: normal;
+}
+.m3Moves {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 58px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #5a2a12, #3b1707);
+  color: #fff;
+  font-family: var(--display);
+  line-height: 1;
+  border: 3px solid #fff;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.2);
+}
+.m3Moves b {
+  font-size: 26px;
+  font-weight: normal;
+}
+.m3Moves small {
+  font-size: 11px;
+  opacity: 0.85;
+}
+.m3Moves.low b {
+  color: #ffd23f;
+  animation: m3Pulse 0.8s infinite;
+}
+.m3Goals {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.m3Goal {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px 4px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  font-family: var(--display);
+  color: var(--ink);
+  box-shadow: 0 3px 0 rgba(74, 31, 12, 0.18);
+}
+.m3Goal span {
+  font-size: 22px;
+}
+.m3Goal b {
+  font-size: 19px;
+  font-weight: normal;
+}
+.m3Goal small {
+  font-family: inherit;
+  font-size: 12px;
+  opacity: 0.75;
+}
+.m3Goal.done {
+  background: #d9f7df;
+  color: #1e7a3a;
+}
+.m3Wrap {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  max-width: 480px;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+}
+.m3Board {
+  position: relative;
+  border-radius: 18px;
+  background: rgba(74, 31, 12, 0.35);
+  box-shadow:
+    inset 0 4px 12px rgba(0, 0, 0, 0.25),
+    0 0 0 4px rgba(255, 255, 255, 0.85),
+    0 10px 0 rgba(74, 31, 12, 0.25);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.m3Board.shake {
+  animation: m3Shake 0.32s;
+}
+.m3cell {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--t);
+  height: var(--t);
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: background 0.3s;
+}
+.m3cell.grease {
+  background: radial-gradient(
+    circle at 40% 40%,
+    rgba(210, 160, 40, 0.75),
+    rgba(150, 90, 20, 0.65)
+  );
+  border-radius: 10px;
+}
+.m3t {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--t);
+  height: var(--t);
+  display: grid;
+  place-items: center;
+  transition: transform 0.18s cubic-bezier(0.3, 1.25, 0.5, 1);
+  will-change: transform;
+  z-index: 1;
+}
+.m3t span {
+  display: grid;
+  place-items: center;
+  width: 86%;
+  height: 86%;
+  border-radius: 30%;
+  font-size: calc(var(--t) * 0.56);
+  line-height: 1;
+  background:
+    radial-gradient(
+      circle at 32% 25%,
+      rgba(255, 255, 255, 0.85),
+      transparent 40%
+    ),
+    radial-gradient(circle at 50% 120%, rgba(0, 0, 0, 0.18), transparent 60%),
+    var(--c);
+  box-shadow:
+    inset 0 -3px 0 rgba(0, 0, 0, 0.18),
+    0 3px 0 rgba(0, 0, 0, 0.2);
+  transition: transform 0.15s;
+}
+.m3t.sel span {
+  transform: scale(1.12);
+  box-shadow:
+    0 0 0 3px #fff,
+    0 0 14px 4px rgba(255, 255, 255, 0.8);
+}
+.m3t.hint span {
+  animation: m3Hint 0.9s ease-in-out infinite;
+}
+.m3t.nope span {
+  animation: m3Nope 0.26s;
+}
+.m3t.pop span {
+  animation: m3Pop 0.24s ease-in forwards;
+}
+.m3t.born span {
+  animation: m3Born 0.4s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+.m3t.smash span {
+  animation: m3Smash 0.16s;
+}
+/* Special pieces */
+.m3t.sp span::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.m3t.sp span {
+  position: relative;
+}
+.m3t.row span::after {
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0 5px,
+    rgba(255, 255, 255, 0.75) 5px 8px
+  );
+  animation: m3Shine 1.2s linear infinite;
+}
+.m3t.col span::after {
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0 5px,
+    rgba(255, 255, 255, 0.75) 5px 8px
+  );
+  animation: m3Shine 1.2s linear infinite;
+}
+.m3t.pot span {
+  box-shadow:
+    0 0 0 3px #ffd23f,
+    0 0 12px 3px rgba(255, 140, 0, 0.9),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.18);
+  animation: m3Glow 1s ease-in-out infinite alternate;
+}
+.m3t.ladle span {
+  background:
+    radial-gradient(circle at 32% 25%, #fff, transparent 40%),
+    conic-gradient(#ff5a5f, #ffc531, #2fa34f, #12a99f, #7a5bd6, #ff5a5f);
+  box-shadow:
+    0 0 0 3px #fff,
+    0 0 16px 4px rgba(255, 255, 255, 0.9);
+  animation: m3Spin 2.4s linear infinite;
+}
+.m3t.ladle span::after {
+  content: "🥄";
+  display: grid;
+  place-items: center;
+  font-size: calc(var(--t) * 0.5);
+}
+.m3t.ladle span {
+  font-size: 0;
+}
+/* Effects */
+.m3Spark {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 3;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.8);
+}
+.m3Beam {
+  position: absolute;
+  pointer-events: none;
+  z-index: 4;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.95),
+    #ffd23f,
+    rgba(255, 255, 255, 0.95),
+    transparent
+  );
+  box-shadow: 0 0 18px 6px rgba(255, 200, 40, 0.8);
+}
+.m3Beam.row {
+  left: 0;
+  right: 0;
+  height: var(--t);
+  animation: m3BeamH 0.5s ease-out forwards;
+}
+.m3Beam.col {
+  top: 0;
+  bottom: 0;
+  width: var(--t);
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(255, 255, 255, 0.95),
+    #ffd23f,
+    rgba(255, 255, 255, 0.95),
+    transparent
+  );
+  animation: m3BeamV 0.5s ease-out forwards;
+}
+.m3Beam.pot,
+.m3Beam.ladle {
+  width: calc(var(--t) * 3);
+  height: calc(var(--t) * 3);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.95),
+    rgba(255, 170, 0, 0.7) 45%,
+    transparent 70%
+  );
+  transform: translate(-50%, -50%) scale(0.2);
+  animation: m3Ring 0.5s ease-out forwards;
+}
+.m3Beam.ladle {
+  width: calc(var(--t) * 7);
+  height: calc(var(--t) * 7);
+}
+.m3Float {
+  position: absolute;
+  z-index: 5;
+  transform: translate(-50%, -50%);
+  font-family: var(--display);
+  font-size: 20px;
+  color: #fff;
+  text-shadow:
+    0 2px 0 #4a1f0c,
+    0 0 6px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  animation: m3Float 0.9s ease-out forwards;
+}
+.m3Cheer {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  z-index: 6;
+  transform: translate(-50%, -50%) scale(0.4);
+  opacity: 0;
+  font-family: var(--display);
+  font-size: 30px;
+  color: #ffd23f;
+  white-space: nowrap;
+  text-shadow:
+    0 3px 0 #a8285a,
+    0 0 12px rgba(0, 0, 0, 0.35);
+  -webkit-text-stroke: 1.5px #4a1f0c;
+  pointer-events: none;
+}
+.m3Cheer.show {
+  animation: m3Cheer 0.9s cubic-bezier(0.3, 1.5, 0.5, 1) forwards;
+}
+.m3Cheer.big {
+  font-size: 36px;
+}
+.m3Tools {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.m3Tool {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  border: 3px solid #fff;
+  background: linear-gradient(180deg, #fff7e8, #ffe2a8);
+  box-shadow: 0 4px 0 rgba(74, 31, 12, 0.3);
+  font-size: 26px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.m3Tool:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 rgba(74, 31, 12, 0.3);
+}
+.m3Tool b {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 4px;
+  box-sizing: border-box;
+  border-radius: 11px;
+  background: var(--coral);
+  color: #fff;
+  font-family: var(--display);
+  font-weight: normal;
+  font-size: 13px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #fff;
+}
+.m3Tool.armed {
+  background: linear-gradient(180deg, #fff, #ffd23f);
+  box-shadow:
+    0 0 0 3px #ffd23f,
+    0 0 16px rgba(255, 210, 63, 0.9);
+  animation: m3Pulse 0.8s infinite;
+}
+.m3Score {
+  margin-left: auto;
+  text-align: right;
+  color: #fff;
+  font-family: var(--display);
+  line-height: 1;
+  text-shadow: 0 2px 0 rgba(74, 31, 12, 0.5);
+}
+.m3Score small {
+  display: block;
+  font-size: 12px;
+}
+.m3Score b {
+  font-size: 24px;
+  font-weight: normal;
+}
+
+/* ---------- Start and result panels ---------- */
+.sidePanel {
+  text-align: center;
+}
+.levelPick {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-family: var(--display);
+  font-size: 24px;
+}
+.levelPick b {
+  font-weight: normal;
+}
+.levelPick .iconBtn:disabled {
+  opacity: 0.35;
+}
+.sideStars {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  font-size: 20px;
+  color: rgba(74, 31, 12, 0.2);
+}
+.sideStars.big {
+  font-size: 44px;
+  margin: 2px 0 4px;
+}
+.sideStars i {
+  font-style: normal;
+}
+.sideStars i.on {
+  color: var(--gold);
+  -webkit-text-stroke: 1.5px #b06f00;
+  animation: starIn 0.45s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+}
+.sideStars i.on:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.sideStars i.on:nth-child(3) {
+  animation-delay: 0.3s;
+}
+.m3StartGoals {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 10px 0 4px;
+}
+.sideShop {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 8px 0 12px;
+}
+.shopChip {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 8px;
+  align-items: center;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 14px;
+  border: 2px solid rgba(74, 31, 12, 0.12);
+  background: rgba(255, 255, 255, 0.85);
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.shopChip span {
+  grid-row: span 2;
+  font-size: 24px;
+}
+.shopChip b {
+  font-size: 13.5px;
+  line-height: 1.1;
+}
+.shopChip small {
+  font-size: 12px;
+  opacity: 0.75;
+  font-weight: 800;
+}
+.shopChip.on {
+  border-color: var(--teal);
+  background: #dff7f3;
+}
+.sideRewards {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0 12px;
+}
+.rewardRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 10px;
+  text-align: left;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.8);
+  animation: rowIn 0.35s ease-out both;
+}
+.rewardRow:nth-child(2) {
+  animation-delay: 0.08s;
+}
+.rewardRow:nth-child(3) {
+  animation-delay: 0.16s;
+}
+.rewardRow:nth-child(4) {
+  animation-delay: 0.24s;
+}
+.rewardRow:nth-child(n + 5) {
+  animation-delay: 0.32s;
+}
+.rewardRow span {
+  font-size: 24px;
+  grid-row: span 2;
+}
+.rewardRow small {
+  grid-column: 2;
+  font-size: 12px;
+  opacity: 0.75;
+}
+.rewardRow em {
+  font-style: normal;
+  font-family: var(--display);
+  font-size: 17px;
+}
+.rewardRow.recipe {
+  background: linear-gradient(90deg, #fff2c4, #ffe08a);
+  box-shadow: 0 0 0 2px #ffc531;
+}
+
+/* ---------- Okada Rush ---------- */
+#scrRun {
+  background: transparent;
+  color: #fff;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+.runHud {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.runStat {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 8px;
+  border-radius: 14px;
+  background: rgba(30, 14, 4, 0.62);
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  font-family: var(--display);
+  line-height: 1.05;
+  text-align: center;
+}
+.runStat small {
+  display: block;
+  font-size: 11px;
+  opacity: 0.85;
+}
+.runStat b {
+  font-size: 19px;
+  font-weight: normal;
+  white-space: nowrap;
+}
+.runStat.low b {
+  color: #ff8a80;
+  animation: m3Pulse 0.6s infinite;
+}
+.runStat.done {
+  border-color: #3be07a;
+}
+.runStat.done b {
+  color: #b9ffcd;
+}
+.runRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.runPacks {
+  display: flex;
+  gap: 6px;
+}
+.runPacks .pack {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(30, 14, 4, 0.55);
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.runPacks .pack i {
+  font-style: normal;
+  font-size: 24px;
+}
+.runPacks .pack em {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 5px;
+  background: hsl(calc(var(--h) * 30 + 190 - var(--h) * 190), 90%, 55%);
+  transition: width 0.3s;
+}
+.runPacks .pack.empty {
+  opacity: 0.35;
+}
+.runLives {
+  display: flex;
+  gap: 4px;
+  font-size: 22px;
+}
+.runLives i {
+  font-style: normal;
+  color: rgba(255, 255, 255, 0.3);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.3);
+}
+.runLives i.on {
+  color: #ff4f6d;
+}
+.runPowers {
+  display: flex;
+  gap: 6px;
+  min-height: 28px;
+}
+.runPowers span {
+  padding: 3px 10px 3px 6px;
+  border-radius: 999px;
+  background: rgba(30, 14, 4, 0.62);
+  font-family: var(--display);
+  font-size: 15px;
+  animation: rowIn 0.25s ease-out;
+}
+.runPowers b {
+  margin-right: 4px;
+}
+.runMsg {
+  position: absolute;
+  left: 50%;
+  top: 34%;
+  transform: translate(-50%, -50%);
+  max-width: 88%;
+  text-align: center;
+  font-family: var(--display);
+  font-size: 26px;
+  line-height: 1.15;
+  text-shadow:
+    0 3px 0 #263f98,
+    0 0 12px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  pointer-events: none;
+}
+.runMsg.show {
+  animation: runMsg 1.4s ease-out forwards;
+}
+.runCombo {
+  position: absolute;
+  right: 14px;
+  top: 40%;
+  font-family: var(--display);
+  font-size: 22px;
+  color: #ffd23f;
+  text-shadow: 0 2px 0 #a8285a;
+}
+.runFloats {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  pointer-events: none;
+}
+.runFloat {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-family: var(--display);
+  font-size: 24px;
+  animation: runFloat 1.1s ease-out forwards;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
+}
+.runFloat.pay {
+  color: #b9ffcd;
+  font-size: 28px;
+}
+.runFloat.miss {
+  color: #ff8a80;
+  font-size: 18px;
+}
+.runPad {
+  margin-top: auto;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  opacity: 0.75;
+}
+.runPad button {
+  flex: 1;
+  height: 54px;
+  border-radius: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  background: rgba(30, 14, 4, 0.45);
+  color: #fff;
+  display: grid;
+  place-items: center;
+}
+.runPad button:active {
+  background: rgba(255, 255, 255, 0.3);
+}
+.runPad .buttonIcon {
+  width: 26px;
+  height: 26px;
+}
+#runSlide .buttonIcon {
+  transform: rotate(90deg);
+}
+.runTier {
+  margin: 8px 0;
+}
+.runTier > b {
+  display: block;
+  font-family: var(--display);
+  font-weight: normal;
+  font-size: 24px;
+}
+.runTier > small {
+  display: block;
+  opacity: 0.8;
+  font-weight: 800;
+}
+.tierFacts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: 8px 0 4px;
+}
+.tierFacts span {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.85);
+  font-size: 13px;
+  font-weight: 800;
+}
+.howRun {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  text-align: left;
+  font-size: 12.5px;
+  font-weight: 800;
+}
+.howRun span {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 8px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.7);
+}
+.howRun b {
+  font-size: 16px;
+  flex: none;
+}
+
+/* ---------- Keyframes ---------- */
+@keyframes m3Pop {
+  40% {
+    transform: scale(1.25);
+  }
+  100% {
+    transform: scale(0);
+    opacity: 0;
+  }
+}
+@keyframes m3Born {
+  0% {
+    transform: scale(0.3) rotate(-30deg);
+  }
+  100% {
+    transform: scale(1) rotate(0);
+  }
+}
+@keyframes m3Hint {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.12) rotate(6deg);
+  }
+}
+@keyframes m3Nope {
+  25% {
+    transform: translateX(-4px);
+  }
+  75% {
+    transform: translateX(4px);
+  }
+}
+@keyframes m3Smash {
+  50% {
+    transform: scale(0.7);
+  }
+}
+@keyframes m3Shake {
+  20% {
+    transform: translate(-4px, 2px);
+  }
+  40% {
+    transform: translate(4px, -2px);
+  }
+  60% {
+    transform: translate(-3px, 1px);
+  }
+  80% {
+    transform: translate(2px, -1px);
+  }
+}
+@keyframes m3Shine {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 16px 16px;
+  }
+}
+@keyframes m3Glow {
+  to {
+    box-shadow:
+      0 0 0 3px #ffd23f,
+      0 0 20px 6px rgba(255, 120, 0, 1),
+      inset 0 -3px 0 rgba(0, 0, 0, 0.18);
+  }
+}
+@keyframes m3Spin {
+  to {
+    filter: hue-rotate(360deg);
+  }
+}
+@keyframes m3BeamH {
+  from {
+    transform: scaleX(0.1);
+    opacity: 1;
+  }
+  to {
+    transform: scaleX(1);
+    opacity: 0;
+  }
+}
+@keyframes m3BeamV {
+  from {
+    transform: scaleY(0.1);
+    opacity: 1;
+  }
+  to {
+    transform: scaleY(1);
+    opacity: 0;
+  }
+}
+@keyframes m3Ring {
+  to {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0;
+  }
+}
+@keyframes m3Float {
+  to {
+    transform: translate(-50%, -150%);
+    opacity: 0;
+  }
+}
+@keyframes m3Cheer {
+  0% {
+    transform: translate(-50%, -50%) scale(0.4) rotate(-8deg);
+    opacity: 0;
+  }
+  25% {
+    transform: translate(-50%, -50%) scale(1.15) rotate(3deg);
+    opacity: 1;
+  }
+  75% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -80%) scale(0.9);
+    opacity: 0;
+  }
+}
+@keyframes m3Pulse {
+  50% {
+    transform: scale(1.12);
+  }
+}
+@keyframes starIn {
+  from {
+    transform: scale(0) rotate(-90deg);
+  }
+  to {
+    transform: scale(1) rotate(0);
+  }
+}
+@keyframes rowIn {
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+}
+@keyframes runMsg {
+  0% {
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 0;
+  }
+  15% {
+    transform: translate(-50%, -50%) scale(1.1);
+    opacity: 1;
+  }
+  80% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -70%) scale(1);
+    opacity: 0;
+  }
+}
+@keyframes runFloat {
+  0% {
+    transform: translate(-50%, 10px) scale(0.6);
+    opacity: 0;
+  }
+  20% {
+    transform: translate(-50%, 0) scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -80px) scale(1);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .m3t.ladle span,
+  .m3t.pot span,
+  .m3t.row span::after,
+  .m3t.col span::after,
+  .m3t.hint span {
+    animation: none;
+  }
+}
+/* New tiles drop in from behind the board's top edge. */
+.m3Board {
+  overflow: hidden;
+}
+@media (max-width: 360px) {
+  .btn.sideBtn {
+    font-size: 15px;
+    padding: 8px 8px;
+    justify-content: center;
+  }
+  .btn.sideBtn .sideArt {
+    display: none;
+  }
+  .btn.sideBtn .buttonLabel {
+    align-items: center;
+  }
+}

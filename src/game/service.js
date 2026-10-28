@@ -1,3 +1,4 @@
+import { RECIPES } from "./sidegames.js";
 // The owner's job once staff do the routine work: run the service in waves,
 // tell the crew what matters most, and finish the premium plates yourself.
 
@@ -84,9 +85,12 @@ export const SPECIAL_DISHES = [
   { id: "suya", name: "Chicken suya special", food: "chicken", mult: 2.4 },
 ];
 
-// Specials the current menu can make.
-export const specialsFor = (foods) =>
-  SPECIAL_DISHES.filter((s) => foods.includes(s.food));
+// Specials the current menu can make, plus recipe specials won in
+// Market Match (`recipes` lists their ids).
+export const specialsFor = (foods, recipes = []) =>
+  [...SPECIAL_DISHES, ...RECIPES.filter((r) => recipes.includes(r.id))].filter(
+    (s) => foods.includes(s.food),
+  );
 
 // `pos` is the marker position from 0 to 1 when the owner tapped.
 export function plateQuality(pos) {

@@ -206,6 +206,10 @@ import {
   settleDebt,
 } from "../game/business.js";
 import { Lifetime } from "./Lifetime.js";
+import { createMarketMatch } from "../modes/MarketMatch.js";
+import { createOkadaRush } from "../modes/OkadaRush.js";
+import { tierFor, RUN_UNLOCK } from "../game/runner.js";
+import { sideSave, RECIPES } from "../game/sidegames.js";
 
 // Procedural geometry, scene choreography and timing are retained from the reference.
 export function mountGame(canvas, host, bridge) {
@@ -6515,12 +6519,17 @@ export function mountGame(canvas, host, bridge) {
       this.specialT -= dt;
       if (this.specialT > 0) return;
       this.specialT = rnd(55, 90);
-      const options = specialsFor(this.cfg.foods).filter((d) => {
+      const options = specialsFor(
+        this.cfg.foods,
+        Save.d.side?.recipes || [],
+      ).filter((d) => {
         const ck = this.cookers[d.food];
         return !ck || hasPortion(ck);
       });
       if (!options.length) return;
-      const dish = pick(options);
+      const won = options.filter((d) => d.level);
+      const dish =
+        won.length && Math.random() < 0.5 ? pick(won) : pick(options);
       this.special = { dish, left: 25 };
       const b = $("#btnSpecial");
       b.hidden = false;
@@ -7960,6 +7969,11 @@ export function mountGame(canvas, host, bridge) {
     camMode("menu");
     const el = Save.d.unlocked > 50;
     $("#endlessLock").hidden = el;
+    const tier = tierFor(Save.d.unlocked - 1);
+    $("#runSub").textContent = tier ? tier.name : `Level ${RUN_UNLOCK}`;
+    $("#btnRun").classList.toggle("locked", !tier);
+    $("#matchSub").textContent =
+      `${(Save.d.side?.recipes || []).length}/${RECIPES.length} recipes`;
     $("#btnEndless").classList.toggle("pulse", el);
     if (firstLaunch()) setTimeout(openGuide, 700);
     else if (Save.d.lastClaim !== today()) setTimeout(openReward, 700);
@@ -8287,6 +8301,46 @@ export function mountGame(canvas, host, bridge) {
       Sound.init();
       f(e);
     });
+  const sideCtx = {
+    T3,
+    renderer,
+    $,
+    on,
+    listen,
+    UI,
+    Save,
+    Sound,
+    Haptics,
+    fmt: fmtNaira,
+    today,
+    person: (seed = ri(0, 99)) =>
+      makePerson({
+        skin: SKINS[seed % SKINS.length],
+        bodyMat: M(["#2F8F6B", "#3E7CB1", "#C8553D", "#8E5B3E"][seed % 4]),
+        accent: ["#FFC531", "#12A99F", "#FF5A5F"][seed % 3],
+        hat: ["cap", "gele", "afro"][seed % 3],
+        scale: 1,
+      }),
+    onExit: () => {
+      Game.state = "menu";
+      UI.coins();
+      showMenu();
+      fitCamera();
+    },
+  };
+  const Match = createMarketMatch(sideCtx);
+  const Rush = createOkadaRush(sideCtx);
+  const sideActive = () => Match.active() || Rush.active();
+  on("#btnMatch", () => {
+    Sound.play("click");
+    Game.state = "side";
+    Match.open();
+  });
+  on("#btnRun", () => {
+    Sound.play("click");
+    Game.state = "side";
+    if (!Rush.open()) Game.state = "menu";
+  });
   on("#btnPlay", () => {
     Sound.play("click");
     openMap();
@@ -8437,6 +8491,7 @@ export function mountGame(canvas, host, bridge) {
   function openBooks() {
     bridge.books({
       journal: (Save.d.journal || []).slice().reverse(),
+      side: sideSave(Save.d).log.slice().reverse(),
       history: Save.d.history || [],
       summary: bookSummary(Save.d.history || [], 7),
       targets: TARGETS,
@@ -9033,6 +9088,8 @@ export function mountGame(canvas, host, bridge) {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     T += dt;
+    if (Rush.active()) return Rush.update(dt);
+    if (Match.active()) return;
     if (Game.state !== "paused") {
       Game.update(dt);
       if (Game.state === "menu" || Game.state === "map") {
@@ -9207,6 +9264,9 @@ export function mountGame(canvas, host, bridge) {
         cam,
         Online,
         syncNow,
+        Match,
+        Rush,
+        sideActive,
       };
   }
   /* ================= ACCOUNT (Kikter account / Lagos Life) ================= */
