@@ -135,6 +135,18 @@ import { applyGrants, grantLabel } from "../game/grants.js";
 import { tablesAt, canPlace, saveLayout, snap } from "../game/layout.js";
 import { styleFor } from "../game/styles.js";
 import {
+  waveOf,
+  waveDone,
+  waveCount,
+  PRIORITIES,
+  DEFAULT_PRIORITY,
+  serverOrder,
+  cookAhead,
+  specialsFor,
+  plateQuality,
+  specialPrice,
+} from "../game/service.js";
+import {
   shiftInsights,
   recordDay,
   bookSummary,
@@ -4027,6 +4039,24 @@ export function mountGame(canvas, host, bridge) {
     ],
   };
   const roleCount = {};
+  const TASK_WORDS = {
+    serve: "served",
+    pack: "packed",
+    cook: "pots cooked",
+    wash: "washes",
+    clear: "tables cleared",
+    sweep: "swept",
+    market: "market runs",
+  };
+  const TASK_ICONS = {
+    serve: "🍛",
+    pack: "📦",
+    cook: "🔥",
+    wash: "🧽",
+    clear: "🍽️",
+    sweep: "🧹",
+    market: "🛒",
+  };
   let litterSeq = 0;
   const V = (x, z) => new T3.Vector3(x, 0, z);
   class Helper {
@@ -4064,6 +4094,12 @@ export function mountGame(canvas, host, bridge) {
       this.root = this.P.root;
       this.root.position.copy(this.home);
       world.add(this.root);
+      this.done = {};
+      this.task = "";
+      this.tag = document.createElement("div");
+      this.tag.className = "helperTag";
+      this.tag.hidden = true;
+      host.querySelector("#world")?.appendChild(this.tag);
       setFace(this.P, "happy");
       // Riders wait at the roadside by the parked okadas (built with the scene).
     }
@@ -4099,6 +4135,11 @@ export function mountGame(canvas, host, bridge) {
       }
       return [this.home.clone()];
     }
+    // Starts a job and remembers what it is, for the status tag.
+    goAs(task, path, run, hold, face) {
+      this.task = task;
+      return this.go(path, run, hold, face);
+    }
     go(path, run, hold = 0.6, face = Math.PI) {
       this.path = path;
       this.job = { run, hold, face };
@@ -4116,78 +4157,94 @@ export function mountGame(canvas, host, bridge) {
           const ck = G0.cookers[f];
           return !!stations[f] && (!ck || hasPortion(ck));
         };
-        // One trip serves the whole order: the server picks up every dish
-        // that is ready along the bench, then hands them over together.
-        for (const c of waiting) {
-          if (G0.claimed.has("cust" + c.id)) continue;
-          const first = nextNeeded(c.order).find(
-            (it) => ready(it.f) && !G0.claimed.has(c.id + it.f),
-          );
-          if (!first) continue;
-          const xs = [
-            ...new Set(
-              c.order
-                .filter((it) => !it.done && ready(it.f))
-                .map((it) => stations[it.f].position.x),
-            ),
-          ].sort(
-            (a, b) =>
-              Math.abs(a - this.root.position.x) -
-              Math.abs(b - this.root.position.x),
-          );
-          G0.claimed.add("cust" + c.id);
-          return this.go(
-            [
-              ...this.toBench(xs[0]),
-              ...xs.slice(1).map((x) => V(clamp(x, -3.3, 3.3), 2.95)),
-            ],
-            () => {
-              G0.claimed.delete("cust" + c.id);
-              if (c.state !== "wait") return false;
-              let served = 0;
-              for (let guard = 0; guard < 8; guard++) {
-                const it = nextNeeded(c.order).find(
-                  (o) => ready(o.f) && c.needs(o.f),
-                );
-                if (!it) break;
-                const k = G0.cookers[it.f],
-                  st = stations[it.f];
-                if (k) takePortion(k);
-                st.userData.bounce = 1;
-                G0.deliver(
-                  c,
-                  it.f,
-                  st.getWorldPosition(new T3.Vector3()).setY(1.4),
-                );
-                served++;
-              }
-              return served > 0;
-            },
-            0.5 + 0.12 * xs.length,
-          );
-        }
-        for (const o of G0.orders)
-          for (const it of o.items) {
-            if (!packNeeds(o, it.f)) continue;
-            const claim = `pack:${o.id}:${it.f}`;
-            if (G0.claimed.has(claim)) continue;
-            const ck = G0.cookers[it.f];
-            if (ck && !hasPortion(ck)) continue;
-            const st = stations[it.f];
-            G0.claimed.add(claim);
-            return this.go(this.toBench(st ? st.position.x : 0), () => {
-              G0.claimed.delete(claim);
-              const k = G0.cookers[it.f];
-              if (
-                !G0.orders.includes(o) ||
-                !packNeeds(o, it.f) ||
-                (k && !hasPortion(k))
-              )
-                return false;
-              if (k) takePortion(k);
-              G0.fillPack(o, it.f);
-            });
+        // The owner's crew priority decides which job a server looks at first.
+        const counterJob = () => {
+          // One trip serves the whole order: the server picks up every dish
+          // that is ready along the bench, then hands them over together.
+          for (const c of waiting) {
+            if (G0.claimed.has("cust" + c.id)) continue;
+            const first = nextNeeded(c.order).find(
+              (it) => ready(it.f) && !G0.claimed.has(c.id + it.f),
+            );
+            if (!first) continue;
+            const xs = [
+              ...new Set(
+                c.order
+                  .filter((it) => !it.done && ready(it.f))
+                  .map((it) => stations[it.f].position.x),
+              ),
+            ].sort(
+              (a, b) =>
+                Math.abs(a - this.root.position.x) -
+                Math.abs(b - this.root.position.x),
+            );
+            G0.claimed.add("cust" + c.id);
+            return this.goAs(
+              "serve",
+              [
+                ...this.toBench(xs[0]),
+                ...xs.slice(1).map((x) => V(clamp(x, -3.3, 3.3), 2.95)),
+              ],
+              () => {
+                G0.claimed.delete("cust" + c.id);
+                if (c.state !== "wait") return false;
+                let served = 0;
+                for (let guard = 0; guard < 8; guard++) {
+                  const it = nextNeeded(c.order).find(
+                    (o) => ready(o.f) && c.needs(o.f),
+                  );
+                  if (!it) break;
+                  const k = G0.cookers[it.f],
+                    st = stations[it.f];
+                  if (k) takePortion(k);
+                  st.userData.bounce = 1;
+                  G0.deliver(
+                    c,
+                    it.f,
+                    st.getWorldPosition(new T3.Vector3()).setY(1.4),
+                  );
+                  served++;
+                }
+                return served > 0;
+              },
+              0.5 + 0.12 * xs.length,
+            );
           }
+          return false;
+        };
+        const packJob = () => {
+          for (const o of G0.orders)
+            for (const it of o.items) {
+              if (!packNeeds(o, it.f)) continue;
+              const claim = `pack:${o.id}:${it.f}`;
+              if (G0.claimed.has(claim)) continue;
+              const ck = G0.cookers[it.f];
+              if (ck && !hasPortion(ck)) continue;
+              const st = stations[it.f];
+              G0.claimed.add(claim);
+              return this.goAs(
+                "pack",
+                this.toBench(st ? st.position.x : 0),
+                () => {
+                  G0.claimed.delete(claim);
+                  const k = G0.cookers[it.f];
+                  if (
+                    !G0.orders.includes(o) ||
+                    !packNeeds(o, it.f) ||
+                    (k && !hasPortion(k))
+                  )
+                    return false;
+                  if (k) takePortion(k);
+                  G0.fillPack(o, it.f);
+                },
+              );
+            }
+          return false;
+        };
+        for (const k of serverOrder(G0.priority)) {
+          const r = k === "pack" ? packJob() : counterJob();
+          if (r) return r;
+        }
       } else if (role === "rider") {
         const o = G0.orders.find((x) => packComplete(x) && !x.packing);
         if (o && G0.riders.some((r) => r.id === this.spec.id && r.away <= 0)) {
@@ -4206,7 +4263,8 @@ export function mountGame(canvas, host, bridge) {
           ...new Set(G0.cfg.foods.map((f) => FOOD_GROUP[f])),
         ].filter((g) => (Save.d.pantry[g] || 0) < 2 && !isOut(Save.d, g));
         if (low || groups.length)
-          return this.go(
+          return this.goAs(
+            "market",
             [V(MARKET_EXIT.x, MARKET_EXIT.z)],
             () => {
               this.root.visible = false;
@@ -4231,7 +4289,8 @@ export function mountGame(canvas, host, bridge) {
           !s.washing &&
           (sinkFull(s) || s.plates >= 2 || !G0.anyDirty())
         )
-          return this.go(
+          return this.goAs(
+            "wash",
             [V(SINK_POS.x, SINK_POS.z - 0.2)],
             () => G0.wash(true),
             s.plates * G0.washTime + 0.3,
@@ -4241,7 +4300,8 @@ export function mountGame(canvas, host, bridge) {
         const lane = G0.dirty.findIndex((d, i) => d && i < G0.laneX.length);
         if (lane >= 0 && !G0.claimed.has("lane" + lane)) {
           G0.claimed.add("lane" + lane);
-          return this.go(
+          return this.goAs(
+            "clear",
             this.toFront(G0.laneX[lane]),
             () => {
               G0.claimed.delete("lane" + lane);
@@ -4257,7 +4317,8 @@ export function mountGame(canvas, host, bridge) {
         );
         if (l && (ti < 0 || G0.litter.length >= 3)) {
           G0.claimed.add("litter" + l.id);
-          return this.go(
+          return this.goAs(
+            "sweep",
             [...this.toTable({ x: l.x }), V(l.x, l.z + 0.35)],
             () => {
               G0.claimed.delete("litter" + l.id);
@@ -4269,7 +4330,8 @@ export function mountGame(canvas, host, bridge) {
         }
         if (ti >= 0) {
           G0.claimed.add("table" + ti);
-          return this.go(
+          return this.goAs(
+            "clear",
             this.toTable(G0.tables[ti]),
             () => {
               G0.claimed.delete("table" + ti);
@@ -4312,13 +4374,15 @@ export function mountGame(canvas, host, bridge) {
                   c.order.some((o) => o.f === id && !o.done),
               ) ||
               G0.orders.some((o) => packNeeds(o, id)) ||
-              ck.spec.hold === Infinity;
+              ck.spec.hold === Infinity ||
+              cookAhead(G0.priority);
           if (
             (ck.stage === "burnt" || (ck.stage === "raw" && wanted)) &&
             !G0.claimed.has("cook" + id)
           ) {
             G0.claimed.add("cook" + id);
-            return this.go(
+            return this.goAs(
+              "cook",
               this.toBench(stations[id].position.x),
               () => {
                 G0.claimed.delete("cook" + id);
@@ -4388,8 +4452,10 @@ export function mountGame(canvas, host, bridge) {
           if (j.run() === false) {
             this.t = 0;
             this.work = 0;
+            this.task = "";
             return;
           }
+          if (this.task) this.done[this.task] = (this.done[this.task] || 0) + 1;
         }
         this.work = j.hold;
         this.face = j.face;
@@ -4439,6 +4505,7 @@ export function mountGame(canvas, host, bridge) {
       this.job = null;
     }
     dispose() {
+      this.tag?.remove();
       retainResources(this.root);
       world.remove(this.root);
       if (this.bike) {
@@ -4769,7 +4836,33 @@ export function mountGame(canvas, host, bridge) {
       this.handActs = 0;
       this.runT = 3;
       this.watchT = 1.5;
+      this.priority = Save.d.priority || DEFAULT_PRIORITY;
+      this.wavePrev = 0;
+      this.waveCoins = 0;
+      this.waveLost = 0;
+      this.special = null;
+      this.specials = 0;
+      this.specialT =
+        (cfg.mode === "level" && cfg.n >= 6) ||
+        cfg.mode === "daily" ||
+        cfg.mode === "endless"
+          ? rnd(40, 65)
+          : Infinity;
       this.toldEmpty = false;
+      // A long level continues from its last wave if the game was closed.
+      if (cfg.mode === "level") {
+        const run = cfg.resume;
+        if (run) {
+          this.score = this.dispScore = run.score || 0;
+          this.coinsEarned = this.dispCoins = run.coinsEarned || 0;
+          this.served = this.wavePrev = run.served || 0;
+          this.lost = run.lost || 0;
+          this.lives = Math.max(1, run.lives || 3);
+          this.time = run.time ?? this.time;
+          this.waveCoins = this.coinsEarned;
+          this.waveLost = this.lost;
+        } else delete Save.d.levelRun;
+      }
       // Endless continues where it stopped when the game was closed.
       if (cfg.mode === "endless") {
         const run = cfg.resume;
@@ -4893,6 +4986,8 @@ export function mountGame(canvas, host, bridge) {
       this.syncStations();
       this.updateTools();
       this.updateHUD(true);
+      $("#btnSpecial").hidden = true;
+      updatePriorityBtn();
       UI.show("scrGame");
       camMode("game");
       this.state = "intro";
@@ -4909,6 +5004,16 @@ export function mountGame(canvas, host, bridge) {
             ? `${m.name} is running it today`
             : "No manager here: only its staff are working",
           "Pause to leave",
+        );
+        return;
+      }
+      if (cfg.resume && cfg.mode === "level") {
+        const w = waveOf(this.served, cfg.goal);
+        banner(
+          `Level ${cfg.n} continues`,
+          `Wave ${w.index + 1} of ${w.count} · ${this.served} / ${cfg.goal} served`,
+          "",
+          false,
         );
         return;
       }
@@ -5257,6 +5362,7 @@ export function mountGame(canvas, host, bridge) {
       this.combo++;
       this.bestCombo = Math.max(this.bestCombo, this.combo);
       this.served++;
+      this.afterServe();
       this.track("serve");
       this.track("earn", coins + tip);
       this.track("combo", this.combo);
@@ -5548,6 +5654,7 @@ export function mountGame(canvas, host, bridge) {
           this.coinsEarned += value;
           this.score += value;
           this.served++;
+          this.afterServe();
           this.track("serve");
           this.track("earn", value);
           this.rep(o.kind === "event" ? REP.eventDone : REP.delivered);
@@ -5964,6 +6071,132 @@ export function mountGame(canvas, host, bridge) {
       ins.path = [V(INSPECT_POS.x, STREET_Z), V(10, STREET_Z)];
       ins.P.armR.rotation.x = 0;
     },
+    /* ---- service waves: a short planning break between waves ---- */
+    afterServe() {
+      const c = this.cfg;
+      if (c.mode !== "level" || this.state !== "playing") return;
+      const prev = this.wavePrev;
+      this.wavePrev = this.served;
+      if (waveDone(prev, this.served, c.goal)) this.waveBreak();
+    },
+    waveBreak() {
+      const c = this.cfg,
+        done = waveOf(this.served - 1, c.goal);
+      this.prevState = this.state;
+      this.state = "break";
+      $("#waveTitle").textContent =
+        `Wave ${done.index + 1} of ${done.count} done!`;
+      $("#waveServed").textContent = `${this.served} / ${c.goal}`;
+      $("#waveSales").textContent = fmtNaira(this.coinsEarned - this.waveCoins);
+      $("#waveLost").textContent = String(this.lost - this.waveLost);
+      $("#waveNext").textContent =
+        `Next: customers ${done.end + 1} to ${waveOf(done.end, c.goal).end}. Restock, set your crew's priority, then open the doors.`;
+      this.waveCoins = this.coinsEarned;
+      this.waveLost = this.lost;
+      renderPriority("#wavePriority");
+      $("#wavePriority").hidden = !this.helpers.length;
+      this.saveLevelRun();
+      UI.open("ovWave");
+      Sound.play("star");
+    },
+    endBreak() {
+      UI.close("ovWave");
+      UI.close("ovMarket");
+      this.state = "playing";
+      banner("Doors open!", "Next wave coming in", "", false);
+    },
+    // Keeps a long level so closing the game resumes it at the last wave.
+    saveLevelRun() {
+      const c = this.cfg;
+      if (c?.mode !== "level" || waveCount(c.goal) < 2) return;
+      Save.d.levelRun = {
+        n: c.n,
+        score: Math.round(this.score),
+        coinsEarned: Math.round(this.coinsEarned),
+        served: this.served,
+        lost: this.lost,
+        lives: this.lives,
+        time: Math.round(this.time),
+        at: Date.now(),
+      };
+      Save.save();
+    },
+    /* ---- crew priority ---- */
+    setPriority(key) {
+      if (!PRIORITIES[key]) return;
+      this.priority = key;
+      Save.d.priority = key;
+      Save.save();
+      renderPriority("#wavePriority");
+      updatePriorityBtn();
+      UI.toast(`${PRIORITIES[key].label}: ${PRIORITIES[key].desc}`);
+    },
+    /* ---- owner specials: premium plates the owner finishes ---- */
+    updateSpecial(dt) {
+      if (this.special) {
+        this.special.left -= dt;
+        if (this.special.left <= 0) {
+          this.special = null;
+          $("#btnSpecial").hidden = true;
+        }
+        return;
+      }
+      this.specialT -= dt;
+      if (this.specialT > 0) return;
+      this.specialT = rnd(55, 90);
+      const options = specialsFor(this.cfg.foods).filter((d) => {
+        const ck = this.cookers[d.food];
+        return !ck || hasPortion(ck);
+      });
+      if (!options.length) return;
+      const dish = pick(options);
+      this.special = { dish, left: 25 };
+      const b = $("#btnSpecial");
+      b.hidden = false;
+      b.querySelector("b").textContent = dish.name;
+      this.notify(
+        "🍽️",
+        `A guest wants the ${dish.name}. Tap Special to plate it yourself!`,
+      );
+      Sound.play("combo");
+    },
+    openSpecial() {
+      if (!this.special || this.state !== "playing") return;
+      const d = this.special.dish;
+      this.prevState = this.state;
+      this.state = "special";
+      $("#specialName").textContent = d.name;
+      $("#specialInfo").textContent =
+        `Your crew cooked it; you plate it. Tap when the marker is in the middle. Up to ${fmtNaira(specialPrice(FOODS[d.food].price, d, plateQuality(0.5)))}.`;
+      const m = $("#specialMarker");
+      m.style.animation = "none";
+      void m.offsetWidth;
+      m.style.animation = "";
+      UI.open("ovSpecial");
+    },
+    plateSpecial() {
+      if (this.state !== "special" || !this.special) return;
+      const bar = $("#specialBar").getBoundingClientRect(),
+        mk = $("#specialMarker").getBoundingClientRect(),
+        pos = clamp((mk.left + mk.width / 2 - bar.left) / bar.width, 0, 1);
+      const d = this.special.dish,
+        q = plateQuality(pos),
+        price = specialPrice(FOODS[d.food].price, d, q);
+      const ck = this.cookers[d.food];
+      if (ck && hasPortion(ck)) takePortion(ck);
+      this.coinsEarned += price;
+      this.score += price;
+      this.specials++;
+      this.rep(q.rep);
+      this.special = null;
+      $("#btnSpecial").hidden = true;
+      UI.close("ovSpecial");
+      this.state = "playing";
+      Sound.play(q.bonus >= 0.7 ? "star" : "coin");
+      comboText(`${q.grade.toUpperCase()}! +${fmtNairaShort(price)}`);
+      this.track("earn", price);
+      this.updateHUD();
+    },
     // Keeps an Endless run so closing the game does not lose it.
     saveRun(active = true) {
       if (this.cfg?.mode !== "endless" || this.state === "over") return;
@@ -6372,6 +6605,23 @@ export function mountGame(canvas, host, bridge) {
             cls: "warn",
           }),
       );
+      if (this.specials)
+        rows.push({
+          label: "Owner's specials plated",
+          value: String(this.specials),
+          cls: "pos",
+        });
+      for (const h of this.helpers) {
+        const n = Object.values(h.done).reduce((t, v) => t + v, 0);
+        if (n)
+          rows.push({
+            label: `${h.spec.name} (${h.spec.title.toLowerCase()})`,
+            value: Object.entries(h.done)
+              .map(([k, v]) => `${v} ${TASK_WORDS[k] || k}`)
+              .join(", "),
+            cls: "staffRow",
+          });
+      }
       if (market.news)
         rows.push({ label: "Market news", value: market.news, cls: "news" });
       // The books and Mama Nkechi's debrief.
@@ -6463,6 +6713,7 @@ export function mountGame(canvas, host, bridge) {
     },
     showEnd() {
       this.state = "over";
+      if (this.cfg.mode === "level") delete Save.d.levelRun;
       const cfg = this.cfg;
       this.orders = [];
       this.renderOrders();
@@ -6657,6 +6908,7 @@ export function mountGame(canvas, host, bridge) {
         this.updateInspector(dt);
         this.updateLitter(dt);
         if (this.cfg.mode === "watch") this.watchTick(dt);
+        else this.updateSpecial(dt);
         if (this.cfg.mode === "endless") {
           this.runT -= dt;
           if (this.runT <= 0) {
@@ -6805,7 +7057,10 @@ export function mountGame(canvas, host, bridge) {
       } else {
         $("#hudProg").style.width =
           Math.min(100, (this.served / c.goal) * 100) + "%";
-        $("#hudProgTxt").textContent = `${this.served} / ${c.goal} served`;
+        const w = waveOf(this.served, c.goal);
+        $("#hudProgTxt").textContent =
+          `${this.served} / ${c.goal} served` +
+          (w.count > 1 ? ` · wave ${w.index + 1}/${w.count}` : "");
         $("#hudScoreBar").style.width =
           Math.min(100, (this.score / c.stars[2]) * 100) + "%";
         $("#hudSbar")
@@ -6904,6 +7159,8 @@ export function mountGame(canvas, host, bridge) {
   listen(document, "visibilitychange", () => {
     if (document.hidden) {
       Game.saveRun();
+      if (Game.state === "playing" || Game.state === "break")
+        Game.saveLevelRun();
       Game.pause();
       if (Sound.ctx) Sound.ctx.suspend();
       Save.save();
@@ -7753,6 +8010,23 @@ export function mountGame(canvas, host, bridge) {
     openBooks();
   });
   on("#booksClose", () => UI.close("ovBooks"));
+  // Crew priority buttons (wave break) and the rail button.
+  function renderPriority(sel) {
+    const box = $(sel);
+    if (!box) return;
+    box
+      .querySelectorAll("[data-pri]")
+      .forEach((b) =>
+        b.classList.toggle("on", b.dataset.pri === Game.priority),
+      );
+  }
+  function updatePriorityBtn() {
+    const b = $("#btnPriority");
+    if (!b) return;
+    b.hidden = !Game.helpers.length || Game.cfg?.mode === "watch";
+    b.querySelector("b").textContent =
+      { counter: "🍛", delivery: "📦", restock: "🔥" }[Game.priority] || "🍛";
+  }
   function collectAll() {
     return PLACES.reduce((t, p) => t + collectTill(Save.d, p.id), 0);
   }
@@ -8006,6 +8280,19 @@ export function mountGame(canvas, host, bridge) {
   });
   on("#btnPause", () => Game.pause());
   on("#inspPay", () => Game.payInspector());
+  on("#waveGo", () => Game.endBreak());
+  on("#waveMarket", () => {
+    buildMarket();
+    UI.open("ovMarket");
+  });
+  for (const k of ["counter", "delivery", "restock"])
+    on("#pri-" + k, () => Game.setPriority(k));
+  on("#btnPriority", () => {
+    const keys = ["counter", "delivery", "restock"];
+    Game.setPriority(keys[(keys.indexOf(Game.priority) + 1) % keys.length]);
+  });
+  on("#btnSpecial", () => Game.openSpecial());
+  on("#specialPlate", () => Game.plateSpecial());
   for (let i = 0; i < 3; i++)
     on("#inspOffer" + i, () => Game.bribeInspector(i));
   on("#inspBeg", () => Game.begInspector());
@@ -8022,6 +8309,7 @@ export function mountGame(canvas, host, bridge) {
   });
   on("#pMenu", () => {
     UI.close("ovPause");
+    if (Game.cfg.mode === "level") delete Save.d.levelRun;
     if (Game.cfg.mode === "endless") Game.saveRun(false);
     Save.save();
     Game.cfg.mode === "level" ? (Game.clear(), openMap()) : showMenu();
@@ -8288,6 +8576,17 @@ export function mountGame(canvas, host, bridge) {
       const p = _v.set(t.x, 1.25, t.z).project(camera);
       t.chip.style.transform = `translate3d(${(((p.x + 1) / 2) * innerWidth).toFixed(1)}px,${(((1 - p.y) / 2) * innerHeight).toFixed(1)}px,0) translate(-50%,-50%)`;
     }
+    for (const h of Game.helpers) {
+      if (!h.tag) continue;
+      const busy = (!!h.job || h.work > 0) && !!h.task && h.root.visible;
+      h.tag.hidden = !busy;
+      if (!busy) continue;
+      h.tag.textContent = TASK_ICONS[h.task] || "";
+      const p = _v
+        .set(h.root.position.x, 2.05, h.root.position.z)
+        .project(camera);
+      h.tag.style.transform = `translate3d(${(((p.x + 1) / 2) * innerWidth).toFixed(1)}px,${(((1 - p.y) / 2) * innerHeight).toFixed(1)}px,0) translate(-50%,-100%)`;
+    }
     for (const l of Game.litter) {
       if (!l.chip) continue;
       const p = _v.set(l.x, 0.45, l.z).project(camera);
@@ -8334,7 +8633,15 @@ export function mountGame(canvas, host, bridge) {
     // Managers' earnings for the opening hours you were away.
     catchUpAway();
     goOnline();
-    if (Save.d.endlessRun?.active && Save.d.unlocked > 50)
+    const lr = Save.d.levelRun;
+    if (lr && lr.n && levelOpen(Save.d, lr.n))
+      setTimeout(
+        () =>
+          Game.state === "menu" &&
+          Game.start({ ...levelCfg(lr.n), resume: lr }),
+        600,
+      );
+    else if (Save.d.endlessRun?.active && Save.d.unlocked > 50)
       setTimeout(
         () =>
           Game.state === "menu" &&

@@ -225,6 +225,24 @@ export const GameLayout = memo(function GameLayout({
           >
             <Icon name="target" />
           </button>
+          <button
+            className="boost priBtn"
+            id="btnPriority"
+            aria-label="Crew priority"
+            hidden
+          >
+            <Icon name="staff" />
+            <b>{"🍛"}</b>
+          </button>
+          <button
+            className="boost specialBtn"
+            id="btnSpecial"
+            aria-label="Owner's special"
+            hidden
+          >
+            <Icon name="chef" />
+            <b></b>
+          </button>
           <button className="boost" id="bFreeze" aria-label="Freeze Time">
             <Icon name="freeze" />
             <b>0</b>
@@ -573,6 +591,83 @@ export const GameLayout = memo(function GameLayout({
               <span className="buttonLabel">{"Close"}</span>
             </button>
           </div>
+        </div>
+      </Surface>
+      <Surface className="overlay scroll" id="ovWave" tag="div">
+        <div className="panel wavePanel">
+          <div className="ribbon small" id="waveTitle">
+            {"Wave done!"}
+          </div>
+          <div className="waveStats">
+            <div>
+              <small>{"Served"}</small>
+              <b id="waveServed"></b>
+            </div>
+            <div>
+              <small>{"This wave's sales"}</small>
+              <b id="waveSales"></b>
+            </div>
+            <div>
+              <small>{"Left hungry"}</small>
+              <b id="waveLost"></b>
+            </div>
+          </div>
+          <p className="sub small" id="waveNext"></p>
+          <div className="priPick" id="wavePriority">
+            <small>{"Crew priority"}</small>
+            <div>
+              <button
+                className="btn plain"
+                id="pri-counter"
+                data-pri="counter"
+                type="button"
+              >
+                {"🍛 Counter first"}
+              </button>
+              <button
+                className="btn plain"
+                id="pri-delivery"
+                data-pri="delivery"
+                type="button"
+              >
+                {"📦 Deliveries first"}
+              </button>
+              <button
+                className="btn plain"
+                id="pri-restock"
+                data-pri="restock"
+                type="button"
+              >
+                {"🔥 Restock first"}
+              </button>
+            </div>
+          </div>
+          <div className="btnRow">
+            <button className="btn teal" id="waveMarket" type="button">
+              <Icon name="basket" />
+              <span className="buttonLabel">{"Market"}</span>
+            </button>
+            <button className="btn green" id="waveGo" type="button">
+              <Icon name="play" />
+              <span className="buttonLabel">{"Open the doors"}</span>
+            </button>
+          </div>
+        </div>
+      </Surface>
+      <Surface className="overlay scroll" id="ovSpecial" tag="div">
+        <div className="panel specialPanel">
+          <div className="ribbon small">{"Owner's Special"}</div>
+          <h3 className="specialName" id="specialName"></h3>
+          <p className="sub small" id="specialInfo"></p>
+          <div className="specialBar" id="specialBar">
+            <i className="zone great"></i>
+            <i className="zone perfect"></i>
+            <span className="marker" id="specialMarker"></span>
+          </div>
+          <button className="btn gold big" id="specialPlate" type="button">
+            <Icon name="serve" />
+            <span className="buttonLabel">{"Plate it!"}</span>
+          </button>
         </div>
       </Surface>
       <Surface className="overlay scroll" id="ovInspect" tag="div">

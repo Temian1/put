@@ -965,3 +965,120 @@ svg.star.on {
 .plateRow b {
   text-align: right;
 }
+/* Worker status tags */
+.helperTag {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  font-size: 18px;
+  line-height: 1;
+  padding: 3px 5px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+.ledger .stat.staffRow b {
+  font-size: 13px;
+}
+/* Service waves */
+.waveStats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin: 8px 0;
+}
+.waveStats > div {
+  padding: 8px;
+  border-radius: 12px;
+  background: #fff;
+  border: 2px solid #f0dfc0;
+  text-align: center;
+  color: var(--ink);
+}
+.waveStats small {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--ink-soft);
+}
+.waveStats b {
+  font: 400 20px var(--display);
+}
+.priPick {
+  margin: 8px 0 10px;
+}
+.priPick small {
+  display: block;
+  font-weight: 800;
+  color: var(--ink-soft);
+  margin-bottom: 4px;
+}
+.priPick > div {
+  display: grid;
+  gap: 6px;
+}
+.priPick .btn.on {
+  background: var(--teal);
+  color: #fff;
+}
+/* Owner's special */
+.specialName {
+  margin: 6px 0 2px;
+  text-align: center;
+  font: 400 24px var(--display);
+  color: var(--ink);
+}
+.specialBar {
+  position: relative;
+  height: 34px;
+  margin: 14px 4px 16px;
+  border-radius: 17px;
+  background: #f3e0bd;
+  border: 3px solid var(--ink);
+  overflow: hidden;
+}
+.specialBar .zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+.specialBar .zone.great {
+  left: 34%;
+  width: 32%;
+  background: #ffd36b;
+}
+.specialBar .zone.perfect {
+  left: 44%;
+  width: 12%;
+  background: #2fa34f;
+}
+.specialBar .marker {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 8px;
+  margin-left: -4px;
+  border-radius: 4px;
+  background: var(--coral);
+  box-shadow: 0 0 0 2px #fff;
+  animation: specialSweep 1.1s ease-in-out infinite alternate;
+}
+@keyframes specialSweep {
+  from {
+    left: 3%;
+  }
+  to {
+    left: 97%;
+  }
+}
+#specialPlate {
+  width: 100%;
+}
+.specialBtn {
+  background: linear-gradient(180deg, #ffd36b, #f2a900) !important;
+  animation: pulse 1s ease-in-out infinite;
+}
+.specialBtn b {
+  display: none;
+}
