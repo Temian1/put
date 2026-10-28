@@ -54,6 +54,106 @@ export function Star({ on, className = "" }) {
   );
 }
 
+// Map props: a round tree, a bush with flowers, a little house.
+const MAP_ROOFS = ["#C8553D", "#3E7CB1", "#2F8F6B", "#8E5B3E"];
+function MapProp({ kind, x, y, k }) {
+  const style = { left: x + "%", top: y };
+  if (kind === "tree")
+    return (
+      <svg
+        className="mapProp tree"
+        style={style}
+        viewBox="0 0 40 48"
+        aria-hidden="true"
+      >
+        <ellipse cx="20" cy="45" rx="11" ry="3" fill="rgba(0,0,0,.15)" />
+        <rect x="17" y="28" width="6" height="16" rx="2" fill="#8A5A34" />
+        <circle cx="20" cy="20" r="13" fill="#4FA63F" />
+        <circle cx="13" cy="24" r="8" fill="#5DB84A" />
+        <circle cx="27" cy="23" r="8" fill="#6CC653" />
+        <circle cx="19" cy="13" r="7" fill="#78D25E" />
+      </svg>
+    );
+  if (kind === "bush")
+    return (
+      <svg
+        className="mapProp bush"
+        style={style}
+        viewBox="0 0 36 24"
+        aria-hidden="true"
+      >
+        <ellipse cx="18" cy="21" rx="14" ry="3" fill="rgba(0,0,0,.12)" />
+        <circle cx="11" cy="14" r="8" fill="#4FA63F" />
+        <circle cx="23" cy="13" r="9" fill="#5DB84A" />
+        <circle cx="10" cy="10" r="2" fill="#FF5A8A" />
+        <circle cx="22" cy="7" r="2" fill="#FFD23F" />
+        <circle cx="28" cy="12" r="2" fill="#FFFFFF" />
+      </svg>
+    );
+  const roof = MAP_ROOFS[k % MAP_ROOFS.length];
+  return (
+    <svg
+      className="mapProp house"
+      style={style}
+      viewBox="0 0 44 44"
+      aria-hidden="true"
+    >
+      <ellipse cx="22" cy="41" rx="17" ry="3" fill="rgba(0,0,0,.15)" />
+      <rect x="7" y="18" width="30" height="22" rx="2" fill="#FFF4DE" />
+      <path d="M3 20 L22 5 L41 20 Z" fill={roof} />
+      <rect x="19" y="27" width="7" height="13" rx="1" fill="#7A4B2A" />
+      <rect x="10" y="23" width="6" height="6" rx="1" fill="#7FC8E8" />
+      <rect x="29" y="23" width="6" height="6" rx="1" fill="#7FC8E8" />
+    </svg>
+  );
+}
+
+// The restaurant itself on its chapter card: walls, awning and sign.
+function Storefront({ color, locked }) {
+  return (
+    <svg
+      className={"storefront" + (locked ? " locked" : "")}
+      viewBox="0 0 96 80"
+      aria-hidden="true"
+    >
+      <ellipse cx="48" cy="76" rx="40" ry="4" fill="rgba(0,0,0,.18)" />
+      <rect x="10" y="26" width="76" height="48" rx="4" fill="#FFF4DE" />
+      <path d="M6 28 L48 6 L90 28 Z" fill={color} />
+      <rect x="22" y="12" width="52" height="12" rx="3" fill="#4A1F0C" />
+      <rect x="25" y="15" width="46" height="6" rx="2" fill="#FFC531" />
+      {[0, 1, 2, 3, 4, 5].map((i) => (
+        <path
+          key={i}
+          d={`M${10 + i * 12.6} 30 h12.6 v8 q-6.3 5 -12.6 0 z`}
+          fill={i % 2 ? "#FFFFFF" : color}
+        />
+      ))}
+      <rect x="40" y="48" width="16" height="26" rx="2" fill="#7A4B2A" />
+      <rect x="16" y="46" width="18" height="14" rx="2" fill="#7FC8E8" />
+      <rect x="62" y="46" width="18" height="14" rx="2" fill="#7FC8E8" />
+      {locked ? (
+        <g>
+          <rect
+            x="34"
+            y="36"
+            width="28"
+            height="24"
+            rx="5"
+            fill="rgba(74,31,12,.85)"
+          />
+          <path
+            d="M42 46 v-4 a6 6 0 0 1 12 0 v4"
+            stroke="#FFF"
+            strokeWidth="3"
+            fill="none"
+          />
+          <rect x="40" y="46" width="16" height="10" rx="2" fill="#FFF" />
+        </g>
+      ) : null}
+    </svg>
+  );
+}
+
 export function LevelMap({
   chapters,
   foods,
@@ -95,10 +195,15 @@ export function LevelMap({
                 background: `linear-gradient(135deg,${ch.color},color-mix(in srgb,${ch.color} 70%,#000))`,
               }}
             >
+              <Storefront color={ch.color} locked={!reached || closed} />
               <small>
                 Chapter {ci + 1} · Levels {first}–{first + 9}
               </small>
               <h3>{ch.name}</h3>
+              <p className="chapTarget">
+                Serve {15 + 5 * (first - 1)}–{15 + 5 * (first + 8)} customers a
+                level
+              </p>
               <div className="chapStars">
                 <Star on />
                 <b>{got}</b>/30
@@ -133,11 +238,12 @@ export function LevelMap({
                 preserveAspectRatio="none"
                 aria-hidden="true"
               >
+                {/* A road with kerbs and a dashed centre line. */}
                 <path
                   d={d}
                   fill="none"
-                  stroke="rgba(74,31,12,.18)"
-                  strokeWidth="16"
+                  stroke="#E9DCC0"
+                  strokeWidth="34"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   vectorEffect="non-scaling-stroke"
@@ -145,13 +251,43 @@ export function LevelMap({
                 <path
                   d={d}
                   fill="none"
-                  stroke="#FFF4DE"
-                  strokeWidth="5"
-                  strokeDasharray="2 12"
+                  stroke="#6B6F78"
+                  strokeWidth="26"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  vectorEffect="non-scaling-stroke"
+                />
+                <path
+                  d={d}
+                  fill="none"
+                  stroke="#FFFFFF"
+                  strokeWidth="3"
+                  strokeDasharray="10 12"
                   strokeLinecap="round"
                   vectorEffect="non-scaling-stroke"
                 />
               </svg>
+              {xs.flatMap((x, i) => {
+                // Scenery on the open side of the road at each bend.
+                const side = x > 50 ? 1 : 0,
+                  kinds = ["tree", "house", "bush", "tree"],
+                  seed = ci * 10 + i;
+                return [0, 1].map((j) => {
+                  const kind = kinds[(seed + j * 3) % kinds.length];
+                  const px = side
+                    ? 6 + ((seed * 7 + j * 13) % 22)
+                    : 72 + ((seed * 5 + j * 11) % 20);
+                  return (
+                    <MapProp
+                      key={i + "-" + j}
+                      kind={kind}
+                      k={seed + j}
+                      x={px}
+                      y={i * STEP + 20 + j * 46}
+                    />
+                  );
+                });
+              })}
               {xs.map((x, i) => {
                 const n = first + i,
                   stars = save.stars[n] || 0,

@@ -113,6 +113,14 @@ The game runs for **100 levels in 10 chapters**. After the Mama Put Empire (leve
   - **Menu pricing:** Cheap (−15%), Normal or Premium (+20%) per restaurant, in the Market. Higher prices earn more per plate but bring fewer customers. Roadside and market customers react most; first-class diners least.
   - **Catering contracts (level 15+):** Grow offers three jobs a day: relaxed, standard or rush, with different sizes, deadlines and pay. The one you take arrives as a catering order in your next level.
   - **Announced disruptions (from level 6, day 3):** gas running low, NEPA taking light, a go-slow on the expressway. Each asks for a choice with a clear cost: refill or cook slower, rent a generator or sell warm drinks, pay double fares or pause online orders.
+- **Look and feel (inspired by Township's bright miniature towns):**
+  - **Lighting:** rebalanced so colours stay rich instead of washing out to pale cream; warm sun with soft shadows.
+  - **The world:** blue skies with drifting clouds, green lawns with blades of grass, round cartoon trees and flowering hedges.
+  - **Buildings:** town houses with framed windows, front doors with striped awnings and pitched roofs.
+  - **Staff:** dressed for their job. Cooks wear white coats and chef's hats, servers teal aprons and caps, cleaners yellow aprons, headscarves and rubber gloves. The market runner carries a basket, and riders wear helmets.
+  - **Kitchen zones:** a prep table with ingredient baskets at one end of the bench and a delivery pickup shelf with takeaway packs at the other, both clear of the staff walking route.
+  - **The map:** a countryside with a road, dashed centre line, trees, bushes and houses. Each chapter card shows the restaurant's storefront (greyed and padlocked until open) and its customer range.
+  - **Buttons:** coloured buttons have a glossy highlight.
 - **Serving:** a server collects every ready dish of a customer's order along the bench and serves it in one trip.
 - **Seating:** any clean chair can be used from level 1, by VIPs too. A dirty plate only blocks its own chair.
 - **Litter (level 13+):** customers and passers-by drop nylon, sachets, bones and paper on the dining floor. Tap the brown broom buttons to sweep it, or hire a cleaner. Litter lowers hygiene. When the place is dirty, customers complain and lose patience, fewer people come, and three or more complaints cost reputation. Inspectors fine low hygiene.

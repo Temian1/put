@@ -2139,6 +2139,9 @@ export function mountGame(canvas, host, bridge) {
           },
           [40, 40],
         ),
+        // Flat ground catches full sun and sky; a slight tint keeps the
+        // grass a rich green instead of lime.
+        color: 0xc4c4c4,
         roughness: 1,
       }),
       0,
@@ -2528,7 +2531,70 @@ export function mountGame(canvas, host, bridge) {
     FRIDGE_POS = { x: 3.15, z: 3.45 },
     MARKET_EXIT = { x: 8, z: 3.3 },
     INSPECT_POS = { x: 0, z: -1.25 };
+  // Clear kitchen zones at the bench ends, outside the staff walking route
+  // (which rounds the bench at x ±4.15): a prep table with ingredient
+  // baskets on the left, a delivery pickup shelf with packs on the right.
+  function buildZones(g) {
+    const prep = new T3.Group();
+    prep.position.set(-4.9, 0, 1.9);
+    prep.add(mesh(rbox(0.7, 0.08, 0.9, 0.03), M("#C69C6D"), 0, 0.78, 0));
+    [
+      [-0.25, -0.25],
+      [0.25, -0.25],
+      [-0.25, 0.25],
+      [0.25, 0.25],
+    ].forEach(([a, b]) =>
+      prep.add(mesh(cyl(0.03, 0.03, 0.76, 6), M("#8A5A34"), a, 0.38, b)),
+    );
+    [
+      [-0.15, -0.2, "#E53935"],
+      [0.15, 0.05, "#FFB300"],
+      [-0.1, 0.25, "#7CB342"],
+    ].forEach(([a, b, c]) => {
+      prep.add(
+        mesh(
+          cyl(0.16, 0.12, 0.12, 12),
+          M("#B07A3A", { roughness: 0.9 }),
+          a,
+          0.88,
+          b,
+        ),
+      );
+      for (let k = 0; k < 3; k++)
+        prep.add(
+          mesh(
+            sph(0.05, 8, 6),
+            M(c),
+            a + (k - 1) * 0.06,
+            0.97,
+            b + (k % 2) * 0.04,
+            false,
+          ),
+        );
+    });
+    g.add(prep);
+    const pick = new T3.Group();
+    pick.position.set(4.9, 0, 1.9);
+    pick.add(mesh(rbox(0.7, 1.3, 0.5, 0.04), M("#8A5A34"), 0, 0.65, -0.15));
+    [0.45, 0.85].forEach((y) =>
+      pick.add(mesh(rbox(0.66, 0.04, 0.46, 0.01), M("#C69C6D"), 0, y, 0.12)),
+    );
+    for (let k = 0; k < 4; k++)
+      pick.add(
+        mesh(
+          rbox(0.22, 0.12, 0.18, 0.03),
+          M("#FFFFFF", { roughness: 0.5 }),
+          -0.17 + (k % 2) * 0.34 - 0.08,
+          0.53 + Math.floor(k / 2) * 0.4,
+          0.14,
+          false,
+        ),
+      );
+    pick.add(mesh(rbox(0.72, 0.2, 0.05, 0.03), M("#E53935"), 0, 1.42, 0.12));
+    g.add(pick);
+  }
   function buildBackKitchen(g, eff) {
+    buildZones(g);
     const fl = mesh(
       G("bkfloor", () => new T3.PlaneGeometry(8.4, 1.5)),
       M("#E9E4DA", { roughness: 0.8 }),
@@ -2982,8 +3048,8 @@ export function mountGame(canvas, host, bridge) {
     });
     // Low hedges with flowers framing the kitchen and dining area.
     for (let zz = 3.1; zz >= -1.4; zz -= 0.75) {
-      hedge(g, 5.15, zz, !night);
-      hedge(g, -5.15, zz, !night);
+      hedge(g, 5.65, zz, !night);
+      hedge(g, -5.65, zz, !night);
     }
     if (night) return;
     // Clouds drifting across the sky.
@@ -4206,6 +4272,18 @@ export function mountGame(canvas, host, bridge) {
     ],
   };
   const roleCount = {};
+  // How each job looks, so the crew reads at a glance.
+  const ROLE_LOOKS = {
+    cook: { hat: "chef", coat: "#FAFAFA", accent: "#E53935" },
+    server: { hat: "cap", apron: "#12A99F", accent: "#12A99F" },
+    cleaner: {
+      hat: "gele",
+      apron: "#FFC531",
+      gloves: "#FFD23F",
+      accent: "#FFC531",
+    },
+    errand: { hat: "gele", basket: true },
+  };
   const TASK_WORDS = {
     serve: "served",
     pack: "packed",
@@ -4245,19 +4323,47 @@ export function mountGame(canvas, host, bridge) {
         (spec.role === "errand" ? 3.4 : spec.role === "cleaner" ? 3.9 : 3.1) /
         this.slow;
       const uni = effects(Save.d).uniforms && spec.role !== "rider";
-      const mat = uni
-        ? M("#F4F7FA", { roughness: 0.6 })
-        : new T3.MeshStandardMaterial({
-            map: ankaraTex([spec.a, spec.b, "#FFF4DE"], 1),
-            roughness: 0.7,
-          });
+      const look = ROLE_LOOKS[spec.role] || {};
+      const mat =
+        look.coat || uni
+          ? M(look.coat || "#F4F7FA", { roughness: 0.6 })
+          : new T3.MeshStandardMaterial({
+              map: ankaraTex([spec.a, spec.b, "#FFF4DE"], 1),
+              roughness: 0.7,
+            });
       this.P = makePerson({
         skin: SKINS[spec.skin],
         bodyMat: mat,
-        accent: uni ? "#12A99F" : spec.b,
-        hat: uni ? "chef" : spec.hat || "chef",
+        accent: uni ? "#12A99F" : look.accent || spec.b,
+        hat: look.hat || (uni ? "chef" : spec.hat || "chef"),
         scale: 0.8,
       });
+      // Role details: an apron, rubber gloves, a market basket.
+      if (look.apron)
+        this.P.inner.add(
+          mesh(rbox(0.52, 0.5, 0.06, 0.03), M(look.apron), 0, 0.6, 0.39, false),
+        );
+      if (look.gloves)
+        [this.P.armL, this.P.armR].forEach((a) => {
+          if (a.children[1]) a.children[1].material = M(look.gloves);
+        });
+      if (look.basket) {
+        const b = new T3.Group();
+        b.add(
+          mesh(
+            cyl(0.16, 0.12, 0.16, 12),
+            M("#B07A3A", { roughness: 0.9 }),
+            0,
+            0,
+            0,
+            false,
+          ),
+        );
+        b.add(mesh(sph(0.07, 8, 6), M("#E53935"), -0.05, 0.08, 0, false));
+        b.add(mesh(sph(0.06, 8, 6), M("#2FA34F"), 0.06, 0.08, 0.03, false));
+        b.position.set(0, -0.6, 0.06);
+        this.P.armR.add(b);
+      }
       this.root = this.P.root;
       this.root.position.copy(this.home);
       world.add(this.root);
