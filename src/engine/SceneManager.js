@@ -1148,6 +1148,7 @@ export function mountGame(canvas, host, bridge) {
       arm: caps(0.1, 0.36),
       hand: sph(0.11, 12, 10),
       foot: sph(0.14, 12, 8),
+      leg: caps(0.1, 0.2),
       cheek: sph(0.065, 10, 8),
       nose: sph(0.045, 10, 8),
       ear: sph(0.07, 10, 8),
@@ -1210,6 +1211,17 @@ export function mountGame(canvas, host, bridge) {
       inner.add(f);
       return f;
     });
+    // Legs show only when seated: thighs along the chair seat, shins down
+    // to the feet, so a sitting body joins the floor instead of floating.
+    const legs = new T3.Group();
+    [-0.16, 0.16].forEach((x) => {
+      const thigh = mesh(GEO.leg, bm, x, 0.24, 0.17);
+      thigh.rotation.x = Math.PI / 2;
+      legs.add(thigh);
+      legs.add(mesh(GEO.leg, bm, x, 0.05, 0.34));
+    });
+    legs.visible = false;
+    inner.add(legs);
     const mkArm = (side) => {
       const p = new T3.Group();
       p.position.set(side * 0.42, 1.22, 0);
@@ -1392,6 +1404,7 @@ export function mountGame(canvas, host, bridge) {
       armL,
       armR,
       feet,
+      legs,
       smile,
       frown,
       mouthO,
@@ -3762,13 +3775,23 @@ export function mountGame(canvas, host, bridge) {
       this.el.style.opacity = "0";
     }
     // Walk to a free chair: step back from the counter, sideways, then sit.
+    // Walk round to the back of the assigned chair, then step in and sit.
+    // Anchors come from the chair's own position and facing, so both sides
+    // of a table work, wherever the table has been moved.
     goSit() {
       const s = this.seat,
-        lx = this.root.position.x;
+        lx = this.root.position.x,
+        bx = -Math.sin(s.face),
+        bz = -Math.cos(s.face),
+        sitX = s.x + bx * 0.14,
+        sitZ = s.z + bz * 0.14,
+        backX = s.x + bx * 0.55,
+        aisle = Math.min(s.z + 0.5, -0.85);
       this.path = [
-        new T3.Vector3(lx, 0, -1.12),
-        new T3.Vector3(s.x, 0, -1.12),
-        new T3.Vector3(s.x, 0, s.z),
+        new T3.Vector3(lx, 0, aisle),
+        new T3.Vector3(backX, 0, aisle),
+        new T3.Vector3(backX, 0, s.z + bz * 0.55),
+        new T3.Vector3(sitX, 0, sitZ),
       ];
       this.state = "toSeat";
       this.el.style.opacity = "0";
@@ -3902,17 +3925,22 @@ export function mountGame(canvas, host, bridge) {
       const seated = this.state === "eat";
       if (seated !== this.sitting) {
         this.sitting = seated;
+        if (P.legs) P.legs.visible = seated;
         P.feet?.forEach((f) =>
           f.position.set(
             f.position.x,
-            seated ? -0.14 : 0.07,
-            seated ? 0.36 : 0.1,
+            seated ? -0.15 : 0.07,
+            seated ? 0.4 : 0.1,
           ),
         );
       }
       if (this.state === "eat") {
         I.position.y = lerp(I.position.y, 0.22, dt * 8);
         I.rotation.z = 0;
+        I.scale.y = 1;
+        // Arms back at the sides after the happy cheer, then eating.
+        P.armL.rotation.z = -0.25;
+        P.armR.rotation.z = 0.25;
         P.armR.rotation.x = -1.1 + Math.sin(this.t * 7) * 0.35;
         P.armL.rotation.x = -0.4;
         P.head.rotation.x = 0.15 + Math.sin(this.t * 7) * 0.06;
@@ -8224,6 +8252,7 @@ export function mountGame(canvas, host, bridge) {
         scene,
         dyn,
         diningTables,
+        cam,
         Online,
         syncNow,
       };
