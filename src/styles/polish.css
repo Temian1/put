@@ -1082,3 +1082,50 @@ svg.star.on {
 .specialBtn b {
   display: none;
 }
+/* Decisions */
+.offerTitle {
+  margin: 6px 0 4px;
+  text-align: center;
+  font: 400 22px var(--display);
+  color: var(--ink);
+}
+.offerText {
+  margin: 0 0 6px;
+  font-weight: 700;
+  color: var(--ink);
+  text-align: center;
+}
+.bookRow.decision {
+  display: block;
+  border-left: 5px solid #e2c9a0;
+}
+.bookRow.decision.good {
+  border-left-color: #2fa34f;
+}
+.bookRow.decision.bad {
+  border-left-color: var(--coral);
+}
+.bookRow.decision .outcome {
+  margin-top: 3px;
+  color: var(--ink);
+}
+.priceLevels {
+  margin: 4px 0 10px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: #fff;
+  border: 2px solid #f0dfc0;
+  color: var(--ink);
+}
+.priceLevels > div {
+  display: flex;
+  gap: 6px;
+  margin: 6px 0;
+}
+.priceLevels .btn {
+  flex: 1;
+}
+.priceLevels small {
+  font-weight: 700;
+  color: var(--ink-soft);
+}

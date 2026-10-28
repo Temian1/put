@@ -18,6 +18,7 @@ import {
   MOODS,
   NAMES,
   STOCK,
+  UNLOCKS,
   FOOD_COST,
   EVENTS,
   TIERS,
@@ -146,6 +147,20 @@ import {
   plateQuality,
   specialPrice,
 } from "../game/service.js";
+import {
+  pricing,
+  activeEffects,
+  drawOpportunity,
+  cardById,
+  decide,
+  resolveDecisions,
+  payLoans,
+  averageAt,
+  contractOffers,
+  drawDisruption,
+  PRICE_LEVELS,
+  PRICE_SENSITIVITY,
+} from "../game/decisions.js";
 import {
   shiftInsights,
   recordDay,
@@ -4751,7 +4766,11 @@ export function mountGame(canvas, host, bridge) {
       return Math.max(0.08, 0.32 - 0.045 * Save.d.up.fast);
     },
     cookSpeed() {
-      return (1 + 0.08 * Save.d.up.fast) * (this.eff ? this.eff.cookSpeed : 1);
+      return (
+        (1 + 0.08 * Save.d.up.fast) *
+        (this.eff ? this.eff.cookSpeed : 1) *
+        (this.fx?.cook || 1)
+      );
     },
     track(ev, n) {
       if (this.cfg?.mode === "watch") return;
@@ -4837,6 +4856,20 @@ export function mountGame(canvas, host, bridge) {
       this.runT = 3;
       this.watchT = 1.5;
       this.priority = Save.d.priority || DEFAULT_PRIORITY;
+      // Prices, decisions in effect, a catering contract and any disruption.
+      const here = cfg.mode === "endless" ? "endless" : Save.d.place;
+      const pr = pricing(Save.d, here);
+      this.fx = activeEffects(Save.d, here);
+      this.priceFactor = pr.mult * this.fx.price;
+      this.gapFactor = pr.gap * this.fx.gap;
+      this.commission = 0;
+      this.disruptCost = 0;
+      this.disruptLabel = "";
+      this.contract = null;
+      if (Save.d.contract && cfg.mode === "level" && cfg.n >= UNLOCKS.online) {
+        this.contract = Save.d.contract;
+        delete Save.d.contract;
+      }
       this.wavePrev = 0;
       this.waveCoins = 0;
       this.waveLost = 0;
@@ -4942,6 +4975,9 @@ export function mountGame(canvas, host, bridge) {
           ? 60
           : rnd(6, 10)
         : Infinity;
+      if (this.contract) this.eventT = rnd(12, 20);
+      if (this.fx.noOnline) this.orderT = Infinity;
+      else if (isFinite(this.orderT)) this.orderT *= this.fx.online;
       this.eventsDone = this.eventsFailed = 0;
       this.toldEvent = false;
       this.starveT = 0;
@@ -4996,6 +5032,14 @@ export function mountGame(canvas, host, bridge) {
         cfg.mode === "endless"
           ? "Serve as many customers as you can!"
           : `Serve ${cfg.goal} customers`;
+      if (cfg.mode !== "watch" && !cfg.resume && !cfg.tutorial) {
+        const x = drawDisruption(Save.d, {
+          ...decisionCtx(),
+          level: cfg.mode === "level" ? cfg.n : 20,
+          online: !!cfg.online,
+        });
+        if (x) setTimeout(() => this.announce(x), 2300);
+      }
       if (cfg.mode === "watch") {
         const m = managerAt(Save.d, Save.d.place);
         banner(
@@ -5335,7 +5379,9 @@ export function mountGame(canvas, host, bridge) {
     serve(c) {
       if (c.haggle && !c.haggle.done) this.resolveHaggle(c, "refuse", true);
       const base = Math.round(
-        c.order.reduce((s, o) => s + FOODS[o.f].price, 0) * c.priceMult,
+        c.order.reduce((s, o) => s + FOODS[o.f].price, 0) *
+          c.priceMult *
+          (this.priceFactor || 1),
       );
       const ratio = c.p / c.max;
       const fast = ratio > 0.6;
@@ -5646,11 +5692,15 @@ export function mountGame(canvas, host, bridge) {
           if (!this.orders.includes(o) || this.state !== "playing") return;
           const { rider, fee: riderFee, trip } = dispatch(this.riders),
             fee =
-              riderFee + (o.kind === "event" && !this.eff.bus ? BUS_HIRE : 0),
-            value = orderValue(o),
+              riderFee * (this.fx?.riderFee || 1) +
+              (o.kind === "event" && !this.eff.bus ? BUS_HIRE : 0),
+            gross = Math.round(orderValue(o) * (o.payMult || 1)),
+            cut = Math.round(gross * (this.fx?.commission || 0)),
+            value = gross - cut,
             packs = packsFor(o) * PACK_COST;
           this.packCost += packs;
           this.riderFees += fee;
+          this.commission += cut;
           this.coinsEarned += value;
           this.score += value;
           this.served++;
@@ -5735,10 +5785,12 @@ export function mountGame(canvas, host, bridge) {
         budget = c.mode === "endless" || this.served + this.pending() < c.goal;
       this.orderT -= dt;
       if (this.orderT <= 0) {
-        this.orderT =
-          rnd(14, 22) *
-          spawnFactor(this.repNow) *
-          this.serviceLoad.onlineIntervalScale;
+        this.orderT = this.fx?.noOnline
+          ? Infinity
+          : rnd(14, 22) *
+            spawnFactor(this.repNow) *
+            this.serviceLoad.onlineIntervalScale *
+            (this.fx?.online || 1);
         if (open < this.serviceLoad.onlineLimit && budget)
           this.addOrder(
             makeOnlineOrder(
@@ -5749,7 +5801,19 @@ export function mountGame(canvas, host, bridge) {
           );
       }
       this.eventT -= dt;
-      if (this.eventT <= 0) {
+      if (this.eventT <= 0 && this.contract && !this.contract.sent) {
+        const k = this.contract;
+        k.sent = true;
+        const o = makeEventOrder(k.event, c.foods, Math.random, k.size);
+        o.max = o.t = Math.round(o.max * k.time);
+        o.payMult = k.pay;
+        this.addOrder(o);
+        this.eventT = c.event === "random" ? rnd(80, 120) : Infinity;
+        this.notify(
+          k.icon,
+          `Your contract is in: ${k.name}, ${k.portions} portions. Pack it before the timer runs out!`,
+        );
+      } else if (this.eventT <= 0) {
         this.eventT = c.event === "random" ? rnd(80, 120) : Infinity;
         if (budget || c.mode === "endless") {
           const id = c.event === "random" ? pick(Object.keys(EVENTS)) : c.event;
@@ -6120,6 +6184,45 @@ export function mountGame(canvas, host, bridge) {
         at: Date.now(),
       };
       Save.save();
+    },
+    /* ---- announced disruptions: the owner chooses the cost ---- */
+    announce(x) {
+      if (this.state !== "playing") return;
+      this.prevState = this.state;
+      this.state = "talk";
+      this.disruption = x;
+      $("#disruptTitle").textContent = `${x.icon} ${x.title}`;
+      $("#disruptText").textContent = x.text;
+      x.choices.forEach((c, i) => {
+        const b = $("#disrupt" + i);
+        b.querySelector(".buttonLabel").textContent =
+          c.label + (c.cost ? ` (${fmtNaira(c.cost)})` : "");
+        b.title = c.note || "";
+      });
+      $("#disruptNote").textContent = x.choices
+        .map((c) => (c.note ? `${c.label}: ${c.note}.` : ""))
+        .join(" ");
+      UI.open("ovDisrupt");
+      Sound.play("tick");
+    },
+    resolveDisruption(i) {
+      const x = this.disruption;
+      if (!x) return;
+      const c = x.choices[i];
+      this.disruptCost += c.cost;
+      this.disruptLabel = `${x.title}: ${c.label.toLowerCase()}`;
+      const e = c.effect || {};
+      if (e.cook) this.fx.cook = (this.fx.cook || 1) * e.cook;
+      if (e.price) this.priceFactor *= e.price;
+      if (e.riderFee) this.fx.riderFee = e.riderFee;
+      if (e.noOnline) {
+        this.fx.noOnline = true;
+        this.orderT = Infinity;
+      }
+      this.disruption = null;
+      UI.close("ovDisrupt");
+      this.state = "playing";
+      if (c.note) UI.toast(c.note);
     },
     /* ---- crew priority ---- */
     setPriority(key) {
@@ -6495,7 +6598,9 @@ export function mountGame(canvas, host, bridge) {
           rent +
           upkeep +
           (this.fines || 0) +
-          (this.settlements || 0),
+          (this.settlements || 0) +
+          (this.commission || 0) +
+          (this.disruptCost || 0),
         net = sales + extra - costs;
       const place = this.place || placeFor(this.cfg);
       // A working day: staff here earn their wage into what they are owed.
@@ -6528,6 +6633,8 @@ export function mountGame(canvas, host, bridge) {
       neg("Rent & NEPA light", rent);
       neg("Equipment upkeep", upkeep);
       neg("Hygiene fine", this.fines);
+      neg("Delivery app commission", this.commission);
+      neg(this.disruptLabel || "Disruption", this.disruptCost);
       neg("Inspector “settlement”", this.settlements);
       if (this.complaints >= 3)
         rows.push({
@@ -6665,7 +6772,28 @@ export function mountGame(canvas, host, bridge) {
         },
         fmtNaira,
       );
-      return { net, rows, quit: day.quit.map((m) => m.name), insights };
+      const repaid = payLoans(d);
+      if (repaid)
+        rows.push({
+          label: "Loan repaid",
+          value: "-" + fmtNaira(repaid),
+          cls: "neg",
+        });
+      // Decisions whose days are up: what was expected against what happened.
+      for (const e of resolveDecisions(d, decisionCtx())) {
+        insights.unshift({
+          tone: e.outcome.good ? "good" : "bad",
+          weight: 99,
+          title: `Your decision: ${e.title}`,
+          tip: e.outcome.text,
+        });
+      }
+      return {
+        net,
+        rows,
+        quit: day.quit.map((m) => m.name),
+        insights: insights.slice(0, 4),
+      };
     },
     finish(won, why) {
       if (this.state !== "playing") return;
@@ -6943,7 +7071,8 @@ export function mountGame(canvas, host, bridge) {
               this.eff.spawn *
               (1 - 0.05 * this.tierStart) *
               (Save.d.debt > 0 ? 1.15 : 1) *
-              (this.cfg.litter && this.hygiene < 50 ? 1.2 : 1);
+              (this.cfg.litter && this.hygiene < 50 ? 1.2 : 1) *
+              (this.gapFactor || 1);
           } else this.spawnT = 0.25;
         }
         this.hintT -= dt;
@@ -7545,6 +7674,7 @@ export function mountGame(canvas, host, bridge) {
     Game.state = "menu";
     updateTillBadge();
     updateStaffBadge();
+    setTimeout(offerCard, 1200);
     UI.close("ovWin");
     UI.close("ovFail");
     UI.close("ovPause");
@@ -7904,6 +8034,15 @@ export function mountGame(canvas, host, bridge) {
       manager: (pl) => managerAt(Save.d, pl.id),
       till: (pl) => tillAt(Save.d, pl.id),
       tillTotal: tillTotal(Save.d),
+      contracts: Save.d.unlocked >= UNLOCKS.online ? currentContracts() : null,
+      contract: Save.d.contract || null,
+      takeContract: (k) => {
+        Save.d.contract = k;
+        Save.save();
+        Sound.play("buy");
+        UI.toast(`${k.name} accepted. It comes in your next level from 15 on.`);
+        buildGrow();
+      },
       openNow: isOpenAt(Date.now()),
       hours: `${OPEN_HOUR}am–${CLOSE_HOUR - 12}pm`,
       collect: (pl) => {
@@ -7997,6 +8136,7 @@ export function mountGame(canvas, host, bridge) {
   }
   function openBooks() {
     bridge.books({
+      journal: (Save.d.journal || []).slice().reverse(),
       history: Save.d.history || [],
       summary: bookSummary(Save.d.history || [], 7),
       targets: TARGETS,
@@ -8010,6 +8150,18 @@ export function mountGame(canvas, host, bridge) {
     openBooks();
   });
   on("#booksClose", () => UI.close("ovBooks"));
+  // Three catering offers a day to choose from.
+  function currentContracts() {
+    const day = Save.d.day || 0;
+    if (Save.d.contractOffers?.day !== day) {
+      const pl = PLACES.find((x) => x.id === Save.d.place) || PLACES[0];
+      Save.d.contractOffers = {
+        day,
+        list: contractOffers(Save.d, CHAPTERS[pl.chapter].foods),
+      };
+    }
+    return Save.d.contractOffers.list;
+  }
   // Crew priority buttons (wave break) and the rail button.
   function renderPriority(sel) {
     const box = $(sel);
@@ -8027,6 +8179,73 @@ export function mountGame(canvas, host, bridge) {
     b.querySelector("b").textContent =
       { counter: "🍛", delivery: "📦", restock: "🔥" }[Game.priority] || "🍛";
   }
+  // What the decision rules need to know about where you are.
+  function decisionCtx() {
+    const pl = PLACES.find((x) => x.id === Save.d.place) || PLACES[0];
+    return {
+      place: pl.id,
+      fmt: fmtNaira,
+      foods: CHAPTERS[pl.chapter].foods,
+      bulkCost: roundNaira(marketPrice(Save.d, "rice") * 8 * 0.85, 50),
+      ricePrice: marketPrice(Save.d, "rice"),
+      online: Save.d.unlocked >= UNLOCKS.online,
+      level: Save.d.unlocked,
+    };
+  }
+  function offerCard() {
+    if (Game.state !== "menu" || document.querySelector(".overlay.show"))
+      return;
+    const card = drawOpportunity(Save.d, decisionCtx());
+    if (!card) return;
+    Save.save();
+    const c = decisionCtx();
+    $("#offerTitle").textContent = card.title;
+    $("#offerText").textContent = card.text(c);
+    $("#offerExpect").textContent = `Expected: ${card.expect}`;
+    const choices = card.choices || [
+      {
+        id: "accept",
+        label:
+          card.cost(c) > 0 ? `Accept (${fmtNaira(card.cost(c))})` : "Accept",
+      },
+      { id: "decline", label: "No thanks" },
+    ];
+    ["offerA", "offerB"].forEach((id, i) => {
+      const b = $("#" + id);
+      b.dataset.choice = choices[i].id;
+      b.querySelector(".buttonLabel").textContent = choices[i].label;
+    });
+    UI.open("ovOffer");
+  }
+  function answerOffer(e) {
+    const choice = e.currentTarget.dataset.choice;
+    const card = cardById(Save.d.offer?.id);
+    if (!card) return UI.close("ovOffer");
+    const c = decisionCtx();
+    if (choice !== "decline" && card.cost(c) > Save.d.coins) {
+      Sound.play("wrong");
+      UI.toast(`You need ${fmtNaira(card.cost(c) - Save.d.coins)} more`);
+      return;
+    }
+    const h = Save.d.history || [],
+      day = Save.d.day || 0;
+    decide(Save.d, c, choice, {
+      net: averageAt(h, c.place, "net", day - 3, day),
+      served: averageAt(h, c.place, "served", day - 3, day),
+    });
+    Save.save();
+    UI.coins();
+    UI.close("ovOffer");
+    Sound.play(choice === "decline" ? "click" : "buy");
+    if (choice !== "decline")
+      UI.toast(
+        "Decision recorded. Check Business books to see how it turns out.",
+      );
+  }
+  on("#offerA", answerOffer);
+  on("#offerB", answerOffer);
+  on("#disrupt0", () => Game.resolveDisruption(0));
+  on("#disrupt1", () => Game.resolveDisruption(1));
   function collectAll() {
     return PLACES.reduce((t, p) => t + collectTill(Save.d, p.id), 0);
   }
@@ -8048,6 +8267,16 @@ export function mountGame(canvas, host, bridge) {
     );
     bridge.market({
       place: pl.name,
+      priceLevel: Save.d.prices?.[pl.id] || "normal",
+      priceLevels: PRICE_LEVELS,
+      sensitive: (PRICE_SENSITIVITY[pl.id] ?? 1) >= 1.2,
+      relaxed: (PRICE_SENSITIVITY[pl.id] ?? 1) <= 0.7,
+      setPrice: (lv) => {
+        Save.d.prices = { ...(Save.d.prices || {}), [pl.id]: lv };
+        Save.save();
+        Sound.play("click");
+        buildMarket();
+      },
       foodTarget: TARGETS.foodCost,
       menu: plateCosts(
         CHAPTERS[pl.chapter].foods.filter((f) => FOOD_GROUP[f]),

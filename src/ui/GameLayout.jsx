@@ -593,6 +593,38 @@ export const GameLayout = memo(function GameLayout({
           </div>
         </div>
       </Surface>
+      <Surface className="overlay scroll" id="ovOffer" tag="div">
+        <div className="panel offerPanel">
+          <div className="ribbon small">{"A decision to make"}</div>
+          <h3 className="offerTitle" id="offerTitle"></h3>
+          <p className="offerText" id="offerText"></p>
+          <p className="sub small" id="offerExpect"></p>
+          <div className="btnRow">
+            <button className="btn green" id="offerA" type="button">
+              <span className="buttonLabel"></span>
+            </button>
+            <button className="btn plain" id="offerB" type="button">
+              <span className="buttonLabel"></span>
+            </button>
+          </div>
+        </div>
+      </Surface>
+      <Surface className="overlay scroll" id="ovDisrupt" tag="div">
+        <div className="panel offerPanel">
+          <div className="ribbon small">{"Wahala!"}</div>
+          <h3 className="offerTitle" id="disruptTitle"></h3>
+          <p className="offerText" id="disruptText"></p>
+          <p className="sub small" id="disruptNote"></p>
+          <div className="inspBtns">
+            <button className="btn gold" id="disrupt0" type="button">
+              <span className="buttonLabel"></span>
+            </button>
+            <button className="btn plain" id="disrupt1" type="button">
+              <span className="buttonLabel"></span>
+            </button>
+          </div>
+        </div>
+      </Surface>
       <Surface className="overlay scroll" id="ovWave" tag="div">
         <div className="panel wavePanel">
           <div className="ribbon small" id="waveTitle">

@@ -956,6 +956,9 @@ export function Grow({
   staffAt,
   openNow,
   hours,
+  contracts,
+  contract,
+  takeContract,
 }) {
   return (
     <>
@@ -989,6 +992,46 @@ export function Grow({
           <i className="note" />
           Collect {fmtNaira(tillTotal)} from your managers
         </button>
+      ) : null}
+      {contracts ? (
+        <>
+          <div className="sectionLabel">Catering contracts</div>
+          <p className="hintText">
+            Pick one job for your next shift. Bigger and faster jobs pay more,
+            but a late order costs reputation.
+          </p>
+          {contracts.map((k) => (
+            <div className="card contract" key={k.key}>
+              <div className="ic" style={{ "--bg": "#FFE9C7" }}>
+                {k.icon}
+              </div>
+              <div>
+                <h4>
+                  {k.name} <small>· {k.label}</small>
+                </h4>
+                <p>
+                  {k.portions} portions ·{" "}
+                  {k.time > 1
+                    ? "plenty of time"
+                    : k.time < 1
+                      ? "tight deadline"
+                      : "normal deadline"}{" "}
+                  · pays ×{k.pay.toFixed(2)}
+                </p>
+              </div>
+              <button
+                className={
+                  "btn " + (contract?.key === k.key ? "plain" : "green")
+                }
+                disabled={contract?.key === k.key}
+                onClick={() => takeContract(k)}
+              >
+                <Icon name="check" />
+                {contract?.key === k.key ? "Taken" : "Take"}
+              </button>
+            </div>
+          ))}
+        </>
       ) : null}
       <div className="sectionLabel">Your restaurants</div>
       <p className="hintText">
@@ -1129,6 +1172,11 @@ export function Market({
   place,
   menu = [],
   foodTarget = 0.35,
+  priceLevel = "normal",
+  priceLevels = {},
+  setPrice,
+  sensitive,
+  relaxed,
 }) {
   return (
     <>
@@ -1147,6 +1195,37 @@ export function Market({
           ? ` Your deep freezer keeps ${fridge} perishable units fresh; any more lose a quarter after every shift.`
           : " Without a deep freezer, perishables lose a quarter after every shift."}
       </p>
+      {setPrice ? (
+        <div className="priceLevels">
+          <b>Your prices here</b>
+          <div>
+            {Object.entries(priceLevels).map(([id, lv]) => (
+              <button
+                key={id}
+                className={
+                  "btn small " + (id === priceLevel ? "teal" : "plain")
+                }
+                onClick={() => setPrice(id)}
+              >
+                {lv.label}{" "}
+                {lv.mult === 1
+                  ? ""
+                  : (lv.mult > 1 ? "+" : "") +
+                    Math.round((lv.mult - 1) * 100) +
+                    "%"}
+              </button>
+            ))}
+          </div>
+          <small>
+            Higher prices earn more per plate but bring fewer customers.
+            {sensitive
+              ? " Customers here watch every naira."
+              : relaxed
+                ? " Customers here care more about quality than price."
+                : ""}
+          </small>
+        </div>
+      ) : null}
       {menu.length ? (
         <details className="plateCosts">
           <summary>Cost per plate at today&apos;s prices</summary>
@@ -1221,13 +1300,56 @@ export function Market({
 
 // The business books: profit per day, averages against healthy targets,
 // and the latest days. Learning to read these is the point.
-export function Books({ history = [], summary, targets, placeName, fmt }) {
+export function Books({
+  history = [],
+  summary,
+  targets,
+  placeName,
+  fmt,
+  journal = [],
+}) {
+  const decisions = journal.length ? (
+    <>
+      <div className="sectionLabel">Your decisions</div>
+      {journal.slice(0, 10).map((j) => (
+        <div
+          className={
+            "bookRow decision " +
+            (!j.outcome
+              ? "pending"
+              : j.outcome.good === false
+                ? "bad"
+                : j.outcome.good
+                  ? "good"
+                  : "")
+          }
+          key={j.id + j.day}
+        >
+          <span>
+            <b>{j.title}</b>
+            <small>
+              Day {j.day} · {placeName(j.place)}
+              {j.expect && j.choice !== "decline"
+                ? ` · expected: ${j.expect}`
+                : ""}
+            </small>
+            <small className="outcome">
+              {j.outcome ? j.outcome.text : `Judged on day ${j.due}`}
+            </small>
+          </span>
+        </div>
+      ))}
+    </>
+  ) : null;
   if (!history.length)
     return (
-      <p className="hintText">
-        Play a shift and your books start here: sales, costs and profit for
-        every day you trade.
-      </p>
+      <>
+        <p className="hintText">
+          Play a shift and your books start here: sales, costs and profit for
+          every day you trade.
+        </p>
+        {decisions}
+      </>
     );
   const days = history.slice(-14);
   const top = Math.max(1, ...days.map((e) => Math.abs(e.net)));
@@ -1301,6 +1423,7 @@ export function Books({ history = [], summary, targets, placeName, fmt }) {
           </div>
         </div>
       ) : null}
+      {decisions}
       <div className="sectionLabel">Recent days</div>
       {history
         .slice(-10)
