@@ -838,3 +838,130 @@ svg.star.on {
   text-transform: uppercase;
   color: var(--plum);
 }
+/* Mama Nkechi's debrief */
+.insights {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 4px;
+  text-align: left;
+}
+.mentorHead {
+  font: 400 16px var(--display);
+  color: var(--plum);
+}
+.insight {
+  display: grid;
+  gap: 2px;
+  padding: 7px 10px;
+  border-radius: 12px;
+  border-left: 5px solid #e2c9a0;
+  background: #fff8ea;
+  color: var(--ink);
+}
+.insight b {
+  font-size: 14px;
+}
+.insight span {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+.insight.bad {
+  border-left-color: var(--coral);
+}
+.insight.good {
+  border-left-color: #2fa34f;
+}
+/* Business books */
+#ovBooks .panel {
+  width: min(100%, 480px);
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 16px;
+}
+.booksBtn {
+  width: 100%;
+  margin: 0 0 8px;
+}
+.booksChart {
+  width: 100%;
+  height: 120px;
+  background: #fff8ea;
+  border-radius: 12px;
+}
+.booksChart .axis {
+  stroke: #e2c9a0;
+  stroke-width: 1;
+}
+.booksChart .up {
+  fill: #2fa34f;
+}
+.booksChart .down {
+  fill: var(--coral);
+}
+.booksStats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.booksStats > div,
+.bookRow {
+  padding: 7px 10px;
+  border-radius: 12px;
+  background: #fff;
+  border: 2px solid #f0dfc0;
+  color: var(--ink);
+}
+.booksStats small,
+.bookRow small {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--ink-soft);
+}
+.booksStats b {
+  font-size: 16px;
+}
+.bookRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.bookRow > span:last-child {
+  text-align: right;
+}
+.good {
+  color: #1f7a3a;
+}
+.warn {
+  color: #b25a00;
+}
+.bad {
+  color: #c62828;
+}
+/* Cost per plate */
+.plateCosts {
+  margin: 4px 0 10px;
+  padding: 6px 10px;
+  border-radius: 12px;
+  background: #fff;
+  border: 2px solid #f0dfc0;
+  color: var(--ink);
+}
+.plateCosts summary {
+  font-weight: 800;
+  cursor: pointer;
+}
+.plateRow {
+  display: grid;
+  grid-template-columns: 1fr auto 44px;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 13px;
+  font-weight: 700;
+  border-top: 1px solid #f3e6cc;
+}
+.plateRow b {
+  text-align: right;
+}

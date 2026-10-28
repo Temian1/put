@@ -306,6 +306,7 @@ export const GameLayout = memo(function GameLayout({
               <b id="winScore">{"₦0"}</b>
             </div>
             <div className="ledger" id="winLedger"></div>
+            <div className="insights" id="winInsights" hidden></div>
             <div className="stat">
               <span>{"Cash in hand"}</span>
               <b>
@@ -351,6 +352,7 @@ export const GameLayout = memo(function GameLayout({
               <b id="failServed">{"0"}</b>
             </div>
             <div className="ledger" id="failLedger"></div>
+            <div className="insights" id="failInsights" hidden></div>
           </div>
           <div className="btnRow">
             <button className="btn plain" id="failMap">
@@ -560,6 +562,10 @@ export const GameLayout = memo(function GameLayout({
             </div>
             <CashPill id="growCoins" />
           </div>
+          <button className="btn teal booksBtn" id="growBooks" type="button">
+            <Icon name="note" />
+            <span className="buttonLabel">{"Business books"}</span>
+          </button>
           <div className="shopList scroll" id="growList"></div>
           <div className="btnRow" style={{ marginTop: "12px" }}>
             <button className="btn coral" id="growClose">
@@ -739,6 +745,18 @@ export const GameLayout = memo(function GameLayout({
             <Icon name="close" />
             <span className="buttonLabel">{"Close"}</span>
           </button>
+        </div>
+      </Surface>
+      <Surface className="overlay" id="ovBooks" tag="div">
+        <div className="panel booksPanel">
+          <div className="ribbon small">{"Business Books"}</div>
+          <div className="shopList scroll" id="booksList"></div>
+          <div className="btnRow" style={{ marginTop: "12px" }}>
+            <button className="btn coral" id="booksClose">
+              <Icon name="close" />
+              <span className="buttonLabel">{"Close"}</span>
+            </button>
+          </div>
         </div>
       </Surface>
       <Surface className="overlay scroll" id="ovReward" tag="div">

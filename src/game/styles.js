@@ -4,7 +4,7 @@
 // own night venue with a live scoreboard.
 export const PLACE_STYLES = {
   ch0: {
-    label: "Roadside buka",
+    label: "Humble beginnings",
     furniture: "plastic",
     extras: [],
   },

@@ -13,6 +13,9 @@ import {
   price,
   buy,
   ingredientsForBatch,
+  batchUnits,
+  plateCost,
+  COST_SHARE,
   advanceMarket,
   isOut,
 } from "../src/game/market.js";
@@ -92,12 +95,24 @@ describe("market and inflation", () => {
     expect(buy(d, "rice", 1, 10)).toMatchObject({ ok: false });
   });
   it("cooking uses store stock first, else buys on the spot at a premium", () => {
-    const d = fresh({ coins: 1e6, pantry: { rice: 1 } });
+    const d = fresh({ coins: 1e6, pantry: { rice: 5 } });
     expect(ingredientsForBatch(d, "jollof")).toBe(0);
-    expect(d.pantry.rice).toBe(0);
-    expect(ingredientsForBatch(d, "jollof")).toBeGreaterThan(
-      price(d, "rice") * 1.3,
+    expect(d.pantry.rice).toBe(5 - Math.ceil(batchUnits("jollof")));
+    // With the store empty (and no change left over), it is bought on the
+    // spot for 40% more.
+    d.pantry.rice = 0;
+    d.pantryUse = {};
+    expect(ingredientsForBatch(d, "jollof")).toBeCloseTo(
+      price(d, "rice") * 1.4 * batchUnits("jollof"),
+      -2,
     );
+  });
+  it("every dish costs its own share of its price", () => {
+    const d = fresh();
+    for (const f of ["water", "beef", "jollof", "eba", "malt"])
+      expect(plateCost(d, f) / FOODS[f].price).toBeCloseTo(COST_SHARE[f], 1);
+    // Cheap sachet water no longer loses money on every plate.
+    expect(plateCost(d, "water")).toBeLessThan(FOODS.water.price);
   });
   it("prices inflate over shifts and perishables spoil without a freezer", () => {
     const d = fresh({ pantry: { meat: 8, rice: 8 } });

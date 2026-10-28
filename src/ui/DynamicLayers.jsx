@@ -1119,7 +1119,17 @@ export function Board({ rows, unit, fmt, note }) {
 }
 
 // Market stalls: stock up before prices rise. Perishables spoil without a freezer.
-export function Market({ items, news, index, cap, fridge, buy, place }) {
+export function Market({
+  items,
+  news,
+  index,
+  cap,
+  fridge,
+  buy,
+  place,
+  menu = [],
+  foodTarget = 0.35,
+}) {
   return (
     <>
       <div className="marketNews">
@@ -1137,6 +1147,34 @@ export function Market({ items, news, index, cap, fridge, buy, place }) {
           ? ` Your deep freezer keeps ${fridge} perishable units fresh; any more lose a quarter after every shift.`
           : " Without a deep freezer, perishables lose a quarter after every shift."}
       </p>
+      {menu.length ? (
+        <details className="plateCosts">
+          <summary>Cost per plate at today&apos;s prices</summary>
+          <p className="hintText">
+            Ingredient cost of one plate against its price. Aim for under{" "}
+            {Math.round(foodTarget * 100)}% food cost.
+          </p>
+          {menu.map((m) => (
+            <div className="plateRow" key={m.id}>
+              <span>{m.name}</span>
+              <span>
+                {fmtNaira(m.cost)} of {fmtNaira(m.price)}
+              </span>
+              <b
+                className={
+                  m.pct <= foodTarget
+                    ? "good"
+                    : m.pct <= foodTarget + 0.1
+                      ? "warn"
+                      : "bad"
+                }
+              >
+                {Math.round(m.pct * 100)}%
+              </b>
+            </div>
+          ))}
+        </details>
+      ) : null}
       {items.map((it) => (
         <div className={"card market" + (it.out ? " out" : "")} key={it.id}>
           <div
@@ -1177,6 +1215,111 @@ export function Market({ items, news, index, cap, fridge, buy, place }) {
           </div>
         </div>
       ))}
+    </>
+  );
+}
+
+// The business books: profit per day, averages against healthy targets,
+// and the latest days. Learning to read these is the point.
+export function Books({ history = [], summary, targets, placeName, fmt }) {
+  if (!history.length)
+    return (
+      <p className="hintText">
+        Play a shift and your books start here: sales, costs and profit for
+        every day you trade.
+      </p>
+    );
+  const days = history.slice(-14);
+  const top = Math.max(1, ...days.map((e) => Math.abs(e.net)));
+  const pct = (v) => Math.round(v * 100) + "%";
+  const grade = (v, target) =>
+    v <= target ? "good" : v <= target + 0.1 ? "warn" : "bad";
+  return (
+    <>
+      <div className="sectionLabel">Profit, last {days.length} days</div>
+      <svg
+        className="booksChart"
+        viewBox={`0 0 ${days.length * 22} 120`}
+        role="img"
+        aria-label="Profit per day"
+      >
+        <line x1="0" x2={days.length * 22} y1="60" y2="60" className="axis" />
+        {days.map((e, i) => {
+          const h = (Math.abs(e.net) / top) * 56;
+          return (
+            <rect
+              key={i}
+              x={i * 22 + 4}
+              y={e.net >= 0 ? 60 - h : 60}
+              width="14"
+              height={Math.max(1, h)}
+              rx="3"
+              className={e.net >= 0 ? "up" : "down"}
+            >
+              <title>
+                Day {e.day}: {fmt(e.net)}
+              </title>
+            </rect>
+          );
+        })}
+      </svg>
+      {summary ? (
+        <div className="booksStats">
+          <div>
+            <small>Average sales</small>
+            <b>{fmt(summary.sales)}</b>
+          </div>
+          <div>
+            <small>Average profit</small>
+            <b className={summary.net >= 0 ? "good" : "bad"}>
+              {fmt(summary.net)}
+            </b>
+          </div>
+          <div>
+            <small>Food cost (aim under {pct(targets.foodCost)})</small>
+            <b className={grade(summary.foodPct, targets.foodCost)}>
+              {pct(summary.foodPct)}
+            </b>
+          </div>
+          <div>
+            <small>Wages (aim under {pct(targets.staffCost)})</small>
+            <b className={grade(summary.staffPct, targets.staffCost)}>
+              {pct(summary.staffPct)}
+            </b>
+          </div>
+          <div>
+            <small>Customers lost a day</small>
+            <b className={summary.lost < 1 ? "good" : "bad"}>
+              {summary.lost.toFixed(1)}
+            </b>
+          </div>
+          <div>
+            <small>Best day</small>
+            <b>
+              Day {summary.best.day}: {fmt(summary.best.net)}
+            </b>
+          </div>
+        </div>
+      ) : null}
+      <div className="sectionLabel">Recent days</div>
+      {history
+        .slice(-10)
+        .reverse()
+        .map((e) => (
+          <div className="bookRow" key={e.day + e.place + e.net}>
+            <span>
+              <b>Day {e.day}</b>
+              <small>
+                {placeName(e.place)}
+                {e.mode === "level" && e.level ? ` · level ${e.level}` : ""}
+              </small>
+            </span>
+            <span>
+              <small>Sales {fmt(e.sales)}</small>
+              <b className={e.net >= 0 ? "good" : "bad"}>{fmt(e.net)}</b>
+            </span>
+          </div>
+        ))}
     </>
   );
 }

@@ -13,6 +13,7 @@ import {
   Ledger,
   Board,
   Market,
+  Books,
 } from "./DynamicLayers.jsx";
 
 // Flush only structural changes when the imperative engine immediately needs DOM refs.
@@ -61,6 +62,8 @@ export function createUiBridge(store, host) {
       slot("orders", host.querySelector("#orders"), <Orders {...props} />),
     grow: (props) =>
       slot("grow", host.querySelector("#growList"), <Grow {...props} />),
+    books: (props) =>
+      slot("books", host.querySelector("#booksList"), <Books {...props} />),
     market: (props) =>
       slot("market", host.querySelector("#marketList"), <Market {...props} />),
     board: (props) =>

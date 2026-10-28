@@ -134,6 +134,14 @@ import { createLagosLife, lagosLifeHinted } from "../systems/LagosLife.js";
 import { applyGrants, grantLabel } from "../game/grants.js";
 import { tablesAt, canPlace, saveLayout, snap } from "../game/layout.js";
 import { styleFor } from "../game/styles.js";
+import {
+  shiftInsights,
+  recordDay,
+  bookSummary,
+  plateCosts,
+  MENTOR,
+  TARGETS,
+} from "../game/insights.js";
 import { LIVE, applyLiveConfig } from "../game/live.js";
 import {
   EQUIPMENT,
@@ -151,6 +159,9 @@ import {
   isOut,
   buy as marketBuy,
   ingredientsForBatch,
+  batchUnits,
+  plateCost,
+  batchOf as foodBatch,
   advanceMarket,
 } from "../game/market.js";
 import {
@@ -4800,6 +4811,10 @@ export function mountGame(canvas, host, bridge) {
       this.claimed = new Set();
       this.fines = 0;
       this.settlements = 0;
+      // For the debrief: ingredients taken from the store, and the extra
+      // paid when the store was empty.
+      this.storeUsed = 0;
+      this.emergencyExtra = 0;
       this.busFees = 0;
       this.hygiene = 80;
       this.litter.forEach((l) => this.removeLitter(l));
@@ -5355,12 +5370,16 @@ export function mountGame(canvas, host, bridge) {
         // Ingredients are bought for the whole batch; the market errand haggles 20% off.
         // Ingredients come from the store; if it is empty they are bought on
         // the spot at a premium (the market errand gets 20% off).
-        const cost = ingredientsForBatch(
-          Save.d,
-          id,
-          this.staffOnDuty("errand") ? 0.8 : 1,
-        );
+        const g = FOOD_GROUP[id],
+          discount = this.staffOnDuty("errand") ? 0.8 : 1,
+          value = g ? batchUnits(id) * marketPrice(Save.d, g) * discount : 0,
+          premium = g && isOut(Save.d, g) ? 1.6 : 1.4;
+        const cost = ingredientsForBatch(Save.d, id, discount);
         this.foodCost += cost;
+        // What came from the store, and the premium for buying on the spot.
+        const spot = cost / premium;
+        this.emergencyExtra += cost - spot;
+        this.storeUsed += Math.max(0, value - spot);
         Sound.play("tap");
         if (st) st.userData.bounce = 1;
         if (!byHelper) {
@@ -6355,7 +6374,48 @@ export function mountGame(canvas, host, bridge) {
       );
       if (market.news)
         rows.push({ label: "Market news", value: market.news, cls: "news" });
-      return { net, rows, quit: day.quit.map((m) => m.name) };
+      // The books and Mama Nkechi's debrief.
+      const wages = crewWages(d, place);
+      recordDay(d, {
+        day: d.day,
+        place,
+        mode: this.cfg.mode,
+        level: this.cfg.n || 0,
+        sales: sales + extra,
+        food: this.foodCost + this.storeUsed,
+        wages,
+        costs,
+        net: net - wages,
+        served: this.served,
+        lost: this.lost,
+        spoiled: market.spoiled,
+      });
+      const insights = shiftInsights(
+        {
+          sales: sales + extra,
+          foodCost: this.foodCost,
+          storeUsed: this.storeUsed,
+          emergencyExtra: roundNaira(this.emergencyExtra, 10),
+          packCost: this.packCost,
+          riderFees: this.riderFees,
+          rent,
+          upkeep,
+          taxes: tax.levy + tax.vat,
+          fines: this.fines,
+          settlements: this.settlements,
+          wages,
+          served: this.served,
+          lost: this.lost,
+          spoiled: market.spoiled,
+          complaints: this.complaints,
+          net: net - wages,
+          debt: d.debt,
+          owed: owedAt(d, place),
+          payday: daysToPayday(d),
+        },
+        fmtNaira,
+      );
+      return { net, rows, quit: day.quit.map((m) => m.name), insights };
     },
     finish(won, why) {
       if (this.state !== "playing") return;
@@ -6411,6 +6471,7 @@ export function mountGame(canvas, host, bridge) {
         const shift = this.settle(roundNaira(this.coinsEarned * 0.6), 0),
           coins = shift.net;
         bridge.ledger("winLedger", shift.rows);
+        showInsights("winInsights", shift.insights);
         const nb = this.score > Save.d.endlessBest;
         if (nb) Save.d.endlessBest = this.score;
         Save.save();
@@ -6453,6 +6514,7 @@ export function mountGame(canvas, host, bridge) {
         const shift = this.settle(this.coinsEarned, bonus),
           total = shift.net;
         bridge.ledger("winLedger", shift.rows);
+        showInsights("winInsights", shift.insights);
         Save.d.tutorialDone = true;
         this.track("win");
         if (!this.lost) this.track("perfect");
@@ -6523,6 +6585,7 @@ export function mountGame(canvas, host, bridge) {
             cls: shift.net < 0 ? "neg" : "pos",
           },
         ]);
+        showInsights("failInsights", shift.insights);
         Save.save();
         this.report(false, this.coinsEarned, shift.net, 0);
         $("#failTitle").textContent =
@@ -7653,6 +7716,43 @@ export function mountGame(canvas, host, bridge) {
       );
     if (r.quit.length) UI.toast(`${r.quit.join(", ")} quit: not paid`);
   }
+  // Mama Nkechi's debrief under the shift report.
+  function showInsights(id, list = []) {
+    const box = $("#" + id);
+    if (!box) return;
+    box.hidden = !list.length;
+    const head = document.createElement("div");
+    head.className = "mentorHead";
+    head.textContent = `${MENTOR} says`;
+    box.replaceChildren(
+      head,
+      ...list.map((i) => {
+        const row = document.createElement("div");
+        row.className = "insight " + i.tone;
+        const t = document.createElement("b");
+        t.textContent = i.title;
+        const tip = document.createElement("span");
+        tip.textContent = i.tip;
+        row.append(t, tip);
+        return row;
+      }),
+    );
+  }
+  function openBooks() {
+    bridge.books({
+      history: Save.d.history || [],
+      summary: bookSummary(Save.d.history || [], 7),
+      targets: TARGETS,
+      fmt: fmtNaira,
+      placeName: (id) => PLACES.find((p) => p.id === id)?.name || id,
+    });
+    UI.open("ovBooks");
+  }
+  on("#growBooks", () => {
+    Sound.play("click");
+    openBooks();
+  });
+  on("#booksClose", () => UI.close("ovBooks"));
   function collectAll() {
     return PLACES.reduce((t, p) => t + collectTill(Save.d, p.id), 0);
   }
@@ -7674,6 +7774,13 @@ export function mountGame(canvas, host, bridge) {
     );
     bridge.market({
       place: pl.name,
+      foodTarget: TARGETS.foodCost,
+      menu: plateCosts(
+        CHAPTERS[pl.chapter].foods.filter((f) => FOOD_GROUP[f]),
+        (f) => FOODS[f].price,
+        (f) => plateCost(Save.d, f) * foodBatch(f),
+        foodBatch,
+      ).map((m) => ({ ...m, name: FOODS[m.id].name })),
       items: Object.entries(INGREDIENTS)
         .filter(([id]) => needed.has(id))
         .map(([id, g]) => ({

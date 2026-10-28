@@ -57,7 +57,36 @@ const NEWS = [
   "Harvest season: some farm produce is cheaper today",
 ];
 
-const batchOf = (f) => (FOODS[f].cook || STOCK[FOODS[f].station]).batch;
+export const batchOf = (f) =>
+  (FOODS[f].cook || STOCK[FOODS[f].station] || { batch: 1 }).batch;
+
+// What share of a dish's price goes on ingredients, roughly as in a real
+// Lagos buka: bought-in drinks resell on thin margins, homemade zobo and
+// swallows are cheap to make, proteins cost the most to cook.
+export const COST_SHARE = {
+  jollof: 0.3,
+  friedrice: 0.32,
+  whiterice: 0.25,
+  beans: 0.22,
+  moimoi: 0.3,
+  eba: 0.2,
+  amala: 0.2,
+  poundedyam: 0.3,
+  egusi: 0.35,
+  efo: 0.3,
+  ewedu: 0.25,
+  beef: 0.45,
+  fish: 0.4,
+  egg: 0.35,
+  peppersoup: 0.4,
+  chicken: 0.42,
+  plantain: 0.3,
+  water: 0.55,
+  zobo: 0.25,
+  mineral: 0.6,
+  malt: 0.6,
+};
+const shareOf = (f) => COST_SHARE[f] ?? FOOD_COST;
 // One unit = one batch's worth of ingredients for the average food in the group.
 export function basePrice(g) {
   const foods = Object.keys(FOOD_GROUP).filter((f) => FOOD_GROUP[f] === g);
@@ -91,15 +120,42 @@ export function buy(d, g, qty, cap, discount = 1) {
   return { ok: true, n, cost };
 }
 
-// Called when a batch starts cooking. Returns the naira spent right now
-// (0 when the pantry covered it).
+// How many market units one batch of a dish uses: its ingredient value
+// over the value of one unit of its group. Cheap dishes use part of a unit.
+export function batchUnits(food) {
+  const g = FOOD_GROUP[food];
+  if (!g) return 0;
+  return (FOODS[food].price * batchOf(food) * shareOf(food)) / basePrice(g);
+}
+
+// Ingredient cost of one plate at today's market prices.
+export const plateCost = (d, food) =>
+  FOOD_GROUP[food]
+    ? (batchUnits(food) * price(d, FOOD_GROUP[food])) / batchOf(food)
+    : 0;
+
+/**
+ * Called when a batch starts cooking. The store hands out whole units and
+ * keeps any change as credit for the next batch of that group; whatever the
+ * store cannot cover is bought on the spot at a premium. Returns the naira
+ * spent right now (0 when the store covered it).
+ */
 export function ingredientsForBatch(d, food, discount = 1) {
   const g = FOOD_GROUP[food];
-  if ((d.pantry[g] || 0) > 0) {
+  if (!g) return 0;
+  d.pantryUse = d.pantryUse || {};
+  let owed = (d.pantryUse[g] || 0) + batchUnits(food);
+  while (owed > 0 && (d.pantry[g] || 0) > 0) {
     d.pantry[g]--;
-    return 0;
+    owed -= 1;
   }
-  return roundNaira(price(d, g) * (isOut(d, g) ? 1.6 : 1.4) * discount, 10);
+  let cost = 0;
+  if (owed > 0) {
+    cost = price(d, g) * (isOut(d, g) ? 1.6 : 1.4) * owed * discount;
+    owed = 0;
+  }
+  d.pantryUse[g] = owed;
+  return roundNaira(cost, 10);
 }
 
 // After each shift: prices creep up (Nigerian food inflation), some days a
