@@ -1287,6 +1287,10 @@ export function Board({ rows, unit, fmt, note }) {
               <>
                 <Star on className="mini" /> {r.value}
               </>
+            ) : unit === "okada" ? (
+              `🛵 ${r.value}`
+            ) : unit === "match" ? (
+              `Lv ${r.value}`
             ) : (
               fmt(r.value)
             )}

@@ -331,6 +331,19 @@ svg.star.on {
 .tabs.three {
   grid-template-columns: repeat(3, 1fr);
 }
+.tabs.five {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+.tabs.five button {
+  font-size: 12px;
+  padding-left: 2px;
+  padding-right: 2px;
+  min-width: 0;
+}
+.tabs.five .buttonLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 #ovBoard .panel,
 #ovGrow .panel {
   width: min(100%, 460px);

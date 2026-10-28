@@ -65,7 +65,7 @@ class MamaputShiftResource extends Resource
             ->filters([
                 TernaryFilter::make('flagged'),
                 TernaryFilter::make('won'),
-                SelectFilter::make('mode')->options(['level' => 'Level', 'daily' => 'Daily', 'endless' => 'Endless']),
+                SelectFilter::make('mode')->options(['level' => 'Level', 'daily' => 'Daily', 'endless' => 'Endless', 'okada' => 'Okada Rush', 'match' => 'Market Match']),
             ])
             ->recordActions([
                 Action::make('flag')

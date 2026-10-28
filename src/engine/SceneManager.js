@@ -8313,6 +8313,10 @@ export function mountGame(canvas, host, bridge) {
     Haptics,
     fmt: fmtNaira,
     today,
+    report: (shift) => {
+      Online.reportShift(shift);
+      scheduleSync();
+    },
     person: (seed = ri(0, 99)) =>
       makePerson({
         skin: SKINS[seed % SKINS.length],
@@ -8688,6 +8692,8 @@ export function mountGame(canvas, host, bridge) {
     sales: "#tabBoardSales",
     stars: "#tabBoardStars",
     endless: "#tabBoardEndless",
+    okada: "#tabBoardOkada",
+    match: "#tabBoardMatch",
   };
   // Real players from the Kikter backend; your row is added if you are
   // outside the top 50.
@@ -8699,7 +8705,7 @@ export function mountGame(canvas, host, bridge) {
     $("#boardScopeRow").hidden = !Online.enabled;
     for (const k in BOARD_TABS)
       $(BOARD_TABS[k]).classList.toggle("on", k === id);
-    const unit = id === "stars" ? "stars" : "naira",
+    const unit = ["stars", "okada", "match"].includes(id) ? id : "naira",
       seq = ++boardSeq;
     bridge.board({
       rows: [],

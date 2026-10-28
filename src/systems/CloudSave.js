@@ -48,6 +48,27 @@ export function mergeSaves(local, remote) {
     { food: rf, ...rs } = remote.stats || {};
   merged.stats = { ...maxMap(ls, rs), food: maxMap(lf, rf) };
   merged.tutorialDone = !!(local.tutorialDone || remote.tutorialDone);
+  if (local.side || remote.side) {
+    const ls = local.side || {},
+      rs = remote.side || {};
+    const side = { ...(newer.side || ls || rs) };
+    side.match = {
+      ...(side.match || {}),
+      level: Math.max(ls.match?.level || 1, rs.match?.level || 1),
+      stars: maxMap(ls.match?.stars, rs.match?.stars),
+    };
+    side.run = {
+      ...(side.run || {}),
+      best: Math.max(ls.run?.best || 0, rs.run?.best || 0),
+      bestDelivered: Math.max(
+        ls.run?.bestDelivered || 0,
+        rs.run?.bestDelivered || 0,
+      ),
+      runs: Math.max(ls.run?.runs || 0, rs.run?.runs || 0),
+    };
+    side.recipes = union(ls.recipes, rs.recipes);
+    merged.side = side;
+  }
   merged.updatedAt = Math.max(local.updatedAt || 0, remote.updatedAt || 0);
   merged.playerId = local.playerId || remote.playerId;
   return merged;

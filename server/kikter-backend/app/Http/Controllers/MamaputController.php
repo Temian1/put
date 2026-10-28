@@ -236,8 +236,9 @@ class MamaputController extends Controller
     {
         $player = $this->player($request);
         $data = $request->validate([
-            'mode' => ['required', 'in:level,daily,endless'],
-            'level' => ['nullable', 'integer', 'min:0', 'max:100'],
+            // okada = an Okada Rush delivery run, match = a Market Match level.
+            'mode' => ['required', 'in:level,daily,endless,okada,match'],
+            'level' => ['nullable', 'integer', 'min:0', 'max:10000'],
             'won' => ['required', 'boolean'],
             'served' => ['required', 'integer', 'min:0', 'max:1000'],
             'lost' => ['required', 'integer', 'min:0', 'max:1000'],
@@ -255,7 +256,9 @@ class MamaputController extends Controller
         $player->save();
         // Signed-in players earn coins for won shifts, up to a daily cap.
         $coins = 0;
-        if ($data['won'] && ! $data['flagged'] && $player->source() !== 'guest') {
+        // Side games pay in naira inside the game, not wallet coins.
+        $restaurant = in_array($data['mode'], ['level', 'daily', 'endless'], true);
+        if ($restaurant && $data['won'] && ! $data['flagged'] && $player->source() !== 'guest') {
             $coins = max(0, min((int) MamaputConfig::get('coins_per_win'),
                 (int) MamaputConfig::get('coins_daily_cap') - MamaputAccounts::earnedToday($player)));
             if ($coins > 0) {
@@ -276,6 +279,8 @@ class MamaputController extends Controller
         $column = match ($board) {
             'stars' => 'stars',
             'endless' => 'endless_best',
+            'okada' => 'okada_best',
+            'match' => 'match_level',
             default => 'lifetime_sales',
         };
         // scope=lagoslife ranks only players signed in through Lagos Life.

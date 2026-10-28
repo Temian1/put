@@ -52,7 +52,8 @@ export function createMarketMatch(ctx) {
     mode = "",
     selected = null,
     hintT = null,
-    size = 40;
+    size = 40,
+    startedAt = 0;
   const tiles = new Map();
   const boardEl = () => $("#m3Board");
 
@@ -494,6 +495,7 @@ export function createMarketMatch(ctx) {
     progress = spec.goals.map(() => 0);
     moves = spec.moves;
     score = 0;
+    startedAt = performance.now();
     over = false;
     busy = false;
     mode = "";
@@ -523,6 +525,24 @@ export function createMarketMatch(ctx) {
     finish(false, tools.moves > 0);
   }
 
+  // Each finished level is reported to the server like a shift.
+  function report(won, stars, cash) {
+    ctx.report?.({
+      mode: "match",
+      level: pick,
+      won,
+      served: progress.reduce((a, b) => a + b, 0) % 1000,
+      lost: 0,
+      sales: cash,
+      cash,
+      stars,
+      duration: Math.min(
+        7200,
+        Math.round((performance.now() - startedAt) / 1000),
+      ),
+    });
+  }
+
   function finish(won, canExtend) {
     over = true;
     clearHint();
@@ -533,6 +553,7 @@ export function createMarketMatch(ctx) {
       const stars = starsFor(moves, total);
       const r = claimMatch(Save.d, pick, stars, today());
       Save.save();
+      report(true, stars, r.cash);
       UI.coins();
       $("#m3EndTitle").textContent =
         stars === 3 ? "Perfect market run!" : "Level complete!";
@@ -576,6 +597,7 @@ export function createMarketMatch(ctx) {
       $("#m3EndNext .buttonLabel").textContent = canExtend
         ? "+5 moves"
         : "Retry";
+      report(false, 0, 0);
       Sound.play("fail");
     }
     $("#m3EndRewards").innerHTML = rows.join("");

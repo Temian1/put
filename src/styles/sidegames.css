@@ -619,95 +619,169 @@
   user-select: none;
   -webkit-user-select: none;
   touch-action: none;
+  gap: 8px;
 }
-.runHud {
+.runTop {
   display: flex;
   align-items: center;
   gap: 8px;
 }
-.runStat {
-  flex: 1;
-  min-width: 0;
-  padding: 5px 8px;
-  border-radius: 14px;
-  background: rgba(30, 14, 4, 0.62);
-  border: 2px solid rgba(255, 255, 255, 0.6);
+.runPause {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  background: linear-gradient(180deg, #ffae45, var(--orange, #ff8a00));
+  box-shadow:
+    0 4px 0 rgba(150, 70, 0, 0.9),
+    0 6px 12px rgba(0, 0, 0, 0.25);
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+.runPause svg {
+  width: 20px;
+  height: 20px;
+  fill: #fff;
+}
+.runPill {
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px 0 8px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #5a2a12, #3b1707);
+  border: 3px solid #fff;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.2);
   font-family: var(--display);
-  line-height: 1.05;
-  text-align: center;
 }
-.runStat small {
-  display: block;
-  font-size: 11px;
-  opacity: 0.85;
+.runPill i {
+  font-style: normal;
+  font-size: 18px;
 }
-.runStat b {
+.runPill b {
+  font-size: 20px;
+  font-weight: normal;
+  white-space: nowrap;
+}
+.runPill.cash {
+  margin-left: auto;
+}
+.runPill.clock.low {
+  background: linear-gradient(180deg, #ff5a5f, #c62828);
+  animation: m3Pulse 0.6s infinite;
+}
+.runGoal {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 6px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--ink);
+  font-family: var(--display);
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.15);
+}
+.runGoal > span {
+  font-size: 20px;
+}
+.runGoal b {
   font-size: 19px;
   font-weight: normal;
   white-space: nowrap;
 }
-.runStat.low b {
-  color: #ff8a80;
-  animation: m3Pulse 0.6s infinite;
-}
-.runStat.done {
-  border-color: #3be07a;
-}
-.runStat.done b {
-  color: #b9ffcd;
-}
-.runRow {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.runPacks {
-  display: flex;
-  gap: 6px;
-}
-.runPacks .pack {
-  position: relative;
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  background: rgba(30, 14, 4, 0.55);
-  border: 2px solid rgba(255, 255, 255, 0.7);
-  display: grid;
-  place-items: center;
+.runGoalBar {
+  flex: 1;
+  height: 12px;
+  border-radius: 6px;
+  background: rgba(74, 31, 12, 0.15);
   overflow: hidden;
 }
-.runPacks .pack i {
-  font-style: normal;
-  font-size: 24px;
+.runGoalBar i {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #2fa34f, #7be08f);
+  transition: width 0.4s cubic-bezier(0.3, 1.4, 0.5, 1);
 }
-.runPacks .pack em {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  height: 5px;
-  background: hsl(calc(var(--h) * 30 + 190 - var(--h) * 190), 90%, 55%);
-  transition: width 0.3s;
+.runGoal.done {
+  background: #d9f7df;
 }
-.runPacks .pack.empty {
-  opacity: 0.35;
-}
-.runLives {
+/* Next delivery card */
+.runNav {
+  align-self: center;
   display: flex;
-  gap: 4px;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 16px 6px 6px;
+  border-radius: 999px;
+  background: rgba(20, 30, 50, 0.72);
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(4px);
+  transition:
+    background 0.2s,
+    border-color 0.2s;
+  max-width: 100%;
+}
+.runNav[hidden] {
+  display: none;
+}
+.runNavArrow {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #ffc531;
+  color: #4a1f0c;
   font-size: 22px;
+  font-weight: 900;
+  animation: navNudge 0.9s ease-in-out infinite;
 }
-.runLives i {
-  font-style: normal;
-  color: rgba(255, 255, 255, 0.3);
-  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.3);
+.runNavText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.1;
 }
-.runLives i.on {
-  color: #ff4f6d;
+.runNavText b {
+  font-family: var(--display);
+  font-weight: normal;
+  font-size: 17px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.runNavText small {
+  font-size: 12.5px;
+  font-weight: 800;
+  opacity: 0.9;
+}
+.runNav.ok {
+  background: rgba(30, 122, 58, 0.85);
+  border-color: #7be08f;
+}
+.runNav.ok .runNavArrow {
+  background: #3be07a;
+  color: #fff;
+  animation: none;
+}
+.runNav.near:not(.ok) {
+  background: rgba(198, 40, 40, 0.85);
+}
+.runNav.food .runNavArrow {
+  background: #fff;
+  animation: m3Pulse 0.9s infinite;
 }
 .runPowers {
   display: flex;
+  justify-content: center;
   gap: 6px;
-  min-height: 28px;
+  min-height: 26px;
 }
 .runPowers span {
   padding: 3px 10px 3px 6px;
@@ -723,16 +797,17 @@
 .runMsg {
   position: absolute;
   left: 50%;
-  top: 34%;
+  top: 36%;
   transform: translate(-50%, -50%);
-  max-width: 88%;
+  width: 88%;
   text-align: center;
   font-family: var(--display);
-  font-size: 26px;
+  font-size: 25px;
   line-height: 1.15;
+  -webkit-text-stroke: 1px #263f98;
   text-shadow:
     0 3px 0 #263f98,
-    0 0 12px rgba(0, 0, 0, 0.5);
+    0 0 14px rgba(0, 0, 0, 0.45);
   opacity: 0;
   pointer-events: none;
 }
@@ -742,16 +817,16 @@
 .runCombo {
   position: absolute;
   right: 14px;
-  top: 40%;
+  top: 46%;
   font-family: var(--display);
-  font-size: 22px;
+  font-size: 24px;
   color: #ffd23f;
   text-shadow: 0 2px 0 #a8285a;
 }
 .runFloats {
   position: absolute;
   left: 50%;
-  top: 52%;
+  top: 56%;
   pointer-events: none;
 }
 .runFloat {
@@ -761,44 +836,166 @@
   transform: translateX(-50%);
   white-space: nowrap;
   font-family: var(--display);
-  font-size: 24px;
+  font-size: 22px;
   animation: runFloat 1.1s ease-out forwards;
   text-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
 }
 .runFloat.pay {
-  color: #b9ffcd;
-  font-size: 28px;
+  color: #ffd23f;
+  font-size: 26px;
 }
 .runFloat.miss {
   color: #ff8a80;
   font-size: 18px;
 }
-.runPad {
+/* "Delivered!" banner */
+.runDone {
+  position: absolute;
+  left: 50%;
+  top: 25%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px 10px 10px;
+  border-radius: 22px;
+  background: linear-gradient(180deg, #3be07a, #1e9a4a);
+  border: 3px solid #fff;
+  box-shadow:
+    0 6px 0 #146b33,
+    0 12px 24px rgba(0, 0, 0, 0.3);
+  transform: translate(-50%, -20px) scale(0.6);
+  opacity: 0;
+  pointer-events: none;
+  max-width: calc(100% - 32px);
+}
+.runDone.show {
+  animation: doneIn 1.8s cubic-bezier(0.3, 1.4, 0.5, 1) forwards;
+}
+.runDone .tick {
+  width: 42px;
+  height: 42px;
+  flex: none;
+  border-radius: 50%;
+  background: #fff;
+  color: #1e9a4a;
+  display: grid;
+  place-items: center;
+  font-size: 26px;
+  font-weight: 900;
+}
+.runDone b {
+  display: block;
+  font-family: var(--display);
+  font-weight: normal;
+  font-size: 19px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.runDone small {
+  font-weight: 800;
+  font-size: 13px;
+}
+/* Swipe hint at the start of a run: a hand sweeping side to side. */
+.runSwipe {
+  position: absolute;
+  left: 50%;
+  bottom: 22%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+.runSwipe.show {
+  opacity: 1;
+}
+.runSwipe .hand {
+  font-style: normal;
+  font-size: 46px;
+  animation: swipeHand 1.6s ease-in-out infinite;
+  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.4));
+}
+.runSwipe small {
+  font-family: var(--display);
+  font-size: 18px;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
+}
+.runBottom {
   margin-top: auto;
   display: flex;
   justify-content: space-between;
-  gap: 10px;
-  opacity: 0.75;
+  align-items: flex-end;
 }
-.runPad button {
-  flex: 1;
-  height: 54px;
-  border-radius: 18px;
-  border: 2px solid rgba(255, 255, 255, 0.7);
-  background: rgba(30, 14, 4, 0.45);
-  color: #fff;
+.runPacks {
+  display: flex;
+  gap: 6px;
+}
+.runPacks .pack {
+  position: relative;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fff, #ffe9c4);
+  border: 3px solid #fff;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.2);
   display: grid;
   place-items: center;
+  overflow: hidden;
 }
-.runPad button:active {
-  background: rgba(255, 255, 255, 0.3);
+.runPacks .pack i {
+  font-style: normal;
+  font-size: 24px;
 }
-.runPad .buttonIcon {
-  width: 26px;
-  height: 26px;
+.runPacks .pack em {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 6px;
+  background: #ffb300;
+  transition: width 0.3s;
 }
-#runSlide .buttonIcon {
-  transform: rotate(90deg);
+.runPacks .pack.hot em {
+  background: #ff5722;
+}
+.runPacks .pack.hot::after {
+  content: "🔥";
+  position: absolute;
+  right: 1px;
+  top: -1px;
+  font-size: 13px;
+}
+.runPacks .pack.cold em {
+  background: #4fc3f7;
+}
+.runPacks .pack.empty {
+  background: rgba(255, 255, 255, 0.25);
+  border-style: dashed;
+}
+.runPacks .pack.empty i {
+  opacity: 0.35;
+}
+.runLives {
+  display: flex;
+  gap: 4px;
+  font-size: 26px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(30, 14, 4, 0.45);
+}
+.runLives i {
+  font-style: normal;
+  color: rgba(255, 255, 255, 0.3);
+}
+.runLives i.on {
+  color: #ff4f6d;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.3);
+}
+.runLives i.shield {
+  font-size: 22px;
 }
 .runTier {
   margin: 8px 0;
@@ -847,6 +1044,39 @@
 .howRun b {
   font-size: 16px;
   flex: none;
+}
+@keyframes navNudge {
+  50% {
+    transform: translateX(3px) scale(1.06);
+  }
+}
+@keyframes doneIn {
+  0% {
+    transform: translate(-50%, -20px) scale(0.6);
+    opacity: 0;
+  }
+  12% {
+    transform: translate(-50%, 0) scale(1.08);
+    opacity: 1;
+  }
+  20%,
+  80% {
+    transform: translate(-50%, 0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -30px) scale(0.95);
+    opacity: 0;
+  }
+}
+@keyframes swipeHand {
+  0%,
+  100% {
+    transform: translateX(-50px) rotate(-12deg);
+  }
+  50% {
+    transform: translateX(50px) rotate(12deg);
+  }
 }
 
 /* ---------- Keyframes ---------- */

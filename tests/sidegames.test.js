@@ -279,3 +279,44 @@ describe("side game rewards", () => {
     expect(d.side.match.tools.spoon).toBe(2);
   });
 });
+
+describe("side games across devices", () => {
+  it("merging two saves keeps the best side game progress", async () => {
+    const { mergeSaves } = await import("../src/systems/CloudSave.js");
+    const phone = {
+      updatedAt: 2,
+      unlocked: 12,
+      side: {
+        match: { level: 4, stars: { 1: 3, 2: 1 }, tools: { spoon: 2 } },
+        run: { best: 9, bestDelivered: 9, runs: 3 },
+        recipes: ["coconutrice"],
+      },
+    };
+    const laptop = {
+      updatedAt: 1,
+      unlocked: 12,
+      side: {
+        match: { level: 7, stars: { 2: 3 } },
+        run: { best: 14, bestDelivered: 14, runs: 5 },
+        recipes: ["gizdodo"],
+      },
+    };
+    const m = mergeSaves(phone, laptop);
+    expect(m.side.match.level).toBe(7);
+    expect(m.side.match.stars).toEqual({ 1: 3, 2: 3 });
+    expect(m.side.match.tools.spoon).toBe(2);
+    expect(m.side.run.best).toBe(14);
+    expect(m.side.recipes.sort()).toEqual(["coconutrice", "gizdodo"]);
+  });
+
+  it("the next drop is the nearest customer still waiting", async () => {
+    const { nextDrop } = await import("../src/game/runner.js");
+    const r = createRun(TIERS[0], seeded(1));
+    r.items = [
+      { id: 1, type: "drop", lane: 1, z: 40, name: "Far" },
+      { id: 2, type: "drop", lane: -1, z: 20, name: "Near", done: true },
+      { id: 3, type: "drop", lane: -1, z: 25, name: "Next" },
+    ];
+    expect(nextDrop(r).name).toBe("Next");
+  });
+});

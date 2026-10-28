@@ -85,6 +85,8 @@ class MamaputPlayerResource extends Resource
                 TextEntry::make('unlocked')->label('Level unlocked'),
                 TextEntry::make('stars'),
                 TextEntry::make('endless_best')->label('Endless best')->formatStateUsing($naira),
+                TextEntry::make('okada_best')->label('Okada Rush best (deliveries)'),
+                TextEntry::make('match_level')->label('Market Match levels cleared'),
                 TextEntry::make('restaurants'),
                 TextEntry::make('staff_count')->label('Staff'),
                 TextEntry::make('shifts_played')->label('Shifts'),
@@ -127,6 +129,8 @@ class MamaputPlayerResource extends Resource
                 TextColumn::make('reputation')->numeric(1)->sortable(),
                 TextColumn::make('stars')->sortable()->toggleable(),
                 TextColumn::make('restaurants')->sortable()->toggleable(),
+                TextColumn::make('okada_best')->label('Okada best')->sortable()->toggleable(),
+                TextColumn::make('match_level')->label('Match level')->sortable()->toggleable(),
                 TextColumn::make('staff_count')->label('Staff')->sortable()->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('shifts_played')->label('Shifts')->sortable(),
                 IconColumn::make('banned_at')->label('Banned')->boolean()

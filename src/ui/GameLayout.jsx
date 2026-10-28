@@ -300,51 +300,60 @@ export const GameLayout = memo(function GameLayout({
         aria-label="Okada Rush"
         tag="section"
       >
-        <div className="runHud">
-          <button className="iconBtn" id="runPause" aria-label="Pause">
+        <div className="runTop">
+          <button className="runPause" id="runPause" aria-label="Pause">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <rect x="6" y="5" width="4" height="14" rx="1.5"></rect>
               <rect x="14" y="5" width="4" height="14" rx="1.5"></rect>
             </svg>
           </button>
-          <div className="runStat" id="runClockBox">
-            <small id="runClockLabel">{"Time"}</small>
+          <div className="runPill clock" id="runClockBox">
+            <i aria-hidden="true">{"⏱️"}</i>
             <b id="runClock">{"1:15"}</b>
           </div>
-          <div className="runStat">
-            <small>{"Delivered"}</small>
-            <b id="runDelivered">{"0 / 5"}</b>
-          </div>
-          <div className="runStat cash">
-            <small>{"Earned"}</small>
+          <div className="runPill cash">
+            <i className="note" aria-hidden="true"></i>
             <b id="runCash">{"₦0"}</b>
           </div>
         </div>
-        <div className="runRow">
+        <div className="runGoal" aria-label="Deliveries">
+          <span>{"🥡"}</span>
+          <div className="runGoalBar">
+            <i id="runGoalBar"></i>
+          </div>
+          <b id="runDelivered">{"0 / 5"}</b>
+        </div>
+        <div className="runNav" id="runNav" hidden>
+          <span className="runNavArrow" id="runNavArrow">
+            {"➜"}
+          </span>
+          <span className="runNavText">
+            <b id="runNavTitle">{"Next drop"}</b>
+            <small id="runNavSub"></small>
+          </span>
+        </div>
+        <div className="runPowers" id="runPowers"></div>
+        <div className="runMsg" id="runMsg" aria-live="polite"></div>
+        <div className="runCombo" id="runCombo"></div>
+        <div className="runFloats" id="runFloats"></div>
+        <div className="runDone" id="runDone" aria-live="polite">
+          <span className="tick">{"✓"}</span>
+          <span>
+            <b id="runDoneTitle">{"Delivered!"}</b>
+            <small id="runDoneSub"></small>
+          </span>
+        </div>
+        <div className="runSwipe" id="runSwipe" aria-hidden="true">
+          <i className="hand">{"👆"}</i>
+          <small>{"Swipe to ride"}</small>
+        </div>
+        <div className="runBottom">
           <div className="runPacks" id="runPacks" aria-label="Food packs"></div>
           <div
             className="runLives"
             id="runLives"
             aria-label="Crashes left"
           ></div>
-        </div>
-        <div className="runPowers" id="runPowers"></div>
-        <div className="runMsg" id="runMsg" aria-live="polite"></div>
-        <div className="runCombo" id="runCombo"></div>
-        <div className="runFloats" id="runFloats"></div>
-        <div className="runPad" id="runPad">
-          <button id="runLeft" aria-label="Left">
-            <Icon name="back" />
-          </button>
-          <button id="runJump" aria-label="Jump">
-            <Icon name="upgrade" />
-          </button>
-          <button id="runSlide" aria-label="Duck">
-            <Icon name="next" />
-          </button>
-          <button id="runRight" aria-label="Right">
-            <Icon name="next" />
-          </button>
         </div>
       </Surface>
       <Surface className="screen" id="scrGame" aria-label="Game" tag="section">
@@ -735,7 +744,7 @@ export const GameLayout = memo(function GameLayout({
       <Surface className="overlay" id="ovBoard" tag="div">
         <div className="panel">
           <div className="ribbon small">{"Leaderboard"}</div>
-          <div className="tabs three" id="boardTabs">
+          <div className="tabs five" id="boardTabs">
             <button id="tabBoardSales" className="on">
               <Icon name="note" />
               <span className="buttonLabel">{"Top Bukas"}</span>
@@ -747,6 +756,14 @@ export const GameLayout = memo(function GameLayout({
             <button id="tabBoardEndless">
               <Icon name="infinity" />
               <span className="buttonLabel">{"Endless"}</span>
+            </button>
+            <button id="tabBoardOkada">
+              <Icon name="bike" />
+              <span className="buttonLabel">{"Okada"}</span>
+            </button>
+            <button id="tabBoardMatch">
+              <Icon name="basket" />
+              <span className="buttonLabel">{"Match"}</span>
             </button>
           </div>
           <label className="boardScope" id="boardScopeRow" hidden>

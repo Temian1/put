@@ -97,6 +97,25 @@ export const POWERS = {
 };
 
 export const MAX_PACKS = 3;
+// Who is waiting at the gate.
+export const CUSTOMERS = [
+  "Mama Bisi",
+  "Oga Tunde",
+  "Aunty Ngozi",
+  "Baba Sule",
+  "Chidi",
+  "Halima",
+  "Uncle Femi",
+  "Sister Joy",
+  "Emeka",
+  "Madam Kemi",
+];
+
+// The next customer ahead who is still waiting, if any.
+export const nextDrop = (r) =>
+  r.items
+    .filter((i) => i.type === "drop" && !i.done && i.z > r.dist - 0.5)
+    .sort((a, b) => a.z - b.z)[0] || null;
 const JUMP_V = 9.5,
   GRAVITY = 26,
   SLIDE_T = 0.75,
@@ -154,9 +173,12 @@ function generate(r) {
     // Every few rows: a customer waiting at a gate on one side.
     if (roll < 0.22) {
       const side = r.rng() < 0.5 ? -1 : 1;
-      add(r, { type: "drop", lane: side, z });
-      // A row of notes leads into the drop lane.
+      const drop = r.nextId;
+      add(r, { type: "drop", lane: side, z, name: pickOf(r, CUSTOMERS) });
+      // Arrows painted on the road lead into the drop lane, then notes.
       for (let k = 1; k <= 3; k++)
+        add(r, { type: "guide", lane: side, z: z - 6 - k * 4, drop });
+      for (let k = 1; k <= 2; k++)
         add(r, { type: "note", lane: side, z: z - k * 2.2 });
     } else if (roll < 0.36) {
       // A food stall hands out a pack.

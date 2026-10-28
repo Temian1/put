@@ -131,6 +131,10 @@ class MamaputPlayer extends Model
         $this->tier = MamaputConfig::tierOf($this->lifetime_sales, $this->reputation);
         $this->restaurants = count((array) ($save['branches'] ?? ['ch0']));
         $this->staff_count = count((array) ($save['staff'] ?? []));
+        // Side games: best Okada Rush endless run and Market Match progress.
+        $side = (array) ($save['side'] ?? []);
+        $this->okada_best = max(0, min(100000, (int) ($side['run']['best'] ?? 0)));
+        $this->match_level = max(0, min(100000, (int) ($side['match']['level'] ?? 1) - 1));
     }
 
     /**
