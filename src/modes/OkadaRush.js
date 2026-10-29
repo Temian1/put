@@ -66,10 +66,26 @@ const CONFETTI = [
 ];
 const TIPS = {
   1: "Swipe left or right into the green lane to deliver!",
-  2: "Potholes ahead. Swipe up to jump them!",
-  3: "Checkpoint poles: swipe down to duck under!",
+  2: "Hawkers cross anyhow. Swipe down to brake!",
+  3: "Police on patrol. Swipe up to speed away!",
   4: "Endless! Three crashes and the night is over.",
 };
+const CAR_COLORS = [
+  "#E53935",
+  "#1E88E5",
+  "#FAFAFA",
+  "#43A047",
+  "#424242",
+  "#8E24AA",
+];
+const BRIDGE_SIGNS = [
+  ["WELCOME TO LAGOS", "#2FA34F", "#FFF"],
+  ["MAMA PUT · HOT FOOD 24/7", "#E53935", "#FFF"],
+];
+const TRAYS = ["#FFC531", "#E53935", "#8BC34A", "#FF7043"];
+const WALKERS = 10,
+  WALK_SPAN = 150,
+  BRIDGE_SPAN = 190;
 
 export function createOkadaRush(ctx) {
   const {
@@ -107,6 +123,10 @@ export function createOkadaRush(ctx) {
     rider = null,
     roadTex = [],
     lots = [],
+    walkers = [],
+    bridges = [],
+    cop = null,
+    sirenT = 0,
     doneT = 0,
     swiped = false,
     startedAt = 0;
@@ -364,6 +384,24 @@ export function createOkadaRush(ctx) {
       scene.add(track(g));
       lots.push(g);
     }
+    // People walking along both pavements, some hawkers with trays.
+    walkers = [];
+    if (person)
+      for (let i = 0; i < WALKERS; i++) {
+        const w = buildWalker(i);
+        scene.add(track(w));
+        walkers.push(w);
+      }
+    // Pedestrian footbridges over the road, every so often.
+    bridges = [];
+    const bridgeSigns = BRIDGE_SIGNS.map(signTex);
+    for (let i = 0; i < 2; i++) {
+      const b = buildBridge(i, night, bridgeSigns[i]);
+      scene.add(track(b));
+      bridges.push(b);
+    }
+    cop = buildCop();
+    scene.add(track(cop.root));
     rider = buildRider();
     scene.add(track(rider.root));
     // Confetti for deliveries, kept in a pool.
@@ -555,6 +593,242 @@ export function createOkadaRush(ctx) {
     g.add(b);
   }
 
+  // Someone on the pavement. Hawkers carry a tray of goods on the head.
+  function buildWalker(i) {
+    const g = new T3.Group();
+    const side = i % 2 ? 1 : -1;
+    const p = person(100 + i * 7);
+    p.root.userData.shared = true;
+    p.root.scale.setScalar(0.82 + (i % 3) * 0.06);
+    g.add(p.root);
+    g.add(blob(0.9, 0.9, 0.28));
+    const dir = i % 3 ? 1 : -1;
+    const tray = i % 4 === 0 ? addTray(g, p, i, 0.82 + (i % 3) * 0.06) : null;
+    g.position.x = side * (ROAD_W / 2 + 1 + (i % 3) * 0.55);
+    // Walking up the road faces away from the camera.
+    p.root.rotation.y = dir > 0 ? Math.PI : 0;
+    g.userData = {
+      z: (i * WALK_SPAN) / WALKERS + Math.random() * 6,
+      vz: dir * (1 + Math.random() * 0.7),
+      p,
+      tray,
+      phase: Math.random() * 6,
+    };
+    return g;
+  }
+  // A tray balanced on the head, arms up to hold it.
+  function addTray(g, p, seed, scale) {
+    const t = new T3.Group();
+    t.add(
+      mesh(
+        new T3.CylinderGeometry(0.5, 0.42, 0.08, 14),
+        M("#B0BEC5", { metalness: 0.5 }),
+      ),
+    );
+    for (let k = 0; k < 5; k++)
+      t.add(
+        mesh(
+          box(0.2, 0.16, 0.2),
+          M(TRAYS[(seed + k) % TRAYS.length]),
+          Math.cos(k * 1.3) * 0.24,
+          0.12,
+          Math.sin(k * 1.3) * 0.24,
+        ),
+      );
+    t.position.y = 2.12 * scale;
+    g.add(t);
+    p.armL.rotation.z = -2.6;
+    p.armR.rotation.z = 2.6;
+    return t;
+  }
+  function walkAnim(p, ph, tray) {
+    const sw = Math.sin(ph);
+    if (p.feet?.length === 2) {
+      p.feet[0].position.z = 0.1 + sw * 0.16;
+      p.feet[1].position.z = 0.1 - sw * 0.16;
+    }
+    if (!tray) {
+      p.armL.rotation.x = sw * 0.5;
+      p.armR.rotation.x = -sw * 0.5;
+    }
+    p.inner.position.y = Math.abs(Math.cos(ph)) * 0.05;
+  }
+
+  // A footbridge across the road: deck, railings, a banner, stairs down
+  // at the pavement's edge, and a few people crossing on top.
+  function buildBridge(i, night, sign) {
+    const g = new T3.Group();
+    const H = 6.4,
+      X = ROAD_W / 2 + 3,
+      W = X * 2 + 1.3;
+    const steel = M("#5F6B7A", { metalness: 0.4, roughness: 0.5 });
+    const green = M(i ? "#1565C0" : "#2E7D32", { roughness: 0.5 });
+    g.add(mesh(box(W, 0.35, 2.4), steel, 0, H, 0));
+    [-1.15, 1.15].forEach((z) => {
+      g.add(mesh(box(W, 0.95, 0.08), green, 0, H + 0.62, z));
+      g.add(mesh(box(W, 0.1, 0.14), steel, 0, H + 1.12, z));
+    });
+    // A light roof on posts, like the real ones.
+    g.add(mesh(box(W, 0.1, 2.8), M("#E0E0E0"), 0, H + 2.4, 0));
+    for (let x = -X; x <= X + 0.01; x += X / 2)
+      [-1.15, 1.15].forEach((z) =>
+        g.add(mesh(box(0.08, 2.3, 0.08), steel, x, H + 1.25, z)),
+      );
+    const banner = mesh(
+      new T3.PlaneGeometry(7.4, 0.9),
+      new T3.MeshBasicMaterial({ map: sign }),
+      0,
+      H + 0.6,
+      1.21,
+    );
+    g.add(banner);
+    if (night)
+      g.add(
+        mesh(
+          box(W - 1, 0.06, 0.2),
+          M("#FFF4C4", { emissive: "#FFD86B", emissiveIntensity: 1.4 }),
+          0,
+          H - 0.2,
+          0,
+        ),
+      );
+    // Pillars and stairs on both pavements.
+    const L = 9,
+      len = Math.hypot(L, H);
+    [-1, 1].forEach((sd) => {
+      g.add(mesh(box(0.7, H, 0.7), steel, sd * X, H / 2, 0));
+      const st = mesh(
+        box(1.3, 0.3, len),
+        M("#9E9E9E"),
+        sd * X,
+        H / 2,
+        -L / 2 - 1.2,
+      );
+      st.rotation.x = -Math.atan2(H, L);
+      g.add(st);
+      const rail = mesh(
+        box(0.06, 0.7, len),
+        green,
+        sd * (X + 0.62),
+        H / 2 + 0.55,
+        -L / 2 - 1.2,
+      );
+      rail.rotation.x = st.rotation.x;
+      g.add(rail);
+    });
+    if (person)
+      [-2.6, 1.8].forEach((x, k) => {
+        const p = person(40 + i * 5 + k);
+        p.root.userData.shared = true;
+        p.root.scale.setScalar(0.8);
+        p.root.position.set(x, H + 0.18, 0.3 - k * 0.6);
+        p.root.rotation.y = k ? -Math.PI / 2 : Math.PI / 2;
+        g.add(p.root);
+        g.userData["p" + k] = p;
+      });
+    g.userData.z = 70 + i * (BRIDGE_SPAN / 2);
+    return g;
+  }
+
+  // The police: a patrol car that chases the okada after a crash.
+  function buildCop() {
+    const root = new T3.Group();
+    root.add(blob(2.4, 4.4, 0.45));
+    const white = M("#FAFAFA", { roughness: 0.35, metalness: 0.25 });
+    root.add(mesh(box(1.8, 0.72, 4), white, 0, 0.62, 0));
+    root.add(mesh(box(1.82, 0.2, 4.02), M("#0D47A1"), 0, 0.66, 0));
+    root.add(
+      mesh(
+        box(1.56, 0.5, 2),
+        M("#22303C", { roughness: 0.15, metalness: 0.4 }),
+        0,
+        1.22,
+        0.2,
+      ),
+    );
+    root.add(mesh(box(1.6, 0.1, 2.04), white, 0, 1.5, 0.2));
+    const red = M("#FF1744", { emissive: "#FF1744", emissiveIntensity: 2 }),
+      blue = M("#2979FF", { emissive: "#2979FF", emissiveIntensity: 2 });
+    root.add(mesh(box(0.5, 0.18, 0.36), red, -0.3, 1.64, 0.2));
+    root.add(mesh(box(0.5, 0.18, 0.36), blue, 0.3, 1.64, 0.2));
+    const plate = mesh(
+      new T3.PlaneGeometry(1.4, 0.36),
+      new T3.MeshBasicMaterial({ map: signTex(["POLICE", "#0D47A1", "#FFF"]) }),
+      0,
+      0.72,
+      2.02,
+    );
+    root.add(plate);
+    const roofSign = mesh(
+      new T3.PlaneGeometry(1.3, 0.34),
+      new T3.MeshBasicMaterial({ map: signTex(["POLICE", "#0D47A1", "#FFF"]) }),
+      0,
+      1.56,
+      0.9,
+    );
+    roofSign.rotation.x = -Math.PI / 2;
+    root.add(roofSign);
+    const wheels = [];
+    [-0.82, 0.82].forEach((x) =>
+      [-1.3, 1.3].forEach((z) => {
+        const w = mesh(
+          new T3.CylinderGeometry(0.32, 0.32, 0.24, 12),
+          M("#1E1E1E"),
+          x,
+          0.32,
+          z,
+        );
+        w.rotation.z = Math.PI / 2;
+        root.add(w);
+        wheels.push(w);
+      }),
+    );
+    root.visible = false;
+    root.position.z = 14;
+    root.scale.setScalar(0.85);
+    return { root, red, blue, wheels };
+  }
+
+  // Amber indicators at the back corners of a vehicle, facing the rider.
+  function indicators(g, u, x, y, z) {
+    u.blink = {};
+    [-1, 1].forEach((sd) => {
+      const m = M("#FFB300", { emissive: "#FF8F00", emissiveIntensity: 0.1 });
+      g.add(mesh(box(0.2, 0.14, 0.06), m, sd * x, y, z));
+      u.blink[sd] = m;
+    });
+  }
+  function wheelSet(g, u, xs, zs, rad, w = 0.24) {
+    u.wheels = u.wheels || [];
+    xs.forEach((x) =>
+      zs.forEach((z) => {
+        const wh = mesh(
+          new T3.CylinderGeometry(rad, rad, w, 12),
+          M("#1E1E1E"),
+          x,
+          rad,
+          z,
+        );
+        wh.rotation.z = Math.PI / 2;
+        g.add(wh);
+        u.wheels.push(wh);
+      }),
+    );
+  }
+  function tailLights(g, x, y, z) {
+    [-1, 1].forEach((sd) =>
+      g.add(
+        mesh(
+          box(0.28, 0.14, 0.05),
+          M("#FF5252", { emissive: "#FF1744", emissiveIntensity: 0.8 }),
+          sd * x,
+          y,
+          z,
+        ),
+      ),
+    );
+  }
+
   // The okada and its rider, with the Mama Put delivery box on the back.
   function buildRider() {
     const root = new T3.Group(),
@@ -664,117 +938,75 @@ export function createOkadaRush(ctx) {
         // Bags tied on the roof rack.
         g.add(mesh(box(1.4, 0.35, 1.2), M("#6D4C41"), 0.1, 2.62, 0.6));
         g.add(mesh(box(0.9, 0.3, 0.9), M("#1565C0"), -0.3, 2.6, -0.8));
-        [-0.75, 0.75].forEach((x) =>
-          [-1.4, 1.4].forEach((z) => {
-            const w = mesh(
-              new T3.CylinderGeometry(0.33, 0.33, 0.26, 12),
-              M("#1E1E1E"),
-              x,
-              0.33,
-              z,
-            );
-            w.rotation.z = Math.PI / 2;
-            g.add(w);
-          }),
-        );
-        [-0.6, 0.6].forEach((x) =>
-          g.add(
-            mesh(
-              box(0.26, 0.16, 0.05),
-              M("#FF5252", { emissive: "#FF1744", emissiveIntensity: 0.8 }),
-              x,
-              0.85,
-              2.13,
-            ),
-          ),
-        );
-      } else if (it.kind === "barrier") {
-        g.add(blob(2.2, 0.8, 0.3));
-        for (let k = 0; k < 4; k++)
-          g.add(
-            mesh(
-              box(0.46, 0.34, 0.22),
-              M(k % 2 ? "#FFFFFF" : "#E53935", { roughness: 0.5 }),
-              -0.69 + k * 0.46,
-              0.66,
-              0,
-            ),
-          );
-        [-0.75, 0.75].forEach((x) => {
-          g.add(mesh(box(0.1, 0.55, 0.1), M("#555"), x, 0.28, 0));
-          g.add(mesh(box(0.5, 0.06, 0.4), M("#555"), x, 0.03, 0));
-        });
-      } else if (it.kind === "pothole") {
-        const hole = mesh(
-          new T3.CircleGeometry(0.95, 20),
-          M("#1A1816", { roughness: 1 }),
-          0,
-          0.02,
-          0,
-        );
-        hole.rotation.x = -Math.PI / 2;
-        hole.scale.y = 0.72;
-        g.add(hole);
-        const water = mesh(
-          new T3.CircleGeometry(0.55, 16),
-          M("#5D7A99", { roughness: 0.05, metalness: 0.4 }),
-          0.1,
-          0.03,
-          0.05,
-        );
-        water.rotation.x = -Math.PI / 2;
-        water.scale.y = 0.6;
-        g.add(water);
-        const cone = mesh(
-          new T3.ConeGeometry(0.2, 0.6, 10),
-          M("#FF6D00"),
-          -1,
-          0.3,
-          0.5,
-        );
-        g.add(cone);
+        wheelSet(g, u, [-0.75, 0.75], [-1.4, 1.4], 0.33, 0.26);
+        tailLights(g, 0.6, 0.85, 2.13);
+        indicators(g, u, 0.86, 1.1, 2.14);
+      } else if (it.kind === "car") {
+        g.add(blob(2.2, 4.2, 0.45));
+        const c = CAR_COLORS[it.id % CAR_COLORS.length];
+        const body = M(c, { roughness: 0.3, metalness: 0.3 });
+        g.add(mesh(box(1.7, 0.6, 3.8), body, 0, 0.6, 0));
         g.add(
           mesh(
-            new T3.CylinderGeometry(0.17, 0.17, 0.08, 10),
-            M("#FFFFFF"),
-            -1,
-            0.3,
-            0.5,
+            box(1.5, 0.5, 2),
+            M("#22303C", { roughness: 0.15, metalness: 0.4 }),
+            0,
+            1.15,
+            0.15,
           ),
         );
-      } else if (it.kind === "pole") {
-        g.add(blob(2.6, 0.9, 0.3));
-        [-1, 1].forEach((s) => {
-          g.add(
-            mesh(
-              new T3.CylinderGeometry(0.28, 0.28, 0.9, 12),
-              M("#1565C0"),
-              s * 1.05,
-              0.45,
-              0,
-            ),
-          );
-          g.add(
-            mesh(
-              new T3.CylinderGeometry(0.29, 0.29, 0.12, 12),
-              M("#FFFFFF"),
-              s * 1.05,
-              0.6,
-              0,
-            ),
-          );
-          g.add(mesh(box(0.1, 0.7, 0.1), M("#333"), s * 1.05, 1.2, 0));
-        });
-        for (let k = 0; k < 5; k++)
-          g.add(
-            mesh(
-              box(0.46, 0.2, 0.18),
-              M(k % 2 ? "#FFFFFF" : "#E53935"),
-              -0.92 + k * 0.46,
-              1.45,
-              0,
-            ),
-          );
+        g.add(mesh(box(1.54, 0.1, 2.04), body, 0, 1.44, 0.15));
+        g.add(mesh(box(1.72, 0.18, 0.2), M("#2A2A2A"), 0, 0.36, 1.9));
+        wheelSet(g, u, [-0.8, 0.8], [-1.25, 1.25], 0.32);
+        tailLights(g, 0.58, 0.72, 1.91);
+        indicators(g, u, 0.8, 0.92, 1.92);
+      } else if (it.kind === "keke") {
+        // A keke: the three-wheeled taxi, yellow and green with a canopy.
+        g.add(blob(1.7, 2.9, 0.4));
+        g.add(
+          mesh(
+            box(1.3, 0.55, 2.2),
+            M("#FFC531", { roughness: 0.4 }),
+            0,
+            0.62,
+            0,
+          ),
+        );
+        g.add(mesh(box(1.32, 0.12, 2.22), M("#2E7D32"), 0, 0.95, 0));
+        g.add(mesh(box(1.3, 0.85, 0.06), M("#FFC531"), 0, 1.35, 1.08));
+        g.add(mesh(box(1.42, 0.1, 2.3), M("#2E7D32"), 0, 1.85, 0));
+        [-0.62, 0.62].forEach((x) =>
+          [-1, 1].forEach((z) =>
+            g.add(mesh(box(0.06, 0.9, 0.06), M("#333"), x, 1.4, z)),
+          ),
+        );
+        g.add(
+          mesh(
+            box(1.1, 0.5, 0.05),
+            M("#2B3A4A", { roughness: 0.15 }),
+            0,
+            1.45,
+            -1.05,
+          ),
+        );
+        wheelSet(g, u, [-0.6, 0.6], [0.7], 0.27, 0.2);
+        wheelSet(g, u, [0], [-0.95], 0.27, 0.2);
+        tailLights(g, 0.45, 0.72, 1.11);
+        indicators(g, u, 0.62, 0.95, 1.12);
+      } else if (it.kind === "hawker") {
+        const sc = 0.88;
+        if (person) {
+          const p = person(it.id * 3 + 1);
+          p.root.userData.shared = true;
+          p.root.scale.setScalar(sc);
+          g.add(p.root);
+          u.walker = p;
+          // Faces the way they walk across the road.
+          p.root.rotation.y = it.from < 0 ? Math.PI / 2 : -Math.PI / 2;
+          addTray(g, p, it.id, sc);
+        } else g.add(mesh(box(0.5, 1.6, 0.4), M("#8E5B3E"), 0, 0.8, 0));
+        g.add(blob(1, 1, 0.3));
+        u.hawker = true;
       }
     } else if (it.type === "note") {
       const n = new T3.Group();
@@ -1037,6 +1269,20 @@ export function createOkadaRush(ctx) {
         .join(""),
     );
     setText("#runCombo", run.combo >= 2 ? `🔥 x${run.combo}` : "");
+    const ch = run.police;
+    $("#runChase").hidden = !ch;
+    $("#scrRun").classList.toggle("chased", !!ch);
+    if (ch) {
+      const close = ch.gap < 3;
+      $("#runChase").classList.toggle("close", close);
+      setText(
+        "#runChaseTitle",
+        close ? "Police are close!" : "Police chasing you!",
+      );
+      setText("#runChaseSub", `Swipe up to speed away · ${Math.ceil(ch.t)}s`);
+      $("#runChaseGap").style.width =
+        Math.max(0, Math.min(100, (ch.gap / 10) * 100)) + "%";
+    }
     // The navigation card: where the next order goes, or find food first.
     const nav = $("#runNav");
     nav.hidden = countdown > 0;
@@ -1126,6 +1372,7 @@ export function createOkadaRush(ctx) {
         1100,
       );
       if (o) o.userData.hit = 1;
+      if (e.item.kind === "hawker") float("Sorry o! 🙏", "miss");
     } else if (e.type === "shield") {
       Sound.play("tap");
       shake = 0.25;
@@ -1134,7 +1381,22 @@ export function createOkadaRush(ctx) {
       float(`Missed ${e.item.name || "a customer"}`, "miss");
     } else if (e.type === "empty") {
       message("No food in the box. Grab a bag 🥡", 1200);
-    } else if (e.type === "jump") Sound.play("tap");
+    } else if (e.type === "police") {
+      Sound.play("siren");
+      sirenT = 1.2;
+      message("🚨 Police! Speed away!", 1300);
+    } else if (e.type === "caught") {
+      Sound.play("wrong");
+      Haptics.play("wrong");
+      shake = 0.4;
+      message(`👮 Caught! Fine ${fmt(e.fine)}`, 1500);
+      float("−" + fmt(e.fine), "miss");
+    } else if (e.type === "escaped") {
+      Sound.play("star");
+      message("😎 You lost them!", 1300);
+      float("+" + fmt(e.bonus), "pay");
+    } else if (e.type === "boost") Sound.play("whoosh");
+    else if (e.type === "brake") Sound.play("tap");
     else if (e.type === "over") finish();
   }
   function fadeOut(o, grow) {
@@ -1164,6 +1426,10 @@ export function createOkadaRush(ctx) {
         }
       } else {
         step(run, dt).forEach(onEvent);
+        if (run.police && (sirenT -= dt) <= 0) {
+          Sound.play("siren");
+          sirenT = 1.2;
+        }
         if (run.t > 4 && !swiped) {
           swiped = true;
           $("#runSwipe").classList.remove("show");
@@ -1187,8 +1453,28 @@ export function createOkadaRush(ctx) {
       o.position.z = -(it.z - dist);
       // Anything already passed would block the camera behind the rider.
       if (!o.userData.fade) o.visible = o.position.z < 2.2;
-      o.position.x += (it.lane * LANE_W - o.position.x) * Math.min(1, dt * 10);
       const u = o.userData;
+      if (it.type === "hazard") {
+        o.position.x = (it.x ?? it.lane) * LANE_W;
+        if (u.wheels && !run.over) {
+          const turn = (it.vf || 0) * run.speed * dt * 3;
+          u.wheels.forEach((w) => (w.rotation.x -= turn));
+        }
+        if (u.blink) {
+          const on = Math.floor(T * 6) % 2 === 0;
+          [-1, 1].forEach(
+            (sd) =>
+              (u.blink[sd].emissiveIntensity =
+                it.signal === sd && on ? 2.4 : 0.1),
+          );
+        }
+        if (u.walker) {
+          const moving = it.go && Math.abs(it.x) < 2.95;
+          if (moving) walkAnim(u.walker, T * 9 + it.id, true);
+        }
+      } else
+        o.position.x +=
+          (it.lane * LANE_W - o.position.x) * Math.min(1, dt * 10);
       if (u.spin) u.spin.rotation.y += dt * 3;
       if (u.bob) u.spin.position.y = u.bob + Math.sin(T * 4 + it.id) * 0.12;
       if (u.pulse)
@@ -1261,26 +1547,57 @@ export function createOkadaRush(ctx) {
       const rel = ((((g.userData.z - dist) % span) + span) % span) - 20;
       g.position.z = -rel;
     });
-    // The rider: steer, lean, jump, duck, blink when hurt.
+    walkers.forEach((g) => {
+      const u = g.userData;
+      if (!run.over) u.z += u.vz * dt;
+      const rel = ((((u.z - dist) % WALK_SPAN) + WALK_SPAN) % WALK_SPAN) - 15;
+      g.position.z = -rel;
+      u.phase += dt * 7 * Math.abs(u.vz);
+      walkAnim(u.p, u.phase, u.tray);
+    });
+    bridges.forEach((g) => {
+      const rel =
+        ((((g.userData.z - dist) % BRIDGE_SPAN) + BRIDGE_SPAN) % BRIDGE_SPAN) -
+        20;
+      g.position.z = -rel;
+    });
+    // The police car closes in from behind in the lane next to you.
+    const ch = run.police;
+    if (ch && !cop.root.visible) {
+      cop.root.visible = true;
+      cop.root.position.set(run.x * LANE_W, 0, 13);
+    }
+    if (cop.root.visible) {
+      const cl = run.lane >= 1 ? run.lane - 1 : run.lane + 1;
+      cop.root.position.x +=
+        (cl * LANE_W - cop.root.position.x) * Math.min(1, dt * 3);
+      const tz = ch ? 0.2 + Math.min(10, Math.max(1, ch.gap)) * 0.25 : 15;
+      cop.root.position.z += (tz - cop.root.position.z) * Math.min(1, dt * 2.5);
+      if (!ch && cop.root.position.z > 13) cop.root.visible = false;
+      const flash = Math.floor(T * 8) % 2;
+      cop.red.emissiveIntensity = flash ? 2.6 : 0.2;
+      cop.blue.emissiveIntensity = flash ? 0.2 : 2.6;
+      cop.wheels.forEach((w) => (w.rotation.x -= run.speed * dt * 3));
+    }
+    // The rider: steer, lean, boost, brake, blink when hurt.
     const r = rider;
     const px = run.x * LANE_W;
     const prevX = r.root.position.x;
     r.root.position.x = px;
-    r.lean.position.y = run.y;
-    r.root.children[1].scale.setScalar(Math.max(0.4, 1 - run.y * 0.25));
     const tilt = Math.max(
       -0.45,
       Math.min(0.45, ((prevX - px) / Math.max(dt, 0.001)) * 0.06),
     );
     r.lean.rotation.z += (tilt - r.lean.rotation.z) * Math.min(1, dt * 12);
-    r.lean.rotation.x =
-      run.slide > 0 ? -0.35 : run.y > 0 ? 0.18 : Math.sin(T * 9) * 0.01;
-    r.lean.scale.y = run.slide > 0 ? 0.72 : 1;
+    // A little wheelie on boost, nose down when braking.
+    const pitch =
+      run.boost > 0 ? 0.16 : run.brake > 0 ? -0.08 : Math.sin(T * 9) * 0.01;
+    r.lean.rotation.x += (pitch - r.lean.rotation.x) * Math.min(1, dt * 10);
     const spin = (countdown > 0 ? 0 : run.speed) * dt * 3;
     r.wheels.forEach((w) => (w.rotation.x -= spin));
     r.root.visible = run.hurt > 0 ? Math.floor(T * 16) % 2 === 0 : true;
     r.helmet.visible = !!run.power.helmet;
-    r.flame.visible = run.power.turbo > 0;
+    r.flame.visible = run.power.turbo > 0 || run.boost > 0;
     r.flame.scale.y = 1 + Math.sin(T * 40) * 0.3;
     r.crate.position.y = 1.25 + Math.sin(T * 12) * 0.02 * (run.speed / 10);
     // Camera follows from behind and above, wider in turbo, shaking on crashes.
@@ -1288,10 +1605,10 @@ export function createOkadaRush(ctx) {
     const sx = shake ? (Math.random() - 0.5) * shake : 0,
       sy = shake ? (Math.random() - 0.5) * shake : 0;
     camera.position.x += (px * 0.65 - camera.position.x) * Math.min(1, dt * 5);
-    camera.position.y = 4.7 + run.y * 0.35 + sy;
+    camera.position.y = 4.7 + sy;
     camera.position.z = 7.6;
     camera.position.x += sx;
-    const fov = run.power.turbo > 0 ? 72 : 60;
+    const fov = run.power.turbo > 0 ? 72 : run.boost > 0 ? 66 : 60;
     camera.fov += (fov - camera.fov) * Math.min(1, dt * 4);
     camera.aspect = innerWidth / innerHeight;
     // Narrow phones see more road with a wider view.
@@ -1353,6 +1670,8 @@ export function createOkadaRush(ctx) {
 
   function finish() {
     paused = true;
+    $("#scrRun").classList.remove("chased");
+    $("#runChase").hidden = true;
     $("#runSwipe").classList.remove("show");
     const stars = runStars(run);
     const money = runSettlement(run);
@@ -1397,6 +1716,8 @@ export function createOkadaRush(ctx) {
       ["💵", "Sales and tips", fmt(money.gross)],
       ["⛽", "Fuel", "−" + fmt(money.fuel)],
     ];
+    if (run.escapes) rows.push(["😎", "Lost the police", "x" + run.escapes]);
+    if (run.caught) rows.push(["👮", "Caught by police", "x" + run.caught]);
     if (money.spoiled)
       rows.push(["🗑️", "Undelivered food", "−" + fmt(money.spoiled)]);
     rows.push([
@@ -1427,6 +1748,9 @@ export function createOkadaRush(ctx) {
     objs.clear();
     fading.length = 0;
     bits.length = 0;
+    walkers = [];
+    bridges = [];
+    cop = null;
     scene = null;
     run = null;
   }
@@ -1454,6 +1778,7 @@ export function createOkadaRush(ctx) {
     paused = true;
     ["ovRunStart", "ovRunEnd", "ovRunPause"].forEach((id) => UI.close(id));
     $("#runSwipe").classList.remove("show");
+    $("#scrRun").classList.remove("chased");
     dispose();
     ctx.onExit();
   }
@@ -1486,8 +1811,8 @@ export function createOkadaRush(ctx) {
           ? "right"
           : "left"
         : dy < 0
-          ? "jump"
-          : "slide",
+          ? "boost"
+          : "brake",
     );
     touch = null;
   });
@@ -1499,11 +1824,11 @@ export function createOkadaRush(ctx) {
       a: "left",
       ArrowRight: "right",
       d: "right",
-      ArrowUp: "jump",
-      w: "jump",
-      " ": "jump",
-      ArrowDown: "slide",
-      s: "slide",
+      ArrowUp: "boost",
+      w: "boost",
+      " ": "boost",
+      ArrowDown: "brake",
+      s: "brake",
     }[e.key];
     if (k) {
       e.preventDefault();

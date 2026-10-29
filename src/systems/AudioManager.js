@@ -135,6 +135,35 @@ export function createAudio(Save) {
         case "tick":
           this.tone(1400, 0.04, "square", 0.05);
           break;
+        case "siren": {
+          const t = this.ctx.currentTime;
+          this.tone(960, 0.28, "square", 0.04, 720, t);
+          this.tone(720, 0.28, "square", 0.04, 960, t + 0.3);
+          break;
+        }
+        case "whoosh":
+          this.noise(0.35, 0.12, 900, null, null, "bandpass");
+          this.tone(220, 0.3, "sawtooth", 0.04, 520);
+          break;
+        case "zap":
+          this.tone(1800, 0.12, "sawtooth", 0.06, 300);
+          this.noise(0.12, 0.1, 4000);
+          break;
+        case "thunder": {
+          // A sharp crack, then a long low rumble.
+          const t = this.ctx.currentTime;
+          this.noise(0.18, 0.35, 2500, t);
+          this.noise(1.3, 0.3, 180, t + 0.06, null, "lowpass");
+          this.tone(70, 1, "sawtooth", 0.08, 40, t + 0.05);
+          break;
+        }
+        case "boom": {
+          const t = this.ctx.currentTime;
+          this.tone(140, 0.6, "sine", 0.4, 38, t);
+          this.noise(0.7, 0.4, 420, t, null, "lowpass");
+          this.noise(0.12, 0.2, 3000, t);
+          break;
+        }
       }
     },
     setMusic(on) {

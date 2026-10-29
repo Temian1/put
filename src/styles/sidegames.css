@@ -1281,3 +1281,206 @@
     align-items: center;
   }
 }
+
+/* Police chase: a card under the nav, and red/blue light at the edges. */
+.runChase {
+  align-self: center;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px 5px 6px;
+  border-radius: 999px;
+  background: rgba(13, 71, 161, 0.85);
+  border: 2px solid #fff;
+  max-width: 100%;
+  animation: rowIn 0.25s ease-out;
+}
+.runChase[hidden] {
+  display: none;
+}
+.runChase .siren {
+  font-size: 22px;
+  animation: m3Pulse 0.5s infinite;
+}
+.runChaseText {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+  min-width: 0;
+}
+.runChaseText b {
+  font-family: var(--display);
+  font-weight: normal;
+  font-size: 15px;
+  white-space: nowrap;
+}
+.runChaseText small {
+  font-size: 11.5px;
+  font-weight: 800;
+  opacity: 0.9;
+  white-space: nowrap;
+}
+.runChaseBar {
+  width: 54px;
+  height: 8px;
+  flex: none;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.25);
+  overflow: hidden;
+}
+.runChaseBar i {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: #7be08f;
+  transition: width 0.2s;
+}
+.runChase.close {
+  background: rgba(198, 40, 40, 0.9);
+}
+.runChase.close .runChaseBar i {
+  background: #ffc531;
+}
+.runSiren {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+#scrRun.chased .runSiren {
+  opacity: 1;
+  animation: sirenEdges 0.5s steps(1) infinite;
+}
+@keyframes sirenEdges {
+  0% {
+    box-shadow:
+      inset 18px 0 30px -14px rgba(255, 23, 68, 0.8),
+      inset -18px 0 30px -14px rgba(41, 121, 255, 0.35);
+  }
+  50% {
+    box-shadow:
+      inset 18px 0 30px -14px rgba(255, 23, 68, 0.35),
+      inset -18px 0 30px -14px rgba(41, 121, 255, 0.8);
+  }
+}
+@media (max-width: 360px) {
+  .runChaseBar {
+    display: none;
+  }
+}
+
+/* Market Match: lightning and the pot bomb. */
+.m3Fx {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  z-index: 6;
+  overflow: visible;
+  filter: drop-shadow(0 0 6px rgba(255, 236, 120, 0.9));
+}
+.m3Flash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 7;
+  opacity: 0;
+  mix-blend-mode: screen;
+}
+.m3Boom {
+  position: absolute;
+  pointer-events: none;
+  z-index: 6;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    #fffde7 0%,
+    #ffd23f 25%,
+    #ff8f00 50%,
+    rgba(229, 57, 53, 0.75) 66%,
+    transparent 72%
+  );
+  mix-blend-mode: screen;
+}
+.m3Shock {
+  position: absolute;
+  pointer-events: none;
+  z-index: 6;
+  border-radius: 50%;
+  border: 4px solid rgba(255, 255, 255, 0.9);
+  box-shadow:
+    0 0 16px 4px rgba(255, 180, 40, 0.8),
+    inset 0 0 12px rgba(255, 180, 40, 0.8);
+}
+.m3Ember {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 7;
+  box-shadow: 0 0 8px 2px rgba(255, 140, 0, 0.9);
+}
+.m3Smoke {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 5;
+  background: radial-gradient(circle, rgba(90, 80, 75, 0.7), transparent 70%);
+}
+.m3Board.boom {
+  animation: m3Boom 0.45s cubic-bezier(0.3, 0.8, 0.4, 1);
+}
+@keyframes m3Boom {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  12% {
+    transform: translate(-7px, 4px) scale(1.025);
+  }
+  28% {
+    transform: translate(6px, -5px) scale(1.01);
+  }
+  45% {
+    transform: translate(-4px, -2px);
+  }
+  65% {
+    transform: translate(3px, 2px);
+  }
+  82% {
+    transform: translate(-1px, 1px);
+  }
+}
+/* The pot bomb fizzes: a lit fuse spark on its corner. */
+.m3t.pot span::after {
+  content: "";
+  inset: auto;
+  right: -2px;
+  top: -2px;
+  width: calc(var(--t) * 0.22);
+  height: calc(var(--t) * 0.22);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    #fff 0 20%,
+    #ffd23f 40%,
+    #ff5722 65%,
+    transparent 72%
+  );
+  animation: m3Fuse 0.18s steps(2) infinite;
+}
+@keyframes m3Fuse {
+  50% {
+    transform: scale(1.5) rotate(40deg);
+    opacity: 0.7;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .m3Board.boom {
+    animation: none;
+  }
+}

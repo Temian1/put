@@ -36,6 +36,8 @@ const CHEERS = [
   "Mama approves!",
 ];
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const SVGNS = "http://www.w3.org/2000/svg";
+const FIRE = ["#FFF3B0", "#FFD23F", "#FF9800", "#FF5722", "#E53935"];
 
 export function createMarketMatch(ctx) {
   const { $, on, listen, UI, Save, Sound, Haptics, fmt, today } = ctx;
@@ -188,17 +190,246 @@ export function createMarketMatch(ctx) {
     }
   }
 
-  function beam(b) {
-    const el = document.createElement("div");
-    el.className = "m3Beam " + b.sp;
-    if (b.sp === "row") el.style.top = b.y * size + "px";
-    else if (b.sp === "col") el.style.left = b.x * size + "px";
-    else {
-      el.style.left = (b.x + 0.5) * size + "px";
-      el.style.top = (b.y + 0.5) * size + "px";
+  /* ---- lightning and explosions ---- */
+  // One SVG layer over the board for the bolts of a step.
+  function fxLayer() {
+    const svg = document.createElementNS(SVGNS, "svg");
+    svg.setAttribute("class", "m3Fx");
+    svg.setAttribute("width", spec.w * size);
+    svg.setAttribute("height", spec.h * size);
+    boardEl().appendChild(svg);
+    setTimeout(() => svg.remove(), 1400);
+    return svg;
+  }
+  // A jagged lightning bolt between two tiles (board units, tile centres),
+  // drawn as a wide glow under a white-hot core, flickering out.
+  function bolt(svg, x1, y1, x2, y2, delay = 0, color = "#FFE45C") {
+    const len = Math.hypot(x2 - x1, y2 - y1) || 1;
+    const n = Math.max(3, Math.round(len * 2.2));
+    const nx = -(y2 - y1) / len,
+      ny = (x2 - x1) / len;
+    const pts = [];
+    for (let i = 0; i <= n; i++) {
+      const t = i / n,
+        j = i === 0 || i === n ? 0 : (Math.random() - 0.5) * 0.6;
+      pts.push(
+        ((x1 + (x2 - x1) * t + nx * j + 0.5) * size).toFixed(1) +
+          "," +
+          ((y1 + (y2 - y1) * t + ny * j + 0.5) * size).toFixed(1),
+      );
     }
-    boardEl().appendChild(el);
-    setTimeout(() => el.remove(), 520);
+    const d = "M" + pts.join("L");
+    [
+      [color, size * 0.34, 0.45],
+      [color, size * 0.14, 0.9],
+      ["#FFFFFF", size * 0.06, 1],
+    ].forEach(([c, w, o]) => {
+      const path = document.createElementNS(SVGNS, "path");
+      path.setAttribute("d", d);
+      path.setAttribute("stroke", c);
+      path.setAttribute("stroke-width", w);
+      path.setAttribute("fill", "none");
+      path.setAttribute("stroke-linecap", "round");
+      path.setAttribute("stroke-linejoin", "round");
+      path.style.opacity = 0;
+      svg.appendChild(path);
+      path.animate(
+        [
+          { opacity: 0 },
+          { opacity: o, offset: 0.08 },
+          { opacity: o * 0.25, offset: 0.3 },
+          { opacity: o, offset: 0.45 },
+          { opacity: 0 },
+        ],
+        { duration: 420, delay, fill: "both" },
+      );
+    });
+  }
+  function flash(strength = 0.6, color = "#FFFFFF") {
+    const f = document.createElement("div");
+    f.className = "m3Flash";
+    f.style.background = color;
+    boardEl().appendChild(f);
+    f.animate([{ opacity: strength }, { opacity: 0 }], {
+      duration: 260,
+      easing: "ease-out",
+    });
+    setTimeout(() => f.remove(), 280);
+  }
+  function shakeBoard(big) {
+    const el = boardEl();
+    el.classList.remove("shake", "boom");
+    void el.offsetWidth;
+    el.classList.add(big ? "boom" : "shake");
+  }
+  // The pot bomb: a fireball, a shockwave ring, flying embers and smoke.
+  function explode(x, y, r = 1.5) {
+    const el = boardEl();
+    const cx = (x + 0.5) * size,
+      cy = (y + 0.5) * size;
+    const at = (n, cls) => {
+      n.className = cls;
+      n.style.left = cx + "px";
+      n.style.top = cy + "px";
+      el.appendChild(n);
+      return n;
+    };
+    const ball = at(document.createElement("div"), "m3Boom");
+    ball.style.width = ball.style.height = r * 2 * size + "px";
+    ball.animate(
+      [
+        { transform: "translate(-50%,-50%) scale(.1)", opacity: 1 },
+        {
+          transform: "translate(-50%,-50%) scale(1)",
+          opacity: 1,
+          offset: 0.3,
+        },
+        { transform: "translate(-50%,-50%) scale(1.3)", opacity: 0 },
+      ],
+      { duration: 560, easing: "ease-out", fill: "forwards" },
+    );
+    const ring = at(document.createElement("div"), "m3Shock");
+    ring.style.width = ring.style.height = r * 2 * size + "px";
+    ring.animate(
+      [
+        { transform: "translate(-50%,-50%) scale(.2)", opacity: 1 },
+        { transform: "translate(-50%,-50%) scale(2)", opacity: 0 },
+      ],
+      { duration: 600, easing: "cubic-bezier(.1,.7,.3,1)", fill: "forwards" },
+    );
+    for (let i = 0; i < 16; i++) {
+      const e = at(document.createElement("i"), "m3Ember");
+      e.style.background = FIRE[i % FIRE.length];
+      const a = (i / 16) * Math.PI * 2 + Math.random() * 0.4;
+      const d = size * r * (1 + Math.random() * 0.9);
+      e.animate(
+        [
+          { transform: "translate(-50%,-50%) scale(1.2)", opacity: 1 },
+          {
+            transform: `translate(calc(-50% + ${Math.cos(a) * d}px), calc(-50% + ${Math.sin(a) * d + size * 0.4}px)) scale(.2)`,
+            opacity: 0,
+          },
+        ],
+        {
+          duration: 520 + Math.random() * 260,
+          easing: "cubic-bezier(.15,.8,.4,1)",
+          fill: "forwards",
+        },
+      );
+    }
+    for (let i = 0; i < 5; i++) {
+      const sm = at(document.createElement("i"), "m3Smoke");
+      const dx = (Math.random() - 0.5) * size * r;
+      sm.animate(
+        [
+          { transform: "translate(-50%,-50%) scale(.4)", opacity: 0.7 },
+          {
+            transform: `translate(calc(-50% + ${dx}px), calc(-50% - ${size * (1 + Math.random())}px)) scale(1.8)`,
+            opacity: 0,
+          },
+        ],
+        {
+          duration: 900,
+          delay: 120 + i * 40,
+          easing: "ease-out",
+          fill: "both",
+        },
+      );
+    }
+    flash(0.55, "#FFE9B0");
+    setTimeout(
+      () =>
+        el
+          .querySelectorAll(".m3Boom,.m3Shock,.m3Ember,.m3Smoke")
+          .forEach((n) => n.remove()),
+      1150,
+    );
+  }
+  // Lightning from a tile to each of its targets, one after another.
+  function strikeAll(svg, b, color, max = 30) {
+    (b.cells || [])
+      .filter(([i, j]) => i !== b.x || j !== b.y)
+      .slice(0, max)
+      .forEach(([i, j], n) => {
+        bolt(svg, b.x, b.y, i, j, n * 22, color);
+        setTimeout(() => burst(i, j, color), n * 22 + 60);
+      });
+  }
+  // How loud a step is: the sound and shake of its biggest blast.
+  function blastFx(st) {
+    if (!st.blasts.length && !st.made.length) return;
+    const svg = fxLayer();
+    let boom = false,
+      thunder = false;
+    st.blasts.forEach((b) => {
+      const sp = b.sp === "combo" ? b.combo : b.sp;
+      if (
+        sp === "row" ||
+        sp === "col" ||
+        sp === "col+row" ||
+        sp === "col+col" ||
+        sp === "row+row"
+      ) {
+        if (sp !== "col") {
+          bolt(svg, -0.5, b.y, spec.w - 0.5, b.y);
+          bolt(svg, -0.5, b.y, spec.w - 0.5, b.y, 90, "#FFFFFF");
+        }
+        if (sp !== "row") {
+          bolt(svg, b.x, -0.5, b.x, spec.h - 0.5);
+          bolt(svg, b.x, -0.5, b.x, spec.h - 0.5, 90, "#FFFFFF");
+        }
+        if (b.sp === "combo") thunder = true;
+      } else if (sp.includes("ladle")) {
+        thunder = true;
+        if (sp === "ladle+ladle") {
+          flash(0.8);
+          for (let i = 0; i < 6; i++)
+            bolt(
+              svg,
+              Math.random() * spec.w - 0.5,
+              -0.5,
+              Math.random() * spec.w - 0.5,
+              spec.h - 0.5,
+              i * 60,
+            );
+        }
+        strikeAll(svg, b, "#B388FF");
+        if (sp.includes("pot")) boom = true;
+      } else if (sp.includes("pot")) {
+        boom = true;
+        if (sp === "pot+pot") explode(b.x, b.y, 2.6);
+        else if (sp === "pot") explode(b.x, b.y, 1.5);
+        else {
+          // Pot with lightning: three rows and three columns at once.
+          explode(b.x, b.y, 1.5);
+          for (let d = -1; d <= 1; d++) {
+            bolt(svg, -0.5, b.y + d, spec.w - 0.5, b.y + d, 40 * (d + 1));
+            bolt(svg, b.x + d, -0.5, b.x + d, spec.h - 0.5, 40 * (d + 1));
+          }
+        }
+      }
+    });
+    // A big match calls down thunder onto the new special piece.
+    st.made.forEach((m, n) => {
+      thunder = true;
+      bolt(
+        svg,
+        m.x + (Math.random() - 0.5) * 2,
+        -0.6,
+        m.x,
+        m.y,
+        n * 80,
+        "#FFF59D",
+      );
+    });
+    if (st.made.length) flash(0.45);
+    if (boom) Sound.play("boom");
+    if (thunder) Sound.play("thunder");
+    if (!boom && !thunder && st.blasts.length) Sound.play("zap");
+    if (st.blasts.length) {
+      Haptics.play(boom ? "wrong" : "serve");
+      shakeBoard(boom || thunder);
+    }
   }
 
   /* ---- playing back a move ---- */
@@ -213,14 +444,10 @@ export function createMarketMatch(ctx) {
         await wait(420);
         continue;
       }
-      st.blasts.forEach(beam);
-      if (st.blasts.length) {
-        Sound.play("combo");
-        Haptics.play("serve");
-        boardEl().classList.remove("shake");
-        void boardEl().offsetWidth;
-        boardEl().classList.add("shake");
-      } else Sound.play(st.chain > 1 ? "coin" : "serve");
+      blastFx(st);
+      if (!st.blasts.length) Sound.play(st.chain > 1 ? "coin" : "serve");
+      // Long cascades light up the whole board.
+      if (st.chain >= 3 && !st.blasts.length) flash(0.25, "#FFF59D");
       st.cleared.forEach((c) => {
         const el = tiles.get(c.id);
         if (!el) return;

@@ -22,6 +22,7 @@ import {
   deliveryPay,
   runStars,
   runSettlement,
+  policeFine,
   TIERS,
 } from "../src/game/runner.js";
 import {
@@ -130,6 +131,30 @@ describe("Market Match board", () => {
     const big = trySwap(t, [0, 0], [1, 0]);
     expect(big.ok).toBe(true);
     expect(big.steps[0].cleared.length).toBe(6);
+    expect(big.steps[0].blasts[0].sp).toBe("combo");
+  });
+
+  it("a ladle caught in a blast clears every piece of one kind", () => {
+    const s = boardOf([
+      [1, 2, 1, 2],
+      [3, 4, 5, 1],
+      [2, 1, 3, 4],
+    ]);
+    s.grid[0][0].sp = "row";
+    s.grid[0][3].sp = "ladle";
+    const res = smash(s, 0, 0);
+    const first = res.steps[0];
+    // The row blast sets off the ladle, which takes the most common kind (1).
+    const ladle = first.blasts.find((b) => b.sp === "ladle");
+    expect(ladle.cells.length).toBeGreaterThan(0);
+    expect(first.cleared.filter((c) => c.k === 1).length).toBe(4);
+    const pot = boardOf([
+      [1, 2, 3],
+      [2, 3, 4],
+      [3, 4, 5],
+    ]);
+    pot.grid[1][1].sp = "pot";
+    expect(smash(pot, 1, 1).steps[0].blasts[0].cells).toHaveLength(9);
   });
 
   it("stirring keeps every tile and leaves a move", () => {
@@ -192,7 +217,7 @@ describe("Okada Rush", () => {
     );
   });
 
-  it("crashes spill food, a helmet saves you, jumping clears barriers", () => {
+  it("crashes spill food and a helmet saves you", () => {
     const r = createRun(TIERS[0], seeded(2), { helmet: true });
     r.items = [
       { id: 1, type: "hazard", kind: "danfo", lane: 0, z: 3 },
@@ -203,18 +228,95 @@ describe("Okada Rush", () => {
     expect(r.power.helmet).toBe(false);
     expect(r.crashes).toBe(1);
     expect(r.packs).toHaveLength(0);
-    const j = createRun(TIERS[0], seeded(2));
-    j.items = [{ id: 1, type: "hazard", kind: "barrier", lane: 0, z: 4 }];
-    j.genZ = 1e9;
-    let jumped = false;
-    for (let i = 0; i < 60; i++) {
-      if (!jumped && 4 - j.dist < 2.5) {
-        act(j, "jump");
-        jumped = true;
-      }
-      step(j, 1 / 30);
+  });
+
+  it("traffic drives ahead and meets you at its row; indicators show lane changes", () => {
+    const r = createRun(TIERS[1], seeded(3));
+    const car = r.items.find((i) => i.type === "hazard" && i.meet != null);
+    expect(car).toBeTruthy();
+    const meet = car.meet;
+    // Keep the rider out of the way and watch the car move forward.
+    r.items = [car];
+    r.genZ = 1e9;
+    r.lane = r.x = car.lane === 1 ? -1 : 1;
+    car.shift = undefined;
+    step(r, 0.5);
+    const z1 = car.z;
+    step(r, 0.5);
+    expect(car.z).toBeGreaterThan(z1);
+    // Whatever the speed, the car is level with the rider at its meet point.
+    while (r.dist < meet) step(r, 1 / 60);
+    expect(Math.abs(car.z - r.dist)).toBeLessThan(0.6);
+
+    const s = createRun(TIERS[3], seeded(1));
+    s.items = [];
+    s.genZ = 1e9;
+    const v = {
+      id: 9,
+      type: "hazard",
+      kind: "car",
+      lane: 0,
+      x: 0,
+      meet: 40,
+      z: 40,
+      vf: 0.4,
+      shift: 1,
+    };
+    s.items.push(v);
+    s.lane = s.x = -1;
+    let signalled = false;
+    while (s.dist < 39) {
+      step(s, 1 / 60);
+      if (v.signal === 1) signalled = true;
     }
-    expect(j.crashes).toBe(0);
+    expect(signalled).toBe(true);
+    expect(v.x).toBeCloseTo(1, 5);
+    expect(s.crashes).toBe(0);
+  });
+
+  it("a hawker crosses into their lane as you arrive; swerving misses them", () => {
+    const hit = createRun(TIERS[1], seeded(1));
+    hit.items = [
+      { id: 1, type: "hazard", kind: "hawker", lane: 0, x: -2.7, z: 60 },
+    ];
+    hit.genZ = 1e9;
+    for (let i = 0; i < 600 && hit.dist < 62; i++) step(hit, 1 / 60);
+    expect(hit.crashes).toBe(1);
+    const miss = createRun(TIERS[1], seeded(1));
+    miss.items = [
+      { id: 1, type: "hazard", kind: "hawker", lane: 0, x: -2.7, z: 60 },
+    ];
+    miss.genZ = 1e9;
+    act(miss, "right");
+    for (let i = 0; i < 600 && miss.dist < 62; i++) step(miss, 1 / 60);
+    expect(miss.crashes).toBe(0);
+  });
+
+  it("a crash brings the police; braking lets them catch you, boosting loses them", () => {
+    const r = createRun(TIERS[1], seeded(2));
+    r.items = [{ id: 1, type: "hazard", kind: "car", lane: 0, z: 3 }];
+    r.genZ = 1e9;
+    r.cash = 5000;
+    const ev = [];
+    for (let i = 0; i < 60; i++) ev.push(...step(r, 1 / 30));
+    expect(ev.some((e) => e.type === "police")).toBe(true);
+    for (let i = 0; i < 120 && r.police; i++) {
+      act(r, "brake");
+      ev.push(...step(r, 1 / 30));
+    }
+    expect(ev.find((e) => e.type === "caught").fine).toBe(policeFine(TIERS[1]));
+    expect(r.cash).toBe(5000 - policeFine(TIERS[1]));
+
+    const e = createRun(TIERS[1], seeded(2));
+    e.items = [{ id: 1, type: "hazard", kind: "car", lane: 0, z: 3 }];
+    e.genZ = 1e9;
+    const out = [];
+    for (let i = 0; i < 30 * 16; i++) {
+      act(e, "boost");
+      out.push(...step(e, 1 / 30));
+    }
+    expect(out.some((x) => x.type === "escaped")).toBe(true);
+    expect(e.escapes).toBe(1);
   });
 
   it("a timed round ends on the clock; stars need the target", () => {

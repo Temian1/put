@@ -13,13 +13,13 @@ export const PIECES = [
 ];
 
 // Special pieces, made by bigger matches:
-// row / col: a line of 4 clears its whole row or column.
-// pot: an L or T shape clears the 3x3 square around it.
-// ladle: a line of 5 clears every piece of one ingredient.
+// row / col: a line of 4 makes lightning that clears its row or column.
+// pot: an L or T shape makes a pot bomb that blows up the 3x3 around it.
+// ladle: a line of 5 makes a ladle that strikes every piece of one kind.
 export const SPECIALS = {
-  row: { name: "Pepper blast", how: "Match 4 in a row" },
-  col: { name: "Pepper blast", how: "Match 4 in a column" },
-  pot: { name: "Hot pot", how: "Match in an L or T shape" },
+  row: { name: "Pepper lightning", how: "Match 4 in a row" },
+  col: { name: "Pepper lightning", how: "Match 4 in a column" },
+  pot: { name: "Pot bomb", how: "Match in an L or T shape" },
   ladle: { name: "Mama's ladle", how: "Match 5 in a line" },
 };
 
@@ -188,14 +188,15 @@ function blastArea(s, x, y, sp, kind) {
   const out = [];
   if (sp === "row") for (let i = 0; i < s.w; i++) out.push([i, y]);
   else if (sp === "col") for (let j = 0; j < s.h; j++) out.push([x, j]);
-  else if (sp === "pot")
+  else if (sp === "pot") {
     for (let j = y - 1; j <= y + 1; j++)
       for (let i = x - 1; i <= x + 1; i++)
         if (inside(s, i, j)) out.push([i, j]);
-        else if (sp === "ladle")
-          for (let j = 0; j < s.h; j++)
-            for (let i = 0; i < s.w; i++)
-              if (at(s, i, j)?.k === kind) out.push([i, j]);
+  } else if (sp === "ladle") {
+    for (let j = 0; j < s.h; j++)
+      for (let i = 0; i < s.w; i++)
+        if (at(s, i, j)?.k === kind) out.push([i, j]);
+  }
   return out;
 }
 
@@ -225,10 +226,16 @@ function clearCells(s, cells, step, keep = new Set()) {
     }
     s.grid[y][x] = null;
     if (c.sp) {
-      step.blasts.push({ x, y, sp: c.sp });
-      queue.push(
-        ...blastArea(s, x, y, c.sp, c.sp === "ladle" ? commonKind(s) : c.k),
+      // Each blast lists the tiles it hits, so the view can aim at them.
+      const area = blastArea(
+        s,
+        x,
+        y,
+        c.sp,
+        c.sp === "ladle" ? commonKind(s) : c.k,
       );
+      step.blasts.push({ x, y, sp: c.sp, cells: area });
+      queue.push(...area);
     }
   }
 }
@@ -372,6 +379,13 @@ export function trySwap(s, a, b) {
     step.swap = [a, b];
     step.combo = [ca.sp, cb.sp].filter(Boolean).sort().join("+");
     const area = comboArea(s, a, b, ca, cb);
+    step.blasts.push({
+      x: b[0],
+      y: b[1],
+      sp: "combo",
+      combo: step.combo,
+      cells: area,
+    });
     // The pair itself goes in the blast without setting itself off twice.
     const pair = [b, a];
     [ca, cb].forEach((c) => (c.sp = null));

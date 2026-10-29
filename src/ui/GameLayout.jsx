@@ -333,6 +333,19 @@ export const GameLayout = memo(function GameLayout({
           </span>
         </div>
         <div className="runPowers" id="runPowers"></div>
+        <div className="runChase" id="runChase" hidden>
+          <span className="siren" aria-hidden="true">
+            {"🚨"}
+          </span>
+          <span className="runChaseText">
+            <b id="runChaseTitle">{"Police!"}</b>
+            <small id="runChaseSub">{"Swipe up to speed away"}</small>
+          </span>
+          <span className="runChaseBar" aria-hidden="true">
+            <i id="runChaseGap"></i>
+          </span>
+        </div>
+        <div className="runSiren" aria-hidden="true"></div>
         <div className="runMsg" id="runMsg" aria-live="polite"></div>
         <div className="runCombo" id="runCombo"></div>
         <div className="runFloats" id="runFloats"></div>
@@ -1191,11 +1204,11 @@ export const GameLayout = memo(function GameLayout({
             </span>
             <span>
               <b>{"⬆️"}</b>
-              {"Swipe up to jump barriers and potholes"}
+              {"Swipe up to speed past traffic and the police"}
             </span>
             <span>
               <b>{"⬇️"}</b>
-              {"Swipe down to duck under poles"}
+              {"Swipe down to brake for hawkers crossing"}
             </span>
             <span>
               <b>{"🟢"}</b>
