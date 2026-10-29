@@ -86,3 +86,31 @@ test("restoring cloud progress settles income and refreshes an open Grow panel",
   expect(cloud.till.ch1).toBe(total);
   expect(errors).toEqual([]);
 });
+
+test("a Grow credit remains collectible above the income cap and is paid once", async ({
+  page,
+}) => {
+  await page.route("https://api.mock/**", (route) => route.abort());
+  const errors = await boot(page, {
+    ...managedSave(),
+    awayFrom: Date.now(),
+    till: { ch1: 18000 },
+    growCredits: { support1: { place: "ch1", amount: 300000 } },
+  });
+  await page.locator("#btnGrow").click({ force: true });
+  const collect = page.locator("#growList .collectAll");
+  await expect(collect).toContainText("318,000");
+  const before = await page.evaluate(() => window.__mp.Save.d.coins);
+  await collect.click();
+  expect(await page.evaluate(() => window.__mp.Save.d.coins)).toBe(
+    before + 318000,
+  );
+  await expect(collect).toHaveCount(0);
+  await page.reload();
+  await page.waitForFunction(
+    () => window.__mp && document.querySelector("#boot.gone"),
+  );
+  await page.locator("#btnGrow").click({ force: true });
+  await expect(collect).toHaveCount(0);
+  expect(errors).toEqual([]);
+});

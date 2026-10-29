@@ -1132,8 +1132,8 @@ export function Grow({
         <p className="hintText">
           No takings waiting to collect. Hire a manager for an open restaurant
           to earn while you are away. Offline takings are added for complete
-          opening hours, up to 48 hours away; each safe holds 12 shifts of
-          income.
+          opening hours; shorter visits carry over their minutes. Up to 48 hours
+          away count at once; each safe holds 12 shifts of income.
         </p>
       )}
       {contracts ? (

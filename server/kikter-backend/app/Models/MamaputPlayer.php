@@ -121,6 +121,18 @@ class MamaputPlayer extends Model
      */
     public function syncFromSave(array $save): void
     {
+        // Support credits are issued on the server. Older clients must not
+        // erase them, invent new credits, or restore a collected credit.
+        $stored = $this->save ?? [];
+        $credits = (array) ($stored['growCredits'] ?? []);
+        $save['growCredits'] = $credits;
+        $save['growCollected'] = array_values(array_intersect(
+            array_unique(array_merge(
+                (array) ($stored['growCollected'] ?? []),
+                (array) ($save['growCollected'] ?? []),
+            )),
+            array_keys($credits),
+        ));
         $this->save = $save;
         $this->coins = max(0, (int) ($save['coins'] ?? 0));
         $this->reputation = max(0, min(100, (float) ($save['reputation'] ?? 50)));

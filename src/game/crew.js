@@ -230,15 +230,34 @@ export function runBranches(d, current, repFactor, limit) {
   return made;
 }
 
-export const tillAt = (d, place) => (d.till && d.till[place]) || 0;
+const pendingCredits = (d, place) =>
+  Object.entries(d.growCredits || {}).filter(
+    ([id, credit]) =>
+      credit.place === place &&
+      credit.amount > 0 &&
+      !(d.growCollected || []).includes(id),
+  );
+export const tillAt = (d, place) =>
+  ((d.till && d.till[place]) || 0) +
+  pendingCredits(d, place).reduce((sum, [, credit]) => sum + credit.amount, 0);
 export const tillTotal = (d) =>
-  Object.values(d.till || {}).reduce((s, v) => s + v, 0);
+  [
+    ...new Set([
+      ...Object.keys(d.till || {}),
+      ...Object.values(d.growCredits || {}).map((credit) => credit.place),
+    ]),
+  ].reduce((sum, place) => sum + tillAt(d, place), 0);
 
 // Moves a restaurant's safe into your cash.
 export function collect(d, place) {
   const v = tillAt(d, place);
   if (!v) return 0;
+  d.till = d.till || {};
   d.till[place] = 0;
+  d.growCollected = [
+    ...(d.growCollected || []),
+    ...pendingCredits(d, place).map(([id]) => id),
+  ];
   d.coins += v;
   return v;
 }
@@ -354,15 +373,21 @@ export const isOpenAt = (ms) => {
   return h >= OPEN_HOUR && h < CLOSE_HOUR;
 };
 
-// Whole opening hours between two moments (each counts as one shift).
-export function openHoursBetween(from, to) {
+// Include partial hours, including visits that start between clock hours.
+function openMillisBetween(from, to) {
   if (!(from > 0) || !(to > from)) return 0;
   const H = 3600000,
     start = Math.max(from, to - AWAY_CAP_HOURS * H);
   let n = 0;
-  for (let t = Math.ceil(start / H) * H; t + H <= to; t += H)
-    if (isOpenAt(t)) n++;
+  for (let t = start; t < to; ) {
+    const end = Math.min(to, (Math.floor(t / H) + 1) * H);
+    if (isOpenAt(t)) n += end - t;
+    t = end;
+  }
   return n;
+}
+export function openHoursBetween(from, to) {
+  return Math.floor(openMillisBetween(from, to) / 3600000);
 }
 
 /**
@@ -371,8 +396,19 @@ export function openHoursBetween(from, to) {
  * Returns what they made in total.
  */
 export function earnWhileAway(d, now, repFactor, limit) {
-  const hours = openHoursBetween(d.awayFrom || 0, now);
-  d.awayFrom = now;
+  const eligible = PLACES.some(
+    (p) => d.branches.includes(p.id) && p.income && managerAt(d, p.id),
+  );
+  const H = 3600000;
+  const remainder = Number.isFinite(d.awayOpenMs)
+    ? Math.max(0, Math.min(H - 1, d.awayOpenMs))
+    : 0;
+  const elapsed = eligible
+    ? openMillisBetween(d.awayFrom || 0, now) + remainder
+    : 0;
+  const hours = Math.floor(elapsed / H);
+  d.awayOpenMs = elapsed % H;
+  d.awayFrom = Math.max(d.awayFrom || 0, now);
   let made = 0;
   const quit = [];
   for (let i = 0; i < hours; i++)

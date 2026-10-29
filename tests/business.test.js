@@ -34,6 +34,8 @@ import {
   canHire,
   runBranches,
   collect,
+  tillAt,
+  tillTotal,
   managerAt,
   migrateCrew,
   CREW_LIMIT,
@@ -271,6 +273,54 @@ describe("each restaurant's own crew", () => {
     expect(d.awayFrom).toBe(day + 9 * H);
     // Coming back again straight away adds nothing.
     expect(earnWhileAway(d, day + 9 * H, 1, UNPAID_LIMIT).made).toBe(0);
+  });
+  it("short offline visits accumulate a whole working hour across save/reload", () => {
+    const H = 3600000;
+    const start = Date.UTC(2026, 9, 29, 6, 10);
+    let d = fresh({ branches: ["ch0", "ch1"], awayFrom: start });
+    hire(d, "ch1", "mgr2");
+    hire(d, "ch1", "chidi");
+    for (let visit = 1; visit <= 3; visit++) {
+      expect(
+        earnWhileAway(d, start + (visit * H) / 4, 1, UNPAID_LIMIT).made,
+      ).toBe(0);
+      d = JSON.parse(JSON.stringify(d));
+    }
+    expect(d.awayOpenMs).toBe((3 * H) / 4);
+    const earned = earnWhileAway(d, start + H, 1, UNPAID_LIMIT);
+    expect(earned.hours).toBe(1);
+    expect(earned.made).toBeGreaterThan(0);
+    expect(d.awayOpenMs).toBe(0);
+    expect(earnWhileAway(d, start + H, 1, UNPAID_LIMIT).made).toBe(0);
+  });
+  it("closed time does not fill partial-hour progress, and no manager earns nothing", () => {
+    const H = 3600000;
+    const start = Date.UTC(2026, 9, 29, 20, 30);
+    const d = fresh({ awayFrom: start });
+    hire(d, "ch0", "mgr2");
+    expect(earnWhileAway(d, start + H, 1, UNPAID_LIMIT).hours).toBe(0);
+    expect(d.awayOpenMs).toBe(H / 2);
+    expect(earnWhileAway(d, start + 5 * H, 1, UNPAID_LIMIT).hours).toBe(0);
+    expect(d.awayOpenMs).toBe(H / 2);
+    d.crew = {};
+    expect(earnWhileAway(d, start + 20 * H, 1, UNPAID_LIMIT).made).toBe(0);
+    expect(d.awayOpenMs).toBe(0);
+  });
+  it("Grow credits survive full safes and newer saves, and can be collected only once", () => {
+    const d = fresh({ updatedAt: 10 });
+    hire(d, "ch0", "mgr2");
+    d.till.ch0 = PLACES[0].income * TILL_SHIFTS;
+    d.growCredits = { support1: { place: "ch0", amount: 300000 } };
+    const merged = mergeSaves({ ...fresh(), updatedAt: 20 }, d);
+    expect(tillTotal(merged)).toBe(300000);
+    runBranches(d, null, 1, UNPAID_LIMIT);
+    expect(tillAt(d, "ch0")).toBe(312000);
+    const before = d.coins;
+    expect(collect(d, "ch0")).toBe(312000);
+    expect(d.coins).toBe(before + 312000);
+    expect(collect(d, "ch0")).toBe(0);
+    const stale = { ...fresh(), updatedAt: 30, growCredits: d.growCredits };
+    expect(tillTotal(mergeSaves(d, stale))).toBe(0);
   });
   it("every table level brings more customers", () => {
     const d = fresh({ equipBy: { ch0: {} } });

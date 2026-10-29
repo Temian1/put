@@ -28,6 +28,9 @@ export function createSave(storage = globalThis.localStorage) {
         crew: {},
         crewSeq: 0,
         till: {},
+        // One-off Grow credits stay collectible even when a safe is full.
+        growCredits: {},
+        growCollected: [],
         // Equipment bought for each restaurant.
         equipBy: {},
         // Lagos Life purchases already added to this save.
@@ -36,6 +39,7 @@ export function createSave(storage = globalThis.localStorage) {
         // was last open (managed restaurants earn while you are away).
         day: 0,
         awayFrom: 0,
+        awayOpenMs: 0,
         reputation: 50,
         equip: {},
         pantry: {},

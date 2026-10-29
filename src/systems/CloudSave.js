@@ -17,6 +17,11 @@ export function mergeSaves(local, remote) {
   const newer =
     (remote.updatedAt || 0) > (local.updatedAt || 0) ? remote : local;
   const merged = { ...newer };
+  // Credits have immutable, unique IDs; receipts prevent old backups from
+  // making a collected credit available again. Preserve a server credit
+  // even when this phone has a newer gameplay save.
+  merged.growCredits = { ...local.growCredits, ...remote.growCredits };
+  merged.growCollected = union(local.growCollected, remote.growCollected);
   merged.unlocked = Math.max(local.unlocked || 1, remote.unlocked || 1);
   merged.stars = maxMap(local.stars, remote.stars);
   merged.best = maxMap(local.best, remote.best);
