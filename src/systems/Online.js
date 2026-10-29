@@ -221,12 +221,16 @@ export function createOnline({
       return (await req("POST", "/lagoslife/grants/ack", { ids })).ok;
     },
     // Pull, merge, push. Retries once if another device saved in between.
-    async sync(local) {
+    async sync(local, prepare = (save) => save) {
       if (!base || status.banned || !(await ensurePlayer())) return null;
       let pulled = await req("GET", "/save");
       if (!pulled.ok) return null;
       for (let attempt = 0; attempt < 2; attempt++) {
-        const merged = applyServer(local, pulled.data.save);
+        // Settlement may mutate nested tills/crew. Keep failed uploads and
+        // conflict retries from changing either input before they succeed.
+        const merged = prepare(
+          structuredClone(applyServer(local, pulled.data.save)),
+        );
         const pushed = await req("PUT", "/save", {
           version: pulled.data.version,
           save: merged,

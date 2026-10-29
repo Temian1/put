@@ -1128,7 +1128,14 @@ export function Grow({
           <i className="note" />
           Collect {fmtNaira(tillTotal)} from your managers
         </button>
-      ) : null}
+      ) : (
+        <p className="hintText">
+          No takings waiting to collect. Hire a manager for an open restaurant
+          to earn while you are away. Offline takings are added for complete
+          opening hours, up to 48 hours away; each safe holds 12 shifts of
+          income.
+        </p>
+      )}
       {contracts ? (
         <>
           <div className="sectionLabel">Catering contracts</div>

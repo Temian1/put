@@ -5,6 +5,8 @@ import { LIVE, applyLiveConfig } from "../src/game/live.js";
 import { FOODS, PLACES, STAFF } from "../src/game/data.js";
 import { EQUIPMENT } from "../src/game/equipment.js";
 import { taxes } from "../src/game/business.js";
+import { earnWhileAway, hire } from "../src/game/crew.js";
+import { createSave } from "../src/systems/SaveManager.js";
 
 const memory = () => {
   const m = new Map();
@@ -103,6 +105,39 @@ function fakeServer() {
 afterEach(() => vi.restoreAllMocks());
 
 describe("online services", () => {
+  it("settles restored manager earnings before uploading, without paying twice", async () => {
+    const { s, fetchImpl } = fakeServer();
+    let conflict = true;
+    const o = createOnline({
+      base: "https://api.test",
+      storage: memory(),
+      fetchImpl: async (url, opts) => {
+        if (url.endsWith("/save") && opts.method === "PUT" && conflict) {
+          conflict = false;
+          return json(409, { version: ++s.version, save: s.save });
+        }
+        return fetchImpl(url, opts);
+      },
+    });
+    await o.ensurePlayer();
+    const save = createSave(memory()).defaults();
+    const from = Date.UTC(2026, 9, 28, 6);
+    const now = from + 3 * 3600000;
+    save.awayFrom = from;
+    save.updatedAt = 100;
+    hire(save, "ch0", "mgr2");
+    s.save = save;
+    const prepare = (d) => {
+      earnWhileAway(d, now, 1, 2);
+      return d;
+    };
+    const restored = await o.sync({ updatedAt: 1 }, prepare);
+    expect(restored.till.ch0).toBeGreaterThan(0);
+    expect(s.save.awayFrom).toBe(now);
+    expect(s.save.till.ch0).toBe(restored.till.ch0);
+    const again = await o.sync(restored, prepare);
+    expect(again.till.ch0).toBe(restored.till.ch0);
+  });
   it("is disabled without an API base", async () => {
     const o = createOnline({ base: "", storage: memory(), fetchImpl: vi.fn() });
     expect(o.enabled).toBe(false);

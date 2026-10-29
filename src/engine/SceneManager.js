@@ -236,6 +236,9 @@ export function mountGame(canvas, host, bridge) {
     for (const id in FOODS) FOODS[id].price = FOOD_DATA[id].price;
   };
   syncPrices();
+  // Settle the previous session before daily rewards, decay or menu setup
+  // save anything: saving marks the player as present again.
+  let startupAway = accrueAway(Save.d);
   listen(document, "pointerdown", () => Sound.init(), { capture: true });
   let cleanupScene = () => {};
   const cleanup = () => {
@@ -8455,14 +8458,21 @@ export function mountGame(canvas, host, bridge) {
   }
   // Restaurants with a manager keep earning during opening hours while you
   // are away; this catches them up when you come back.
-  function catchUpAway() {
-    const r = earnWhileAway(
-      Save.d,
+  function accrueAway(save) {
+    return earnWhileAway(
+      save,
       Date.now(),
-      clamp((Save.d.reputation || 50) / 60, 0.4, 1.2),
+      clamp((save.reputation ?? 50) / 60, 0.4, 1.2),
       UNPAID_LIMIT,
     );
+  }
+  function catchUpAway() {
+    const r = startupAway || accrueAway(Save.d);
+    startupAway = null;
     Save.save();
+    reportAway(r);
+  }
+  function reportAway(r) {
     updateTillBadge();
     if (r.made > 0)
       UI.toast(
@@ -9613,7 +9623,14 @@ export function mountGame(canvas, host, bridge) {
   function syncNow() {
     if (!Online.enabled) return Promise.resolve(false);
     if (syncing) return syncing;
-    syncing = Online.sync(Save.d)
+    let away;
+    syncing = Online.sync(Save.d, (merged) => {
+      const restored = migrate(merged, Save.defaults());
+      // A cloud save can contain a different, older away clock. Settle it
+      // before uploading or marking the restored account as present.
+      away = accrueAway(restored);
+      return restored;
+    })
       .then((merged) => {
         if (!merged) return false;
         const before = JSON.stringify([
@@ -9623,6 +9640,8 @@ export function mountGame(canvas, host, bridge) {
         ]);
         Save.d = migrate(merged, Save.defaults());
         Save.save();
+        if (away) reportAway(away);
+        if ($("#ovGrow").classList.contains("show")) buildGrow();
         if (Game.state === "menu" || Game.state === "map") {
           UI.coins();
           if (
