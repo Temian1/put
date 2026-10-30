@@ -87,8 +87,15 @@ export function createMarketMatch(ctx) {
     const p = PIECES[c.k];
     el.style.setProperty("--c", p.color);
     el.className = "m3t" + (c.sp ? " sp " + c.sp : "");
-    el.innerHTML = `<span>${p.icon}</span>`;
+    el.innerHTML = `<span>${p.icon}</span><b class="m3Ice"></b>`;
+    frost(el, c.ice);
     if (c.sp) el.title = SPECIALS[c.sp].name;
+  }
+
+  // Frozen food wears a block of ice over the tile; thick ice is frostier.
+  function frost(el, ice = 0) {
+    el.classList.toggle("ice", ice > 0);
+    el.classList.toggle("ice2", ice > 1);
   }
 
   function drawBoard() {
@@ -124,11 +131,12 @@ export function createMarketMatch(ctx) {
     );
   }
 
+  const goalIcon = (g) => (g.type === "ice" ? "🧊" : PIECES[g.k].icon);
   function drawGoals() {
     $("#m3Goals").innerHTML = spec.goals
       .map((g, i) => {
         const left = Math.max(0, g.n - progress[i]);
-        const icon = g.type === "grease" ? "🧽" : PIECES[g.k].icon;
+        const icon = goalIcon(g);
         return `<div class="m3Goal${left ? "" : " done"}" data-goal="${i}">
           <span>${icon}</span><b>${left ? left : "✓"}</b></div>`;
       })
@@ -458,6 +466,16 @@ export function createMarketMatch(ctx) {
         const g = boardEl().querySelector(`[data-cell="${x},${y}"]`);
         if (g) g.classList.remove("grease");
       });
+      st.thawed.forEach((t) => {
+        const el = tiles.get(t.id);
+        if (!el) return;
+        frost(el, t.ice);
+        el.classList.remove("crack");
+        void el.offsetWidth;
+        el.classList.add("crack");
+        burst(t.x, t.y, "#CDEFFF");
+      });
+      if (st.thawed.length) Sound.play("zap");
       st.made.forEach((m) => {
         const el = tiles.get(m.id);
         if (!el) return;
@@ -502,6 +520,16 @@ export function createMarketMatch(ctx) {
       cb = board.grid[b[1]][b[0]];
     const ea = tiles.get(ca.id),
       eb = tiles.get(cb.id);
+    // Frozen food stays put: it only breaks free by matching around it.
+    if (ca.ice || cb.ice) {
+      [ea, eb].forEach((e) => e.classList.add("nope"));
+      cheer("Frozen! Match next to it to crack the ice");
+      Sound.play("wrong");
+      await wait(260);
+      [ea, eb].forEach((e) => e.classList.remove("nope"));
+      busy = false;
+      return;
+    }
     place(ea, b[0], b[1]);
     place(eb, a[0], a[1]);
     Sound.play("tap");
@@ -681,7 +709,7 @@ export function createMarketMatch(ctx) {
     return g
       .map(
         (x) =>
-          `<span class="m3Goal"><span>${x.type === "grease" ? "🧽" : PIECES[x.k].icon}</span><b>${x.n}</b><small>${x.type === "grease" ? "clean grease" : PIECES[x.k].name}</small></span>`,
+          `<span class="m3Goal"><span>${goalIcon(x)}</span><b>${x.n}</b><small>${x.type === "ice" ? "ice to break" : PIECES[x.k].name}</small></span>`,
       )
       .join("");
   }
@@ -718,6 +746,7 @@ export function createMarketMatch(ctx) {
       h: spec.h,
       kinds: spec.kinds,
       grease: spec.grease,
+      ice: spec.ice,
     });
     progress = spec.goals.map(() => 0);
     moves = spec.moves;
@@ -741,6 +770,10 @@ export function createMarketMatch(ctx) {
       drawBoard();
       drawGoals();
       if (made.length) cheer("Hot start!", true);
+      if (spec.ice.length)
+        UI.toast(
+          "🧊 Frozen food can't move. Match it with others to crack the ice.",
+        );
       Sound.play("go");
       scheduleHint();
     });

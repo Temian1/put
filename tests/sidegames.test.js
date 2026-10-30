@@ -12,6 +12,7 @@ import {
   goalsMet,
   starsFor,
   greaseLeft,
+  iceLeft,
   seeded,
 } from "../src/game/match3.js";
 import {
@@ -113,6 +114,51 @@ describe("Market Match board", () => {
     expect(findGroups(s)).toEqual([]);
   });
 
+  it("frozen food cannot be swapped but cracks when matched", () => {
+    const s = boardOf([
+      [1, 2, 3, 4, 5],
+      [0, 0, 5, 1, 2],
+      [3, 4, 0, 2, 1],
+    ]);
+    const ice = s.grid[1][0];
+    ice.ice = 2;
+    // Swapping the frozen tile itself is refused.
+    const no = trySwap(s, [0, 1], [0, 0]);
+    expect(no).toMatchObject({ ok: false, frozen: true });
+    // A match through it cracks one layer and leaves it on the board.
+    const res = trySwap(s, [2, 1], [2, 2]);
+    expect(res.ok).toBe(true);
+    expect(res.steps[0].thawed).toEqual([{ id: ice.id, x: 0, y: 1, ice: 1 }]);
+    expect(res.steps[0].cleared.some((c) => c.id === ice.id)).toBe(false);
+    expect(s.grid.flat().some((c) => c.id === ice.id)).toBe(true);
+    expect(iceLeft(s)).toBe(1);
+    const p = applyGoals([{ type: "ice", n: 2 }], [0], res.steps);
+    expect(p).toEqual([1]);
+  });
+
+  it("a blast cracks frozen food and moves are found around it", () => {
+    const s = boardOf([
+      [1, 2, 3, 4],
+      [2, 3, 4, 5],
+      [3, 4, 5, 1],
+    ]);
+    s.grid[1][0].sp = "row";
+    s.grid[1][2].ice = 1;
+    const res = smash(s, 0, 1);
+    expect(res.steps[0].thawed).toHaveLength(1);
+    expect(res.steps[0].cleared).toHaveLength(3);
+    expect(iceLeft(s)).toBe(0);
+    for (let seed = 1; seed < 20; seed++) {
+      const b = createBoard({
+        kinds: 6,
+        rng: seeded(seed),
+        ice: levelSpec(20).ice,
+      });
+      const mv = findMove(b);
+      if (mv) mv.forEach(([x, y]) => expect(b.grid[y][x].ice || 0).toBe(0));
+    }
+  });
+
   it("a blast clears its row and two ladles clear the board", () => {
     const s = boardOf([
       [1, 2, 3, 4],
@@ -167,15 +213,21 @@ describe("Market Match board", () => {
     expect(addSpecials(s, 2)).toHaveLength(2);
   });
 
-  it("levels only ask for ingredients; goals count cleared tiles", () => {
+  it("levels ask for ingredients and frozen food; goals count cleared tiles", () => {
     expect(levelSpec(1).goals).toHaveLength(1);
     for (let n = 1; n <= 60; n++) {
       const l = levelSpec(n);
       expect(l.grease).toEqual([]);
-      expect(l.goals.every((g) => g.type === "collect")).toBe(true);
-      expect(new Set(l.goals.map((g) => g.k)).size).toBe(l.goals.length);
+      expect(l.goals.every((g) => g.type !== "grease")).toBe(true);
+      const kinds = l.goals.filter((g) => g.type === "collect").map((g) => g.k);
+      expect(new Set(kinds).size).toBe(kinds.length);
+      const ice = l.goals.find((g) => g.type === "ice");
+      expect(ice?.n || 0).toBe(l.ice.reduce((a, t) => a + t[2], 0));
+      expect(Boolean(ice)).toBe(n >= 6 && n % 2 === 0);
     }
     expect(levelSpec(5).goals).toHaveLength(3);
+    expect(levelSpec(5).ice).toEqual([]);
+    expect(levelSpec(20).ice.some((t) => t[2] === 2)).toBe(true);
     const s = createBoard({ grease: levelSpec(5).grease, rng: seeded(1) });
     expect(greaseLeft(s)).toBe(0);
     const goals = [{ type: "collect", k: 0, n: 2 }];

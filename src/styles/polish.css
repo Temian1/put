@@ -798,6 +798,18 @@ svg.star.on {
 .collectAll {
   width: 100%;
   margin: 8px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+/* Buttons clip their shine, which lets a height-limited list squash them;
+   rows and panel buttons always keep the height of their text. */
+.shopList {
+  grid-auto-rows: max-content;
+}
+.overlay .panel > .btn {
+  flex-shrink: 0;
 }
 .badge.cash {
   background: #2fa34f;

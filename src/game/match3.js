@@ -12,6 +12,11 @@ export const PIECES = [
   { id: "fish", name: "Fish", icon: "🐟", color: "#4FC3F7" },
 ];
 
+// Frozen food: a tile in a block of ice (1 or 2 layers). It cannot be
+// swapped, but it still matches where it stands. Each match or blast that
+// catches it cracks one layer instead of clearing it; it falls with the
+// board like any other tile.
+
 // Special pieces, made by bigger matches:
 // row / col: a line of 4 makes lightning that clears its row or column.
 // pot: an L or T shape makes a pot bomb that blows up the 3x3 around it.
@@ -46,12 +51,14 @@ const randomKind = (s) => Math.floor(s.rng() * s.kinds);
 
 // A fresh board with no ready-made matches and at least one move.
 // `grease` is a list of [x, y] cells with a grease stain to clean.
+// `ice` is a list of [x, y, layers] tiles that start frozen.
 export function createBoard({
   w = 7,
   h = 8,
   kinds = 5,
   rng = Math.random,
   grease = [],
+  ice = [],
 } = {}) {
   const s = { w, h, kinds, rng, nextId: 1, grid: [], grease: [] };
   for (let y = 0; y < h; y++) {
@@ -60,8 +67,13 @@ export function createBoard({
   }
   grease.forEach(([x, y]) => inside(s, x, y) && (s.grease[y][x] = 1));
   fill(s);
+  ice.forEach(([x, y, n]) => {
+    const c = at(s, x, y);
+    if (c) c.ice = n || 1;
+  });
   return s;
 }
+const frozen = (c) => c?.ice > 0;
 
 function fill(s) {
   for (let tries = 0; tries < 50; tries++) {
@@ -173,7 +185,7 @@ export function findMove(s) {
         if (!inside(s, b[0], b[1])) continue;
         const ca = at(s, x, y),
           cb = at(s, b[0], b[1]);
-        if (!ca || !cb) continue;
+        if (!ca || !cb || frozen(ca) || frozen(cb)) continue;
         if (ca.sp === "ladle" || cb.sp === "ladle" || (ca.sp && cb.sp))
           return [a, b];
         if (swapMakesMatch(s, a, b)) return [a, b];
@@ -219,6 +231,11 @@ function clearCells(s, cells, step, keep = new Set()) {
     seen.add(k);
     const c = at(s, x, y);
     if (!c) continue;
+    if (frozen(c)) {
+      c.ice--;
+      step.thawed.push({ id: c.id, x, y, ice: c.ice });
+      continue;
+    }
     step.cleared.push({ id: c.id, x, y, k: c.k, sp: c.sp });
     if (s.grease[y][x]) {
       s.grease[y][x] = 0;
@@ -267,6 +284,7 @@ const emptyStep = () => ({
   made: [],
   blasts: [],
   grease: [],
+  thawed: [],
   moved: [],
   spawned: [],
   points: 0,
@@ -284,11 +302,14 @@ function cascade(s, steps, swapped = []) {
     groups.forEach((g) => {
       toClear.push(...g.cells);
       if (!g.special) return;
-      // The special appears where the player moved, or mid-group.
+      // The special appears where the player moved, or mid-group, never
+      // on frozen food.
+      const free = g.cells.filter(([x, y]) => !frozen(at(s, x, y)));
       const spot =
-        g.cells.find(([x, y]) =>
+        free.find(([x, y]) =>
           swapped.some(([sx, sy]) => sx === x && sy === y),
-        ) || g.cells[Math.floor(g.cells.length / 2)];
+        ) || free[Math.floor(free.length / 2)];
+      if (!spot) return;
       const c = at(s, spot[0], spot[1]);
       if (c.sp) return; // an existing special goes off instead
       keep.add(key(spot[0], spot[1]));
@@ -311,7 +332,8 @@ function cascade(s, steps, swapped = []) {
       }
     });
     step.points =
-      step.cleared.length * 20 * (chain + 1) + step.made.length * 60;
+      (step.cleared.length + step.thawed.length) * 20 * (chain + 1) +
+      step.made.length * 60;
     step.chain = chain + 1;
     gravity(s, step);
     steps.push(step);
@@ -334,7 +356,7 @@ function comboArea(s, a, b, ca, cb) {
     const cells = blastArea(s, x, y, "ladle", kind);
     cells.forEach(([i, j]) => {
       const c = at(s, i, j);
-      if (c && !c.sp)
+      if (c && !c.sp && !frozen(c))
         c.sp = other.sp === "pot" ? "pot" : (i + j) % 2 ? "row" : "col";
     });
     return cells;
@@ -372,6 +394,7 @@ export function trySwap(s, a, b) {
   const ca = at(s, a[0], a[1]),
     cb = at(s, b[0], b[1]);
   if (!ca || !cb) return { ok: false, steps: [] };
+  if (frozen(ca) || frozen(cb)) return { ok: false, frozen: true, steps: [] };
   const steps = [];
   if (ca.sp === "ladle" || cb.sp === "ladle" || (ca.sp && cb.sp)) {
     swapCells(s, a, b);
@@ -390,7 +413,7 @@ export function trySwap(s, a, b) {
     const pair = [b, a];
     [ca, cb].forEach((c) => (c.sp = null));
     clearCells(s, [...pair, ...area], step);
-    step.points = step.cleared.length * 30;
+    step.points = (step.cleared.length + step.thawed.length) * 30;
     step.chain = 1;
     gravity(s, step);
     steps.push(step);
@@ -414,7 +437,7 @@ export function smash(s, x, y) {
   const step = emptyStep();
   if (!at(s, x, y)) return { ok: false, steps: [] };
   clearCells(s, [[x, y]], step);
-  step.points = step.cleared.length * 20;
+  step.points = (step.cleared.length + step.thawed.length) * 20;
   step.chain = 1;
   gravity(s, step);
   const steps = [step];
@@ -453,12 +476,15 @@ export function addSpecials(s, n, sp = null) {
     const x = Math.floor(s.rng() * s.w),
       y = Math.floor(s.rng() * s.h),
       c = at(s, x, y);
-    if (!c || c.sp) continue;
+    if (!c || c.sp || frozen(c)) continue;
     c.sp = sp || (s.rng() < 0.5 ? "row" : "col");
     made.push({ id: c.id, x, y, k: c.k, sp: c.sp });
   }
   return made;
 }
+
+export const iceLeft = (s) =>
+  s.grid.reduce((n, row) => n + row.reduce((a, c) => a + (c?.ice || 0), 0), 0);
 
 export const greaseLeft = (s) =>
   s.grease.reduce((n, row) => n + row.reduce((a, b) => a + b, 0), 0);
@@ -467,6 +493,8 @@ export const greaseLeft = (s) =>
 
 // Puzzle levels get harder slowly: more ingredients and bigger
 // collection goals, with a third ingredient to collect from level 4.
+// From level 6 every other level has frozen food to break, with
+// thicker ice on some tiles from level 15.
 export function levelSpec(n) {
   const kinds = n < 3 ? 4 : n < 9 ? 5 : 6;
   const moves = 20 + (n % 4) * 2 + (n >= 10 ? 2 : 0);
@@ -476,9 +504,22 @@ export function levelSpec(n) {
     c = (n * 2 + 1) % kinds;
   const goals = [{ type: "collect", k: a, n: want }];
   if (n >= 2) goals.push({ type: "collect", k: b, n: Math.round(want * 0.7) });
-  if (n >= 4 && n % 3 !== 1)
+  const ice = [];
+  if (n >= 6 && n % 2 === 0) {
+    const rng = seeded(n * 97);
+    const count = Math.min(16, 4 + Math.floor(n / 2));
+    const set = new Set();
+    while (set.size < count)
+      set.add(Math.floor(rng() * 7) + "," + (3 + Math.floor(rng() * 5)));
+    [...set].forEach((p) => {
+      const [x, y] = p.split(",").map(Number);
+      ice.push([x, y, n >= 15 && rng() < 0.35 ? 2 : 1]);
+    });
+    goals.length = Math.min(goals.length, 2);
+    goals.push({ type: "ice", n: ice.reduce((a, t) => a + t[2], 0) });
+  } else if (n >= 4 && n % 3 !== 1)
     goals.push({ type: "collect", k: c, n: Math.round(want * 0.5) });
-  return { n, kinds, moves, goals, grease: [], w: 7, h: 8 };
+  return { n, kinds, moves, goals, grease: [], ice, w: 7, h: 8 };
 }
 
 // Progress on each goal after the steps of a move.
@@ -491,6 +532,7 @@ export function applyGoals(goals, progress, steps) {
     });
     goals.forEach((g, i) => {
       if (g.type === "grease") progress[i] += st.grease.length;
+      if (g.type === "ice") progress[i] += st.thawed.length;
     });
   });
   return progress;

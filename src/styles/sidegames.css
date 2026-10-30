@@ -261,6 +261,54 @@
 .m3t.smash span {
   animation: m3Smash 0.16s;
 }
+/* Frozen food: a glassy block of ice over the tile */
+.m3t .m3Ice {
+  display: none;
+  position: absolute;
+  inset: 5%;
+  border-radius: 14px;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.85) 0 12%,
+      transparent 13% 60%,
+      rgba(255, 255, 255, 0.5) 61% 64%,
+      transparent 65%
+    ),
+    linear-gradient(160deg, rgba(200, 238, 255, 0.28), rgba(120, 200, 245, 0.3));
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.9),
+    inset 0 -4px 0 rgba(70, 150, 210, 0.45),
+    0 0 6px rgba(150, 220, 255, 0.8);
+}
+.m3t.ice .m3Ice {
+  display: block;
+}
+.m3t.ice2 .m3Ice {
+  background:
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.9) 0 14%,
+      transparent 15% 58%,
+      rgba(255, 255, 255, 0.6) 59% 63%,
+      transparent 64%
+    ),
+    linear-gradient(
+      160deg,
+      rgba(220, 245, 255, 0.45),
+      rgba(130, 205, 245, 0.45)
+    );
+  box-shadow:
+    inset 0 0 0 3px #fff,
+    inset 0 0 0 6px rgba(120, 200, 245, 0.7),
+    inset 0 -5px 0 rgba(70, 150, 210, 0.55),
+    0 0 8px rgba(150, 220, 255, 0.9);
+}
+.m3t.crack .m3Ice,
+.m3t.crack span {
+  animation: m3Nope 0.26s;
+}
 /* Special pieces */
 .m3t.sp span::after {
   content: "";
