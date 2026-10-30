@@ -167,13 +167,17 @@ describe("Market Match board", () => {
     expect(addSpecials(s, 2)).toHaveLength(2);
   });
 
-  it("levels add grease and goals; goals count cleared tiles", () => {
+  it("levels only ask for ingredients; goals count cleared tiles", () => {
     expect(levelSpec(1).goals).toHaveLength(1);
-    const l5 = levelSpec(5);
-    expect(l5.grease.length).toBeGreaterThan(0);
-    expect(l5.goals.some((g) => g.type === "grease")).toBe(true);
-    const s = createBoard({ grease: l5.grease, rng: seeded(1) });
-    expect(greaseLeft(s)).toBe(l5.grease.length);
+    for (let n = 1; n <= 60; n++) {
+      const l = levelSpec(n);
+      expect(l.grease).toEqual([]);
+      expect(l.goals.every((g) => g.type === "collect")).toBe(true);
+      expect(new Set(l.goals.map((g) => g.k)).size).toBe(l.goals.length);
+    }
+    expect(levelSpec(5).goals).toHaveLength(3);
+    const s = createBoard({ grease: levelSpec(5).grease, rng: seeded(1) });
+    expect(greaseLeft(s)).toBe(0);
     const goals = [{ type: "collect", k: 0, n: 2 }];
     const p = applyGoals(
       goals,

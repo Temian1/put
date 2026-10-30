@@ -465,31 +465,20 @@ export const greaseLeft = (s) =>
 
 /* ---- levels ---- */
 
-// Puzzle levels get harder slowly: more ingredients, grease stains to
-// clean, bigger collection goals.
+// Puzzle levels get harder slowly: more ingredients and bigger
+// collection goals, with a third ingredient to collect from level 4.
 export function levelSpec(n) {
   const kinds = n < 3 ? 4 : n < 9 ? 5 : 6;
   const moves = 20 + (n % 4) * 2 + (n >= 10 ? 2 : 0);
   const want = Math.min(40, 10 + Math.round(n * 1.6));
   const a = (n * 2) % kinds,
-    b = (n * 2 + 3) % kinds;
+    b = (n * 2 + 3) % kinds,
+    c = (n * 2 + 1) % kinds;
   const goals = [{ type: "collect", k: a, n: want }];
   if (n >= 2) goals.push({ type: "collect", k: b, n: Math.round(want * 0.7) });
-  let grease = [];
-  if (n >= 4) {
-    const rng = seeded(n * 97);
-    const count = Math.min(24, 6 + n);
-    const set = new Set();
-    while (set.size < count) {
-      const x = Math.floor(rng() * 7),
-        y = 3 + Math.floor(rng() * 5);
-      set.add(x + "," + y);
-    }
-    grease = [...set].map((p) => p.split(",").map(Number));
-    if (n % 3 === 1) goals.length = 1;
-    goals.push({ type: "grease", n: grease.length });
-  }
-  return { n, kinds, moves, goals, grease, w: 7, h: 8 };
+  if (n >= 4 && n % 3 !== 1)
+    goals.push({ type: "collect", k: c, n: Math.round(want * 0.5) });
+  return { n, kinds, moves, goals, grease: [], w: 7, h: 8 };
 }
 
 // Progress on each goal after the steps of a move.
