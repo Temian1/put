@@ -520,16 +520,6 @@ export function createMarketMatch(ctx) {
       cb = board.grid[b[1]][b[0]];
     const ea = tiles.get(ca.id),
       eb = tiles.get(cb.id);
-    // Frozen food stays put: it only breaks free by matching around it.
-    if (ca.ice || cb.ice) {
-      [ea, eb].forEach((e) => e.classList.add("nope"));
-      cheer("Frozen! Match next to it to crack the ice");
-      Sound.play("wrong");
-      await wait(260);
-      [ea, eb].forEach((e) => e.classList.remove("nope"));
-      busy = false;
-      return;
-    }
     place(ea, b[0], b[1]);
     place(eb, a[0], a[1]);
     Sound.play("tap");
@@ -772,7 +762,7 @@ export function createMarketMatch(ctx) {
       if (made.length) cheer("Hot start!", true);
       if (spec.ice.length)
         UI.toast(
-          "🧊 Frozen food can't move. Match it with others to crack the ice.",
+          "🧊 Frozen food: match it to crack the ice. Thick ice takes two hits.",
         );
       Sound.play("go");
       scheduleHint();

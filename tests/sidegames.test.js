@@ -114,7 +114,7 @@ describe("Market Match board", () => {
     expect(findGroups(s)).toEqual([]);
   });
 
-  it("frozen food cannot be swapped but cracks when matched", () => {
+  it("frozen food swaps like any tile but cracks instead of clearing", () => {
     const s = boardOf([
       [1, 2, 3, 4, 5],
       [0, 0, 5, 1, 2],
@@ -122,9 +122,6 @@ describe("Market Match board", () => {
     ]);
     const ice = s.grid[1][0];
     ice.ice = 2;
-    // Swapping the frozen tile itself is refused.
-    const no = trySwap(s, [0, 1], [0, 0]);
-    expect(no).toMatchObject({ ok: false, frozen: true });
     // A match through it cracks one layer and leaves it on the board.
     const res = trySwap(s, [2, 1], [2, 2]);
     expect(res.ok).toBe(true);
@@ -136,7 +133,7 @@ describe("Market Match board", () => {
     expect(p).toEqual([1]);
   });
 
-  it("a blast cracks frozen food and moves are found around it", () => {
+  it("a blast cracks frozen food and frozen tiles can be moved", () => {
     const s = boardOf([
       [1, 2, 3, 4],
       [2, 3, 4, 5],
@@ -154,9 +151,18 @@ describe("Market Match board", () => {
         rng: seeded(seed),
         ice: levelSpec(20).ice,
       });
-      const mv = findMove(b);
-      if (mv) mv.forEach(([x, y]) => expect(b.grid[y][x].ice || 0).toBe(0));
+      expect(findMove(b)).toBeTruthy();
     }
+    // Dragging a frozen tile into a match is a real move.
+    const f = boardOf([
+      [0, 1, 0, 0],
+      [2, 3, 4, 5],
+    ]);
+    f.grid[0][1].ice = 1;
+    const mv = trySwap(f, [1, 0], [0, 0]);
+    expect(mv.ok).toBe(true);
+    expect(mv.steps[0].cleared).toHaveLength(3);
+    expect(mv.steps[0].thawed).toEqual([]);
   });
 
   it("a blast clears its row and two ladles clear the board", () => {

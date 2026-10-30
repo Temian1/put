@@ -12,10 +12,9 @@ export const PIECES = [
   { id: "fish", name: "Fish", icon: "🐟", color: "#4FC3F7" },
 ];
 
-// Frozen food: a tile in a block of ice (1 or 2 layers). It cannot be
-// swapped, but it still matches where it stands. Each match or blast that
-// catches it cracks one layer instead of clearing it; it falls with the
-// board like any other tile.
+// Frozen food: a tile in a block of ice (1 or 2 layers). It swaps, falls
+// and matches like any other tile, but each match or blast that catches
+// it cracks one layer instead of clearing it.
 
 // Special pieces, made by bigger matches:
 // row / col: a line of 4 makes lightning that clears its row or column.
@@ -185,7 +184,7 @@ export function findMove(s) {
         if (!inside(s, b[0], b[1])) continue;
         const ca = at(s, x, y),
           cb = at(s, b[0], b[1]);
-        if (!ca || !cb || frozen(ca) || frozen(cb)) continue;
+        if (!ca || !cb) continue;
         if (ca.sp === "ladle" || cb.sp === "ladle" || (ca.sp && cb.sp))
           return [a, b];
         if (swapMakesMatch(s, a, b)) return [a, b];
@@ -394,7 +393,6 @@ export function trySwap(s, a, b) {
   const ca = at(s, a[0], a[1]),
     cb = at(s, b[0], b[1]);
   if (!ca || !cb) return { ok: false, steps: [] };
-  if (frozen(ca) || frozen(cb)) return { ok: false, frozen: true, steps: [] };
   const steps = [];
   if (ca.sp === "ladle" || cb.sp === "ladle" || (ca.sp && cb.sp)) {
     swapCells(s, a, b);
