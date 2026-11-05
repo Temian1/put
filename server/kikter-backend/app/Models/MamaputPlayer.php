@@ -66,6 +66,12 @@ class MamaputPlayer extends Model
         return $this->banned_at !== null;
     }
 
+    /** Only Kikter accounts hold an email; guests and Lagos Life players have none. */
+    public function email(): ?string
+    {
+        return $this->user?->email;
+    }
+
     /**
      * Creates a player and returns it with its plain-text API token, which is
      * shown only once; the database keeps a SHA-256 hash.
@@ -93,6 +99,14 @@ class MamaputPlayer extends Model
         ]);
 
         return $token;
+    }
+
+    /** Signs the player out of every device. Guests have no way back in. */
+    public function revokeAllTokens(): void
+    {
+        DB::table('mamaput_tokens')->where('player_id', $this->id)->delete();
+        $this->token_hash = hash('sha256', Str::random(48));
+        $this->save();
     }
 
     public static function revokeToken(string $token): void
