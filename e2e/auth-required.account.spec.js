@@ -32,9 +32,14 @@ test("visitors and cached guests cannot enter any game or close the sign-in gate
           : {},
     });
   });
-  const errors = await boot(page, { schema: 3, lastClaim: claimedToday() });
+  const errors = await boot(page, {
+    schema: 3,
+    guideSeen: false,
+    lastClaim: claimedToday(),
+  });
   const account = page.locator("#ovAccount");
   await expect(account).toHaveClass(/show/);
+  await expect(page.locator("#ovGuide")).not.toHaveClass(/show/);
   await page.locator("#accClose").click();
   await expect(account).toHaveClass(/show/);
   for (const id of ["#btnPlay", "#btnMatch", "#btnRun"]) {

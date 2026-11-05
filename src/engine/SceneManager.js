@@ -7978,6 +7978,7 @@ export function mountGame(canvas, host, bridge) {
     $("#matchSub").textContent =
       `${(Save.d.side?.recipes || []).length}/${RECIPES.length} recipes`;
     $("#btnEndless").classList.toggle("pulse", el);
+    if (needsSignIn()) return;
     if (firstLaunch()) setTimeout(openGuide, 700);
     else if (Save.d.lastClaim !== today()) setTimeout(openReward, 700);
   }
@@ -8251,6 +8252,7 @@ export function mountGame(canvas, host, bridge) {
   const firstLaunch = () =>
     !Save.d.guideSeen && !Save.d.tutorialDone && Save.d.unlocked <= 1;
   function openReward() {
+    if (needsSignIn()) return;
     // The reward is queued from the menu; never pop it over a level in progress.
     if (Game.state !== "menu" && Game.state !== "map") return;
     const streak =
