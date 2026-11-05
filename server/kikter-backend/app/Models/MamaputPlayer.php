@@ -63,13 +63,15 @@ class MamaputPlayer extends Model
 
     public function isBanned(): bool
     {
-        return $this->banned_at !== null;
+        return $this->banned_at !== null
+            || ($this->user?->isBanned() ?? false)
+            || ($this->vatarPlayer?->user?->isBanned() ?? false);
     }
 
-    /** Only Kikter accounts hold an email; guests and Lagos Life players have none. */
+    /** Lagos Life itself supplies no email; linked platform accounts may have one. */
     public function email(): ?string
     {
-        return $this->user?->email;
+        return $this->user?->email ?? $this->vatarPlayer?->user?->email;
     }
 
     /**

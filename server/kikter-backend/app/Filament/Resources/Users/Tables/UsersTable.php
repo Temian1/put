@@ -32,7 +32,7 @@ class UsersTable
                     ->searchable()
                     ->sortable()
                     ->weight('bold')
-                    ->description(fn (User $record): string => $record->email),
+                    ->description(fn (User $record): string => $record->email ?? 'Lagos Life · email not shared'),
                 TextColumn::make('status')
                     ->state(fn (User $record): string => $record->isBanned() ? 'Banned' : 'Active')
                     ->badge()

@@ -20,6 +20,7 @@ class UserActions
     {
         return Action::make('sendEmail')
             ->label('Send email')
+            ->visible(fn (User $record): bool => filled($record->email))
             ->icon(Heroicon::OutlinedEnvelope)
             ->color('primary')
             ->modalSubmitActionLabel('Send email')

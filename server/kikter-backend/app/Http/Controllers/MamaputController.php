@@ -356,7 +356,7 @@ class MamaputController extends Controller
     /** @return array<string, mixed> */
     private function profile(MamaputPlayer $p): array
     {
-        $user = $p->user;
+        $user = $p->user ?? $p->vatarPlayer?->user;
 
         return [
             'id' => $p->id, 'name' => $p->name, 'version' => $p->save_version,

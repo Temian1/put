@@ -11,8 +11,21 @@ Authentication is required for the restaurant campaign and both side games.
 The guest registration endpoint is disabled, guest tokens cannot access saves
 or submit results, and guest profiles do not appear in rankings. In Lagos Life,
 every launch verifies the platform session and creates or reuses the linked
-profile automatically. Its name is refreshed from the verified `username`
-(falling back to the verified display name), including digits and underscores.
+profile and a main Users account automatically. Its name follows the verified
+display name. Each stored Lagos Life identity is linked to its main account
+through `vatar_players.user_id`, so repeat sign-ins reuse the same account.
+
+The official [Security and data documentation](https://lagoslife.app/developers/docs#security-and-data)
+states that actual usernames and email addresses are not shared with games.
+The session verification response contains `playerId`, `name`, `gameId`, `exp`
+and `mode`. Email-less Users accounts therefore keep `email = NULL`; no fake
+address is created and no extra personal-data form is shown inside Lagos Life.
+The main account appears in Accounts (all games), with email marked as not
+shared by Lagos Life. Existing linked email accounts keep their addresses.
+
+Deploy the nullable-email migration before the account-registration code, then
+run `php artisan mamaput:register-platform-accounts` to register existing
+players. This command can be repeated and preserves game saves and wallets.
 
 Credentials are server configuration. Do not commit them, put them in Vite
 environment variables, or include them in browser JavaScript. Existing product

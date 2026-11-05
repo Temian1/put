@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\VatarPlayer;
 use App\Models\VatarPurchase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * Sign-in for Mama Put: guests, Kikter accounts (shared with Lagos War) and
@@ -27,6 +28,10 @@ final class MamaputAccounts
     public static function signIn(?MamaputPlayer $current, ?User $user, ?VatarPlayer $vatar): MamaputPlayer
     {
         return DB::transaction(function () use ($current, $user, $vatar): MamaputPlayer {
+            if ($vatar) {
+                // Serialize first registration for the same verified identity.
+                $vatar = VatarPlayer::whereKey($vatar->id)->lockForUpdate()->firstOrFail();
+            }
             $target = $user
                 ? MamaputPlayer::where('user_id', $user->id)->first()
                 : MamaputPlayer::where('vatar_player_id', $vatar->id)->first();
@@ -63,11 +68,16 @@ final class MamaputAccounts
             // them the name they registered with or use in Lagos Life.
             if ($vatar) {
                 $target->name = self::displayName($vatar->name, 40) ?? $target->name;
+                $platformAccount = self::registerPlatformIdentity($vatar, $target->user);
+                abort_if($platformAccount->isBanned(), 403, 'This account has been suspended.');
             } elseif (self::isAutoName($target->name)) {
                 $target->name = self::displayName($user?->name ?? $vatar?->name) ?? $target->name;
             }
             $target->last_seen_at = now();
             $target->save();
+            if ($user && $target->vatar_player_id) {
+                self::registerPlatformIdentity($target->vatarPlayer, $user);
+            }
             if ($target->user_id && $target->wallet > 0) {
                 // A Lagos Life wallet joins the Kikter coin balance.
                 $amount = (int) $target->wallet;
@@ -76,6 +86,36 @@ final class MamaputAccounts
             }
 
             return $target;
+        });
+    }
+
+    /** Main Users registration; Lagos Life deliberately supplies no email. */
+    public static function registerPlatformIdentity(VatarPlayer $identity, ?User $linked = null): User
+    {
+        return DB::transaction(function () use ($identity, $linked): User {
+            $identity = VatarPlayer::whereKey($identity->id)->lockForUpdate()->firstOrFail();
+            $account = $linked ?? $identity->user;
+            if (! $account) {
+                $account = User::create([
+                    'name' => $identity->name,
+                    'email' => null,
+                    'password' => Str::random(64),
+                ]);
+                // Preserve the existing game wallet; registration grants no coins.
+                $profile = new GameProfile(['user_id' => $account->id]);
+                $profile->coins = 0;
+                $profile->save();
+            }
+            if ($account->email === null && $account->name !== $identity->name) {
+                $account->name = $identity->name;
+                $account->save();
+            }
+            if ($identity->user_id !== $account->id) {
+                $identity->user_id = $account->id;
+                $identity->save();
+            }
+
+            return $account;
         });
     }
 
