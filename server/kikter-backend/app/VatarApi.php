@@ -197,7 +197,7 @@ class VatarApi
         if ($match->settled_at) {
             return ['settled' => true];
         }
-        $key = VatarSetting::current()->results_secret;
+        $key = $this->setting()->results_secret;
         abort_unless(filled($key), 503, 'Vatar result signing is not configured.');
         $path = '/api/games/v1/matches/'.rawurlencode($match->platform_match_id).'/result';
         $body = ['winner' => $match->winner];

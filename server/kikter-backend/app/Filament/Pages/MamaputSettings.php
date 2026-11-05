@@ -182,6 +182,8 @@ class MamaputSettings extends Page
                                         ->rule('regex:/^vtr_(test|live)_[a-zA-Z0-9_-]+$/'),
                                     TextInput::make('vatar_webhook_secret')->label('Webhook signing secret')->password()->maxLength(250)
                                         ->rule('regex:/^vtr_whsec_(test|live)_[a-zA-Z0-9_-]+$/'),
+                                    TextInput::make('vatar_results_secret')->label('Match results signing secret')->password()->maxLength(250)
+                                        ->rule('regex:/^vtr_rsec_(test|live)_[a-zA-Z0-9_-]+$/'),
                                 ]),
                         ]),
                         Tab::make('Features')->icon(Heroicon::OutlinedPuzzlePiece)->schema([
@@ -217,11 +219,21 @@ class MamaputSettings extends Page
         if (filled($hook) && ! str_starts_with($hook, 'vtr_whsec_'.$state['vatar_mode'].'_')) {
             throw ValidationException::withMessages(['data.vatar_webhook_secret' => 'The key must match the selected mode.']);
         }
-        $vatar->update(array_merge(filled($secret) ? ['secret' => $secret] : [], filled($hook) ? ['webhook_secret' => $hook] : [], [
+        $results = $state['vatar_results_secret'] ?? null;
+        if (filled($results) && ! str_starts_with($results, 'vtr_rsec_'.$state['vatar_mode'].'_')) {
+            throw ValidationException::withMessages(['data.vatar_results_secret' => 'The key must match the selected mode.']);
+        }
+        foreach (['webhook_secret' => $hook, 'results_secret' => $results] as $field => $value) {
+            if ($state['vatar_mode'] !== $vatar->mode && ! filled($value) && filled($vatar->{$field})) {
+                throw ValidationException::withMessages(['data.vatar_'.$field => 'Supply the signing key for the new mode.']);
+            }
+        }
+        $vatar->update(array_merge(filled($secret) ? ['secret' => $secret] : [], filled($hook) ? ['webhook_secret' => $hook] : [], filled($results) ? ['results_secret' => $results] : [], [
             'enabled' => (bool) $state['own_vatar'], 'mode' => $state['vatar_mode'],
         ]));
         $this->data['vatar_secret'] = null;
         $this->data['vatar_webhook_secret'] = null;
+        $this->data['vatar_results_secret'] = null;
         MamaputConfig::store($state);
         Notification::make()->title('Mama Put settings saved')->body('Players get them the next time the game starts.')->success()->send();
     }
