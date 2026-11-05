@@ -8339,16 +8339,19 @@ export function mountGame(canvas, host, bridge) {
   const Rush = createOkadaRush(sideCtx);
   const sideActive = () => Match.active() || Rush.active();
   on("#btnMatch", () => {
+    if (needsSignIn()) return openAccount();
     Sound.play("click");
     Game.state = "side";
     Match.open();
   });
   on("#btnRun", () => {
+    if (needsSignIn()) return openAccount();
     Sound.play("click");
     Game.state = "side";
     if (!Rush.open()) Game.state = "menu";
   });
   on("#btnPlay", () => {
+    if (needsSignIn()) return openAccount();
     Sound.play("click");
     openMap();
   });
@@ -9287,7 +9290,10 @@ export function mountGame(canvas, host, bridge) {
   }
   /* ================= ACCOUNT (Kikter account / Lagos Life) ================= */
   const needsSignIn = () =>
-    Online.enabled && !LIVE.accounts.guests && !Online.account?.signedIn;
+    (Online.enabled || import.meta.env.PROD) &&
+    (!Online.account?.signedIn ||
+      Online.status.expired ||
+      Online.status.banned);
   function showAccountDot() {
     const dot = $("#accountDot");
     if (dot)
@@ -9512,11 +9518,9 @@ export function mountGame(canvas, host, bridge) {
       onPurchase: (p) => claimPurchase(p.purchaseId).catch(() => {}),
     });
     if (!r || lifetime.disposed) return;
-    const acc = Online.account;
-    if (acc?.lagoslife && !Online.status.expired) {
-      await claimPurchases();
-      collectGrants();
-    } else await signInLagos(true);
+    // Verify the current platform identity on every launch, including its
+    // latest username; cached tokens can belong to a previous app session.
+    await signInLagos(true);
   }
   setAccMode("login");
   on("#btnAccount", () => {
@@ -9532,7 +9536,10 @@ export function mountGame(canvas, host, bridge) {
     submitAccount();
   });
   on("#accLagos", () => signInLagos(false));
-  on("#accClose", () => UI.close("ovAccount"));
+  on("#accClose", () => {
+    if (needsSignIn()) return UI.toast("Sign in to play");
+    UI.close("ovAccount");
+  });
   on("#accSwapBtn", async (e) => {
     const b = e.currentTarget,
       n = Math.floor(Number($("#accSwap").value));
@@ -9572,7 +9579,7 @@ export function mountGame(canvas, host, bridge) {
     b.querySelector(".buttonLabel").textContent = "Log out";
     await syncNow();
     await Online.logout();
-    // The account keeps its progress; this phone goes back to a new guest.
+    // The account keeps its progress; this phone returns to required sign-in.
     Save.d = Save.defaults();
     Save.d.coins = LIVE.startCash;
     Save.save();
@@ -9659,6 +9666,10 @@ export function mountGame(canvas, host, bridge) {
       .finally(() => {
         syncing = null;
         showOnlineStatus();
+        if (needsSignIn()) {
+          Game.pause();
+          openAccount();
+        }
         if (Online.status.banned)
           UI.toast("This player has been suspended by an admin.");
         else if (Online.status.expired && !warnedExpired) {
@@ -9692,6 +9703,7 @@ export function mountGame(canvas, host, bridge) {
     }
     await connectLagos();
     if (lifetime.disposed) return;
+    if (Online.account?.signedIn) await Online.refresh();
     if (needsSignIn()) openAccount();
     else await syncNow();
     if (Online.account?.signedIn) Online.wallet();

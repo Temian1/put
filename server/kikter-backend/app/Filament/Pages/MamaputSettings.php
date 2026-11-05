@@ -145,8 +145,6 @@ class MamaputSettings extends Page
                         ]),
                         Tab::make('Accounts & Lagos Life')->icon(Heroicon::OutlinedUserCircle)->schema([
                             Section::make('Sign-in')->columns(2)->schema([
-                                Toggle::make('guests_allowed')->label('Allow guest play without an account')
-                                    ->helperText('Off: players must sign in with a Kikter account or Lagos Life.'),
                                 Toggle::make('lagoslife_enabled')->label('Allow Lagos Life sign-in'),
                             ]),
                             Section::make('Coin wallet')

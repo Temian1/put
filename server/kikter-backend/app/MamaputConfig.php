@@ -116,7 +116,7 @@ final class MamaputConfig
         'inspection_chance' => 40,
         'max_sales_per_shift' => 3000000,
         'leaderboard_enabled' => true,
-        'guests_allowed' => true,
+        'guests_allowed' => false,
         'lagoslife_enabled' => true,
         'coins_per_win' => 5,
         'coins_daily_cap' => 100,
@@ -144,6 +144,7 @@ final class MamaputConfig
     public static function store(array $values): void
     {
         $merged = array_merge(self::values(), array_intersect_key($values, self::DEFAULTS));
+        $merged['guests_allowed'] = false;
         GameSetting::query()->updateOrCreate(['key' => self::KEY], ['value' => $merged]);
         Cache::forget(self::CACHE_KEY);
     }
@@ -236,7 +237,7 @@ final class MamaputConfig
             ],
             'inspectionChance' => (float) $v['inspection_chance'] / 100,
             'accounts' => [
-                'guests' => (bool) $v['guests_allowed'],
+                'guests' => false,
                 'lagoslife' => (bool) $v['lagoslife_enabled'] && VatarSetting::mamaput()->configured(),
             ],
             'wallet' => [

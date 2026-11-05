@@ -95,7 +95,7 @@ async function mockApi(page) {
   return s;
 }
 
-test("guest signs up, swaps coins for naira, filters the board and logs out", async ({
+test("visitor signs up, swaps coins for naira, filters the board and logs out", async ({
   page,
 }) => {
   const api = await mockApi(page);
@@ -105,9 +105,7 @@ test("guest signs up, swaps coins for naira, filters the board and logs out", as
     coins: 5000,
     unlocked: 4,
   });
-  // A guest gets a reminder dot on the account button.
-  await expect(page.locator("#accountDot")).toBeVisible();
-  await page.locator("#btnAccount").click({ force: true });
+  // Visitors are shown the required sign-in screen automatically.
   await expect(page.locator("#ovAccount")).toHaveClass(/show/);
 
   await page.locator("#accEmail").fill("bose@example.com");
@@ -135,7 +133,8 @@ test("guest signs up, swaps coins for naira, filters the board and logs out", as
   await page.locator("#accSwap").fill("10");
   await page.locator("#accSwapBtn").click();
   await expect(page.locator("#accCoins")).toHaveText("990");
-  await expect(page.locator("#menuCoins")).toHaveText("₦7,000");
+  await expect(page.locator("#menuCoins")).toHaveText("₦7k");
+  expect(await page.evaluate(() => window.__mp.Save.d.coins)).toBe(7000);
 
   await page.locator("#accClose").click();
   await page.locator("#btnBoard").click({ force: true });
@@ -149,7 +148,8 @@ test("guest signs up, swaps coins for naira, filters the board and logs out", as
   await page.locator("#accLogout").click();
   await expect(page.locator("#accLogout")).toContainText("Tap again");
   await page.locator("#accLogout").click();
-  await expect(page.locator("#ovAccount")).not.toHaveClass(/show/);
+  await expect(page.locator("#ovAccount")).toHaveClass(/show/);
+  await expect(page.locator("#accGuest")).toBeVisible();
   const save = await page.evaluate(
     (k) => JSON.parse(localStorage.getItem(k)),
     SAVE_KEY,

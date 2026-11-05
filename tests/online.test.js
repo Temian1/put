@@ -119,7 +119,7 @@ describe("online services", () => {
         return fetchImpl(url, opts);
       },
     });
-    await o.ensurePlayer();
+    await o.login("bose@example.com", "secret-pass");
     const save = createSave(memory()).defaults();
     const from = Date.UTC(2026, 9, 28, 6);
     const now = from + 3 * 3600000;
@@ -143,10 +143,13 @@ describe("online services", () => {
     expect(o.enabled).toBe(false);
     expect(await o.sync({ coins: 1 })).toBe(null);
   });
-  it("creates a player once and remembers the token", async () => {
+  it("requires sign-in without creating guests and remembers the signed-in token", async () => {
     const { fetchImpl } = fakeServer();
     const storage = memory();
     const o = createOnline({ base: "https://api.test", storage, fetchImpl });
+    expect(await o.ensurePlayer()).toBe(false);
+    expect(await o.sync({ coins: 3000, unlocked: 1 })).toBe(null);
+    await o.login("bose@example.com", "secret-pass");
     await o.sync({ coins: 3000, unlocked: 1, updatedAt: 1 });
     expect(o.player).toEqual({ id: 7, name: "Mama Put 1234" });
     const again = createOnline({
@@ -158,7 +161,7 @@ describe("online services", () => {
     await again.sync({ coins: 3000, unlocked: 1, updatedAt: 2 });
     expect(
       fetchImpl.mock.calls.filter(([u]) => u.endsWith("/players")),
-    ).toHaveLength(1);
+    ).toHaveLength(0);
   });
   it("uploads the save and retries after a version conflict", async () => {
     const { s, fetchImpl } = fakeServer();
@@ -167,6 +170,7 @@ describe("online services", () => {
       storage: memory(),
       fetchImpl,
     });
+    await o.login("bose@example.com", "secret-pass");
     const local = {
       coins: 5000,
       unlocked: 4,
@@ -190,6 +194,7 @@ describe("online services", () => {
       storage: memory(),
       fetchImpl,
     });
+    await o.login("bose@example.com", "secret-pass");
     await o.sync({ coins: 5000, unlocked: 30, reputation: 70, updatedAt: 10 });
     s.save = {
       ...s.save,
@@ -230,9 +235,10 @@ describe("online services", () => {
       storage: memory(),
       fetchImpl,
     });
+    await o.login("bose@example.com", "secret-pass");
     expect(
       await o.reportShift({ mode: "level", level: 3, won: true, sales: 9000 }),
-    ).toMatchObject({ ok: true, coins: 0 });
+    ).toMatchObject({ ok: true, coins: 5 });
     expect(s.shifts).toHaveLength(1);
     const board = await o.leaderboard("sales");
     expect(board.rows[0].name).toBe("Iya Bose");
@@ -255,18 +261,17 @@ describe("online services", () => {
 });
 
 describe("accounts and wallet", () => {
-  it("signs a guest in, earns and swaps coins, then logs out", async () => {
+  it("signs in, earns and swaps coins, then logs out", async () => {
     const { s, fetchImpl } = fakeServer();
     const storage = memory();
     const o = createOnline({ base: "https://api.test", storage, fetchImpl });
     await o.sync({ coins: 3000, unlocked: 2, updatedAt: 1 });
-    expect(o.account).toMatchObject({ source: "guest", signedIn: false });
+    expect(o.account).toBe(null);
     const bad = await o.login("bose@example.com", "nope");
     expect(bad).toEqual({ ok: false, error: "Wrong email or password." });
     const r = await o.login("bose@example.com", "secret-pass");
     expect(r.ok).toBe(true);
-    // The guest token goes with the login so the server can merge it.
-    expect(s.loginBearer).toBe("tok");
+    expect(s.loginBearer).toBeUndefined();
     expect(o.account).toMatchObject({
       source: "kikter",
       signedIn: true,

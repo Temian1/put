@@ -1,6 +1,20 @@
 import { test, expect } from "@playwright/test";
 import { boot, claimedToday } from "./helpers.js";
 
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() =>
+    localStorage.setItem(
+      "mamaPutRush3D.online",
+      JSON.stringify({
+        id: 900,
+        name: "Test Account",
+        token: "fake-test-only",
+        source: "kikter",
+      }),
+    ),
+  );
+});
+
 const managedSave = () => ({
   schema: 3,
   unlocked: 12,
@@ -41,6 +55,8 @@ test("restoring cloud progress settles income and refreshes an open Grow panel",
     const req = route.request();
     const path = new URL(req.url()).pathname.replace("/mamaput", "");
     let body = {};
+    if (path === "/me")
+      body = { id: 900, name: "Test Account", source: "kikter" };
     if (req.method() === "OPTIONS")
       return route.fulfill({
         status: 204,

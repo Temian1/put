@@ -118,11 +118,14 @@ class VatarApi
             strlen($me['playerId']) <= 100 && strlen($me['gameId']) <= 100 && $me['gameId'] !== '' &&
             str_starts_with($me['playerId'], $mode === 'test' ? 't_' : 'p_') &&
             is_numeric($me['exp'] ?? null) && (float) $me['exp'] > now()->getTimestampMs(), 401, 'Invalid or expired Vatar session.');
+        $name = trim((string) ($me['username'] ?? '')) ?: trim((string) ($me['name'] ?? ''));
+        abort_unless($name !== '', 502, 'Lagos Life did not provide a player name.');
+        $name = mb_substr($name, 0, 100);
         $player = VatarPlayer::firstOrCreate(
             ['mode' => $mode, 'game_id' => $me['gameId'], 'player_id' => $me['playerId']],
-            ['name' => mb_substr((string) ($me['name'] ?? 'Fighter'), 0, 100)]
+            ['name' => $name]
         );
-        $player->update(['name' => mb_substr((string) ($me['name'] ?? 'Fighter'), 0, 100)]);
+        $player->update(['name' => $name]);
 
         return $player;
     }

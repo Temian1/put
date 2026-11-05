@@ -2,7 +2,7 @@ import { mergeSaves } from "./CloudSave.js";
 
 // Online services on the Kikter backend (war.kikter.com): sign-in, live game
 // settings, cloud save, shift reports, the coin wallet and the real
-// leaderboard. Players start as a guest on this device and can sign in with
+// leaderboard. Players must sign in with
 // a Kikter account (the same one Lagos War uses) or, inside Lagos Life, with
 // their Lagos Life player, so every device shares one save and wallet.
 // Production builds use it by default; dev and tests do not unless
@@ -96,12 +96,8 @@ export function createOnline({
     write(KEY, me);
   }
 
-  async function ensurePlayer(name) {
-    if (me.token) return !status.expired;
-    const r = await req("POST", "/players", name ? { name } : {});
-    if (r.status !== 201) return false;
-    remember({ ...r.data, source: "guest" });
-    return true;
+  async function ensurePlayer() {
+    return signedIn() && !status.expired;
   }
 
   // Signing in links or merges this device's guest on the server and gives

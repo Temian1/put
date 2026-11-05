@@ -35,11 +35,7 @@ class MamaputController extends Controller
 
     public function register(Request $request): JsonResponse
     {
-        abort_unless(MamaputConfig::get('guests_allowed'), 403, 'Sign in or create an account to play.');
-        $data = $request->validate(['name' => ['nullable', 'string', 'min:2', 'max:30']]);
-        [$player, $token] = MamaputPlayer::issue($this->cleanName($data['name'] ?? null));
-
-        return response()->json(['id' => $player->id, 'name' => $player->name, 'token' => $token], 201);
+        abort(403, 'Sign in or create an account to play. Guest play is disabled.');
     }
 
     /** Creates a Kikter account (the same one Lagos War uses) and signs in. */
@@ -286,11 +282,13 @@ class MamaputController extends Controller
         // scope=lagoslife ranks only players signed in through Lagos Life.
         $lagosLife = $request->query('scope') === 'lagoslife';
         $base = fn () => MamaputPlayer::query()->whereNull('banned_at')
+            ->where(fn ($q) => $q->whereNotNull('user_id')->orWhereNotNull('vatar_player_id'))
             ->when($lagosLife, fn ($q) => $q->whereNotNull('vatar_player_id'));
         $rows = $base()->where($column, '>', 0)
             ->orderByDesc($column)->orderBy('id')->limit(50)
             ->get(['id', 'name', $column, 'tier', 'restaurants', 'user_id', 'vatar_player_id']);
         $me = MamaputPlayer::findByToken($request->bearerToken());
+        if ($me?->source() === 'guest') $me = null;
 
         return response()->json([
             'board' => $board,
@@ -317,6 +315,7 @@ class MamaputController extends Controller
     {
         $player = MamaputPlayer::findByToken($request->bearerToken());
         abort_if(! $player, 401, 'Unknown player.');
+        abort_if($player->source() === 'guest', 401, 'Sign in to play. Guest play is disabled.');
         abort_if($player->isBanned(), 403, 'This player has been suspended.');
 
         return $player;

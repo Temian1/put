@@ -33,7 +33,12 @@ test("buying a booster with Lagos Life adds it to the save once", async ({
     },
     [
       SAVE_KEY,
-      JSON.stringify({ schema: 3, lastClaim: claimedToday(), coins: 5000 }),
+      JSON.stringify({
+        schema: 3,
+        guideSeen: true,
+        lastClaim: claimedToday(),
+        coins: 5000,
+      }),
     ],
   );
   await page.route("https://api.mock/mamaput/**", async (route) => {
@@ -71,10 +76,10 @@ test("buying a booster with Lagos Life adds it to the save once", async ({
       });
     if (path === "/players")
       return reply(201, { id: 3, name: "G", token: "g" });
-    if (path === "/auth/lagoslife")
+    if (path === "/auth/lagoslife" || path === "/me")
       return reply(200, {
         id: 3,
-        name: "Eboy's Buka",
+        name: "Eboy",
         token: "ll",
         source: "lagoslife",
         lagoslife: { name: "Eboy" },

@@ -24,7 +24,7 @@ export const LIVE = {
   },
   inspectionChance: 0.4,
   // Sign-in and the coin wallet shared with Lagos War and Lagos Life.
-  accounts: { guests: true, lagoslife: true },
+  accounts: { guests: false, lagoslife: true },
   wallet: { perWin: 5, dailyCap: 100, rate: 200, min: 10 },
   lagoslifeProducts: [],
 };
@@ -52,6 +52,7 @@ export function applyLiveConfig(c) {
     LIVE.dailyReward = { ...LIVE.dailyReward, ...c.dailyReward };
   if (c.features) LIVE.features = { ...LIVE.features, ...c.features };
   if (c.accounts) LIVE.accounts = { ...LIVE.accounts, ...c.accounts };
+  LIVE.accounts.guests = false;
   if (c.wallet) LIVE.wallet = { ...LIVE.wallet, ...c.wallet };
   if (Array.isArray(c.lagoslifeProducts))
     LIVE.lagoslifeProducts = c.lagoslifeProducts;

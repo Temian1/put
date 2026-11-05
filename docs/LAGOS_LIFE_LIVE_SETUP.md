@@ -7,6 +7,13 @@ The API secret, webhook signing secret and multiplayer result signing secret
 must all belong to the live game. The admin form accepts all three, validates
 their mode, and clears credential inputs after saving.
 
+Authentication is required for the restaurant campaign and both side games.
+The guest registration endpoint is disabled, guest tokens cannot access saves
+or submit results, and guest profiles do not appear in rankings. In Lagos Life,
+every launch verifies the platform session and creates or reuses the linked
+profile automatically. Its name is refreshed from the verified `username`
+(falling back to the verified display name), including digits and underscores.
+
 Credentials are server configuration. Do not commit them, put them in Vite
 environment variables, or include them in browser JavaScript. Existing product
 mapping remains unchanged when rotating credentials.

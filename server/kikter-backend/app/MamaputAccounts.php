@@ -61,7 +61,9 @@ final class MamaputAccounts
             }
             // Guests get an automatic "Mama Put 1234" name; signing in gives
             // them the name they registered with or use in Lagos Life.
-            if (self::isAutoName($target->name)) {
+            if ($vatar) {
+                $target->name = self::displayName($vatar->name, 40) ?? $target->name;
+            } elseif (self::isAutoName($target->name)) {
                 $target->name = self::displayName($user?->name ?? $vatar?->name) ?? $target->name;
             }
             $target->last_seen_at = now();
@@ -82,11 +84,11 @@ final class MamaputAccounts
         return (bool) preg_match('/^Mama Put \d{4}$/', (string) $name);
     }
 
-    public static function displayName(?string $name): ?string
+    public static function displayName(?string $name, int $limit = 30): ?string
     {
-        $name = trim((string) preg_replace("/[^\\pL\\pN '&.-]+/u", '', (string) $name));
+        $name = trim((string) preg_replace("/[^\\pL\\pN _@'&.-]+/u", '', (string) $name));
 
-        return $name !== '' ? mb_substr($name, 0, 30) : null;
+        return $name !== '' ? mb_substr($name, 0, $limit) : null;
     }
 
     /** Moves one player's shifts, coins and save into another and deletes it. */
