@@ -91,6 +91,8 @@ export function createOnline({
       account: data.account || null,
       lagoslife: data.lagoslife || null,
       wallet: data.wallet?.coins ?? me.wallet ?? 0,
+      email: data.email ?? data.account?.email ?? null,
+      supportUnread: data.supportUnread ?? me.supportUnread ?? 0,
     });
     if (data.token) me.token = data.token;
     write(KEY, me);
@@ -145,7 +147,8 @@ export function createOnline({
         ? {
             source: me.source || "guest",
             signedIn: signedIn(),
-            email: me.account?.email || null,
+            email: me.email || me.account?.email || null,
+            supportUnread: me.supportUnread || 0,
             lagoslife: me.lagoslife?.name || null,
             wallet: me.wallet || 0,
           }
@@ -174,6 +177,16 @@ export function createOnline({
       const r = await req("GET", "/me");
       if (r.ok) remember(r.data);
       return r.ok ? r.data : null;
+    },
+    // Background check for a saved email and new support replies. Takes only
+    // those two fields: a slower reply must not undo a coin swap.
+    async checkInbox() {
+      if (!base || !signedIn() || status.expired) return;
+      const r = await req("GET", "/me");
+      if (!r.ok) return;
+      me.email = r.data.email ?? r.data.account?.email ?? null;
+      me.supportUnread = r.data.supportUnread ?? 0;
+      write(KEY, me);
     },
     async wallet() {
       if (!base || !signedIn() || status.expired) return null;
@@ -260,6 +273,48 @@ export function createOnline({
           (scope === "lagoslife" ? "&scope=lagoslife" : ""),
       );
       return r.ok ? r.data : null;
+    },
+    // The contact email the game asks for. Not verified, not a login.
+    async saveEmail(email) {
+      if (!base || !(await ensurePlayer()))
+        return { ok: false, error: "Sign in first." };
+      const r = await req("PUT", "/me/email", { email });
+      if (!r.ok)
+        return {
+          ok: false,
+          offline: !r.status,
+          error: errorOf(r, "Could not save your email."),
+        };
+      remember(r.data);
+      return { ok: true };
+    },
+    // Requests and complaints sent to support, with their replies.
+    async support() {
+      if (!base || !(await ensurePlayer()))
+        return { ok: false, error: "Support needs you to be online." };
+      const r = await req("GET", "/support");
+      return r.ok
+        ? { ok: true, tickets: r.data.tickets }
+        : { ok: false, error: errorOf(r, "Could not load your messages.") };
+    },
+    async sendSupport(category, message) {
+      const r = await req("POST", "/support", { category, message });
+      return r.ok
+        ? { ok: true, tickets: r.data.tickets }
+        : { ok: false, error: errorOf(r, "Could not send your message.") };
+    },
+    async replySupport(id, message) {
+      const r = await req("POST", `/support/${id}/reply`, { message });
+      return r.ok
+        ? { ok: true, tickets: r.data.tickets }
+        : { ok: false, error: errorOf(r, "Could not send your message.") };
+    },
+    async readSupport() {
+      const r = await req("POST", "/support/read", {});
+      if (r.ok) {
+        me.supportUnread = 0;
+        write(KEY, me);
+      }
     },
     async rename(name) {
       if (!base || !(await ensurePlayer())) return null;

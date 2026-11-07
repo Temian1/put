@@ -114,6 +114,14 @@ export const GameLayout = memo(function GameLayout({
             <Icon name="info" />
           </button>
           <button
+            className="iconBtn supportBtn"
+            id="btnSupport"
+            aria-label="Support"
+          >
+            <Icon name="support" />
+            <span className="dot" id="supportDot" hidden></span>
+          </button>
+          <button
             className="iconBtn plum accountBtn"
             id="btnAccount"
             aria-label="Account and coins"
@@ -241,6 +249,14 @@ export const GameLayout = memo(function GameLayout({
               <span id="mapStarCount">{"0 / 150"}</span>
             </span>
           </div>
+          <button
+            className="iconBtn supportBtn"
+            id="mapSupport"
+            aria-label="Support"
+          >
+            <Icon name="support" />
+            <span className="dot" id="mapSupportDot" hidden></span>
+          </button>
           <CashPill id="mapCoins" />
         </div>
         <div className="mapScroll scroll" id="mapScroll">
@@ -1048,6 +1064,48 @@ export const GameLayout = memo(function GameLayout({
           >
             <Icon name="close" />
             <span className="buttonLabel">{"Close"}</span>
+          </button>
+        </div>
+      </Surface>
+      <Surface className="overlay" id="ovSupport" tag="div">
+        <div className="panel supportPanel">
+          <div className="ribbon small">{"Support"}</div>
+          <div className="shopList scroll" id="supportList"></div>
+          <div className="btnRow" style={{ marginTop: "12px" }}>
+            <button className="btn coral" id="supportClose">
+              <Icon name="close" />
+              <span className="buttonLabel">{"Close"}</span>
+            </button>
+          </div>
+        </div>
+      </Surface>
+      <Surface className="overlay scroll" id="ovEmail" tag="div">
+        <div className="panel accountPanel">
+          <div className="ribbon small">{"Your Email"}</div>
+          <p className="sub small">
+            {
+              "You're doing well! Add your email so we can reach you about your buka, rewards and support."
+            }
+          </p>
+          <form className="accForm" id="emailForm" noValidate>
+            <input
+              id="emailInput"
+              className="nameInput"
+              type="email"
+              inputMode="email"
+              placeholder="Email address"
+              autoComplete="email"
+              maxLength={190}
+              aria-label="Email address"
+            />
+            <p className="accError" id="emailError" role="alert" hidden></p>
+            <button className="btn green big" id="emailSubmit" type="submit">
+              <Icon name="check" />
+              <span className="buttonLabel">{"Submit"}</span>
+            </button>
+          </form>
+          <button className="linkBtn" id="emailLater" hidden>
+            {"Try again later"}
           </button>
         </div>
       </Surface>

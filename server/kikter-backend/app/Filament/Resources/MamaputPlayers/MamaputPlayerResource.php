@@ -65,6 +65,7 @@ class MamaputPlayerResource extends Resource
         return $schema->components([
             Section::make('Player')->columns(2)->schema([
                 TextInput::make('name')->required()->minLength(2)->maxLength(30),
+                TextInput::make('contact_email')->label('Contact email (typed in the game)')->email()->maxLength(190),
                 Select::make('user_id')->label('Linked Kikter account')
                     ->relationship('user', 'name')->searchable()->preload()->nullable(),
             ]),
@@ -104,6 +105,7 @@ class MamaputPlayerResource extends Resource
                 TextEntry::make('source')->label('Signs in with')->badge()
                     ->state(fn (MamaputPlayer $r): string => self::SOURCES[$r->source()]),
                 TextEntry::make('user.email')->label('Kikter account')->placeholder('—'),
+                TextEntry::make('contact_email')->label('Contact email')->placeholder('—'),
                 TextEntry::make('ban_reason')->label('Ban reason')->placeholder('—'),
                 TextEntry::make('vatarPlayer.name')->label('Lagos Life player')->placeholder('—'),
                 TextEntry::make('wallet_coins')->label('Coin wallet')
@@ -125,7 +127,8 @@ class MamaputPlayerResource extends Resource
             ->defaultSort('lifetime_sales', 'desc')
             ->columns([
                 TextColumn::make('name')->searchable()->weight('bold'),
-                TextColumn::make('user.email')->label('Email')->searchable()->placeholder('None')->toggleable(),
+                TextColumn::make('user.email')->label('Account email')->searchable()->placeholder('None')->toggleable(),
+                TextColumn::make('contact_email')->label('Contact email')->searchable()->placeholder('None')->toggleable(),
                 TextColumn::make('source')->label('Sign-in')->badge()
                     ->state(fn (MamaputPlayer $r): string => self::SOURCES[$r->source()])
                     ->color(fn (MamaputPlayer $r): string => match ($r->source()) {
@@ -155,7 +158,9 @@ class MamaputPlayerResource extends Resource
                         false: fn (Builder $q) => $q->whereNull('banned_at'),
                     ),
                 Filter::make('email')->label('Has an email address')
-                    ->query(fn (Builder $q) => $q->whereNotNull('user_id')),
+                    ->query(fn (Builder $query) => $query->where(fn (Builder $w) => $w->whereNotNull('contact_email')
+                        ->orWhereHas('user', fn (Builder $u) => $u->whereNotNull('email'))
+                        ->orWhereHas('vatarPlayer.user', fn (Builder $u) => $u->whereNotNull('email')))),
                 Filter::make('active')->label('Active in the last 24h')
                     ->query(fn (Builder $q) => $q->where('last_seen_at', '>=', now()->subDay())),
                 SelectFilter::make('source')->label('Sign-in')->options(self::SOURCES)
@@ -176,6 +181,7 @@ class MamaputPlayerResource extends Resource
                         ->using(function (Model $record, array $data): Model {
                             /** @var MamaputPlayer $record */
                             $record->fill(['name' => $data['name'], 'user_id' => $data['user_id'] ?? null]);
+                            $record->contact_email = $data['contact_email'] ?? null;
                             $record->applyAdminChanges([
                                 'coins' => (int) $data['coins'],
                                 'reputation' => (float) $data['reputation'],
@@ -280,7 +286,7 @@ class MamaputPlayerResource extends Resource
                     BulkAction::make('sendEmail')
                         ->label('Email selected')
                         ->icon(Heroicon::OutlinedEnvelope)
-                        ->modalDescription('Goes to selected players with a Kikter account. Guests and Lagos Life players have no email and are skipped.')
+                        ->modalDescription('Goes to selected players with an email address. Anyone without one is skipped.')
                         ->modalSubmitActionLabel('Send email')
                         ->schema(EmailPlayers::fields())
                         ->deselectRecordsAfterCompletion()

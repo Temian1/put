@@ -40,6 +40,11 @@ class MamaputPlayer extends Model
         return $this->belongsTo(VatarPlayer::class);
     }
 
+    public function tickets(): HasMany
+    {
+        return $this->hasMany(MamaputTicket::class, 'player_id');
+    }
+
     public function walletLogs(): HasMany
     {
         return $this->hasMany(MamaputWalletLog::class, 'player_id');
@@ -68,8 +73,16 @@ class MamaputPlayer extends Model
             || ($this->vatarPlayer?->user?->isBanned() ?? false);
     }
 
-    /** Lagos Life itself supplies no email; linked platform accounts may have one. */
+    /**
+     * Lagos Life itself supplies no email; linked platform accounts may have
+     * one. Otherwise the unverified contact email the player typed in the game.
+     */
     public function email(): ?string
+    {
+        return $this->accountEmail() ?? $this->contact_email;
+    }
+
+    public function accountEmail(): ?string
     {
         return $this->user?->email ?? $this->vatarPlayer?->user?->email;
     }

@@ -136,6 +136,8 @@ final class MamaputAccounts
     {
         $from->shifts()->update(['player_id' => $into->id]);
         $from->walletLogs()->update(['player_id' => $into->id]);
+        $from->tickets()->update(['player_id' => $into->id]);
+        $into->contact_email ??= $from->contact_email;
         $into->shifts_played += $from->shifts_played;
         $into->wallet += $from->wallet;
         $vatar = $from->vatar_player_id;

@@ -138,6 +138,79 @@ describe("online services", () => {
     const again = await o.sync(restored, prepare);
     expect(again.till.ch0).toBe(restored.till.ch0);
   });
+  it("saves a contact email and talks to support", async () => {
+    const calls = [];
+    const reply = (status, json) => ({
+      status,
+      ok: status < 400,
+      json: async () => json,
+    });
+    const profile = {
+      id: 1,
+      name: "Ola",
+      source: "lagoslife",
+      email: "ola@example.test",
+      supportUnread: 2,
+    };
+    const fetchImpl = vi.fn(async (url, opts = {}) => {
+      calls.push(opts.method + " " + url.replace("https://api.test", ""));
+      if (url.endsWith("/me/email") && JSON.parse(opts.body).email === "bad")
+        return reply(422, { errors: { email: ["Enter a real email."] } });
+      if (url.endsWith("/me/email")) return reply(200, profile);
+      if (url.endsWith("/support/read")) return reply(200, { ok: true });
+      return reply(200, { tickets: [{ id: 7 }] });
+    });
+    const storage = memory();
+    storage.setItem(
+      "mamaPutRush3D.online",
+      JSON.stringify({ id: 1, token: "t", source: "lagoslife" }),
+    );
+    const o = createOnline({ base: "https://api.test", storage, fetchImpl });
+    expect(o.account.email).toBe(null);
+
+    expect(await o.saveEmail("bad")).toEqual({
+      ok: false,
+      offline: false,
+      error: "Enter a real email.",
+    });
+    expect(await o.saveEmail("ola@example.test")).toEqual({ ok: true });
+    expect(o.account.email).toBe("ola@example.test");
+    expect(o.account.supportUnread).toBe(2);
+
+    expect((await o.support()).tickets).toEqual([{ id: 7 }]);
+    expect((await o.sendSupport("request", "Hello there")).ok).toBe(true);
+    expect((await o.replySupport(7, "Thanks")).ok).toBe(true);
+    await o.readSupport();
+    expect(o.account.supportUnread).toBe(0);
+    expect(calls).toEqual([
+      "PUT /me/email",
+      "PUT /me/email",
+      "GET /support",
+      "POST /support",
+      "POST /support/7/reply",
+      "POST /support/read",
+    ]);
+  });
+
+  it("reports when the email could not reach the server", async () => {
+    const storage = memory();
+    storage.setItem(
+      "mamaPutRush3D.online",
+      JSON.stringify({ id: 1, token: "t", source: "kikter" }),
+    );
+    const o = createOnline({
+      base: "https://api.test",
+      storage,
+      fetchImpl: async () => {
+        throw new Error("offline");
+      },
+    });
+    expect(await o.saveEmail("a@example.test")).toMatchObject({
+      ok: false,
+      offline: true,
+    });
+  });
+
   it("is disabled without an API base", async () => {
     const o = createOnline({ base: "", storage: memory(), fetchImpl: vi.fn() });
     expect(o.enabled).toBe(false);

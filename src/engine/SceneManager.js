@@ -5068,6 +5068,11 @@ export function mountGame(canvas, host, bridge) {
         openAccount();
         return;
       }
+      if (needsEmail()) {
+        afterEmail = () => this.start(cfg);
+        promptEmail(true);
+        return;
+      }
       this.clear();
       ["ovReward", "ovDaily", "ovShop", "ovMissions", "ovGuide"].forEach((id) =>
         UI.close(id),
@@ -7937,6 +7942,8 @@ export function mountGame(canvas, host, bridge) {
     UI.show("scrMap");
     camMode("menu");
     Game.state = "map";
+    refreshSupportDot();
+    setTimeout(() => Game.state === "map" && promptEmail(), 500);
     requestAnimationFrame(() => {
       const cur = $(".node.current");
       if (cur) {
@@ -7979,7 +7986,9 @@ export function mountGame(canvas, host, bridge) {
       `${(Save.d.side?.recipes || []).length}/${RECIPES.length} recipes`;
     $("#btnEndless").classList.toggle("pulse", el);
     if (needsSignIn()) return;
+    refreshSupportDot();
     if (firstLaunch()) setTimeout(openGuide, 700);
+    else if (needsEmail()) setTimeout(promptEmail, 700);
     else if (Save.d.lastClaim !== today()) setTimeout(openReward, 700);
   }
   let shopTab = "up",
@@ -9303,6 +9312,116 @@ export function mountGame(canvas, host, bridge) {
         !Online.enabled ||
         (!!Online.account?.signedIn && !Online.status.expired);
   }
+  /* ================= CONTACT EMAIL ================= */
+  // After this many levels the game asks for an email if it has none. There
+  // is no verification; a linked account's email already counts.
+  const EMAIL_AFTER_LEVELS = 2;
+  let emailDeferred = false,
+    afterEmail = null;
+  const needsEmail = () =>
+    Online.enabled &&
+    !needsSignIn() &&
+    !emailDeferred &&
+    !Online.account?.email &&
+    Save.d.unlocked > EMAIL_AFTER_LEVELS;
+  function emailError(msg) {
+    const el = $("#emailError");
+    el.hidden = !msg;
+    el.textContent = msg || "";
+  }
+  function promptEmail(force = false) {
+    if (!needsEmail()) return;
+    if (force !== true && $(".overlay.show")) return;
+    emailError("");
+    $("#emailLater").hidden = true;
+    UI.open("ovEmail");
+    // Another device may have saved it already.
+    Online.checkInbox().then(() => {
+      if (Online.account?.email) emailDone();
+    });
+  }
+  function emailDone() {
+    UI.close("ovEmail");
+    const next = afterEmail;
+    afterEmail = null;
+    if (next) next();
+    else if (Game.state === "menu" && Save.d.lastClaim !== today())
+      setTimeout(openReward, 400);
+  }
+  listen($("#emailForm"), "submit", async (e) => {
+    e.preventDefault();
+    const email = $("#emailInput").value.trim();
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      emailError("Enter a valid email address.");
+      return;
+    }
+    $("#emailSubmit").disabled = true;
+    const r = await Online.saveEmail(email);
+    $("#emailSubmit").disabled = false;
+    if (r.ok) {
+      UI.toast("Email saved. Thank you!");
+      emailDone();
+    } else {
+      emailError(r.error);
+      // Without a connection nobody could leave this screen otherwise.
+      $("#emailLater").hidden = !r.offline;
+    }
+  });
+  on("#emailLater", () => {
+    emailDeferred = true;
+    emailDone();
+  });
+
+  /* ================= SUPPORT ================= */
+  let supportCheckedAt = 0;
+  function showSupportDot() {
+    const none = !Online.account?.supportUnread;
+    $("#supportDot").hidden = none;
+    $("#mapSupportDot").hidden = none;
+  }
+  // Looks for new replies when the player returns to the menu or map.
+  function refreshSupportDot() {
+    showSupportDot();
+    if (!Online.account?.signedIn || Date.now() - supportCheckedAt < 60000)
+      return;
+    supportCheckedAt = Date.now();
+    Online.checkInbox().then(showSupportDot);
+  }
+  const renderSupport = (state) =>
+    bridge.support({
+      ...state,
+      send: (category, message) =>
+        supportResult(Online.sendSupport(category, message), "Message sent"),
+      reply: (id, message) =>
+        supportResult(Online.replySupport(id, message), "Reply sent"),
+    });
+  async function supportResult(sending, done) {
+    const r = await sending;
+    if (r.ok) {
+      UI.toast(done);
+      renderSupport({ tickets: r.tickets });
+    }
+    return r;
+  }
+  async function openSupport() {
+    if (needsSignIn()) {
+      UI.toast("Sign in to contact support");
+      openAccount();
+      return;
+    }
+    renderSupport({ tickets: [], loading: true });
+    UI.open("ovSupport");
+    const r = await Online.support();
+    renderSupport(r.ok ? { tickets: r.tickets } : { error: r.error });
+    if (r.ok && r.tickets.some((t) => t.unread)) {
+      await Online.readSupport();
+      showSupportDot();
+    }
+  }
+  on("#btnSupport", openSupport);
+  on("#mapSupport", openSupport);
+  on("#supportClose", () => UI.close("ovSupport"));
+
   let accMode = "login";
   function setAccMode(mode) {
     accMode = mode;

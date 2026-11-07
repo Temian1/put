@@ -1270,6 +1270,138 @@ export function Ledger({ rows }) {
   ));
 }
 
+const SUPPORT_TOPICS = {
+  request: "Request",
+  complaint: "Complaint",
+  problem: "Game problem",
+  payment: "Payment or coins",
+  account: "My account",
+  other: "Something else",
+};
+const SUPPORT_STATUS = {
+  open: "Waiting for us",
+  answered: "Answered",
+  closed: "Closed",
+};
+
+function SupportTicket({ ticket, reply }) {
+  const [text, setText] = useState(""),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState("");
+  const send = async () => {
+    setBusy(true);
+    setError("");
+    const r = await reply(ticket.id, text.trim());
+    setBusy(false);
+    if (r.ok) setText("");
+    else setError(r.error);
+  };
+  return (
+    <div className={"ticket" + (ticket.unread ? " unread" : "")}>
+      <div className="ticketHead">
+        <b>{SUPPORT_TOPICS[ticket.category] || ticket.category}</b>
+        <span className={"ticketStatus " + ticket.status}>
+          {SUPPORT_STATUS[ticket.status]}
+        </span>
+      </div>
+      {ticket.messages.map((m) => (
+        <div className={"ticketMsg" + (m.support ? " us" : "")} key={m.id}>
+          <small>{m.support ? "Support" : "You"}</small>
+          {m.body}
+        </div>
+      ))}
+      {ticket.status === "closed" ? null : (
+        <div className="ticketReply">
+          <input
+            className="nameInput"
+            value={text}
+            maxLength={2000}
+            placeholder="Write a reply"
+            aria-label="Write a reply"
+            onChange={(e) => setText(e.target.value)}
+          />
+          <button
+            className="btn teal small"
+            disabled={busy || text.trim().length < 2}
+            onClick={send}
+          >
+            {"Send"}
+          </button>
+        </div>
+      )}
+      {error ? <p className="accError">{error}</p> : null}
+    </div>
+  );
+}
+
+// Send a request or complaint and read the answers.
+export function Support({ tickets, loading, error, send, reply }) {
+  const [topic, setTopic] = useState("request"),
+    [text, setText] = useState(""),
+    [busy, setBusy] = useState(false),
+    [sendError, setSendError] = useState("");
+  const submit = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    setSendError("");
+    const r = await send(topic, text.trim());
+    setBusy(false);
+    if (r.ok) setText("");
+    else setSendError(r.error);
+  };
+  return (
+    <>
+      <p className="hintText">
+        Need something, or has something gone wrong? Tell us and we will reply
+        here.
+      </p>
+      <form className="supportForm" id="supportForm" onSubmit={submit}>
+        <select
+          id="supportTopic"
+          className="nameInput"
+          value={topic}
+          aria-label="What is it about?"
+          onChange={(e) => setTopic(e.target.value)}
+        >
+          {Object.entries(SUPPORT_TOPICS).map(([id, label]) => (
+            <option key={id} value={id}>
+              {label}
+            </option>
+          ))}
+        </select>
+        <textarea
+          id="supportText"
+          className="nameInput"
+          rows={4}
+          maxLength={2000}
+          value={text}
+          placeholder="Tell us what you need"
+          aria-label="Your message"
+          onChange={(e) => setText(e.target.value)}
+        />
+        {sendError ? <p className="accError">{sendError}</p> : null}
+        <button
+          className="btn green"
+          id="supportSend"
+          type="submit"
+          disabled={busy || text.trim().length < 5}
+        >
+          <Icon name="check" />
+          <span className="buttonLabel">{busy ? "Sending…" : "Send"}</span>
+        </button>
+      </form>
+      {tickets?.length ? (
+        <div className="sectionLabel">Your messages</div>
+      ) : null}
+      {loading ? <p className="hintText">Loading your messages…</p> : null}
+      {error ? <p className="accError">{error}</p> : null}
+      {(tickets || []).map((t) => (
+        <SupportTicket key={t.id} ticket={t} reply={reply} />
+      ))}
+    </>
+  );
+}
+
 // Ranked list for the leaderboard. The player's row is highlighted.
 export function Board({ rows, unit, fmt, note }) {
   return (

@@ -21,6 +21,13 @@ Route::prefix("mamaput")->middleware("throttle:120,1")->group(function () {
     Route::post("/lagoslife/grants/ack", [MamaputController::class, "ackGrants"]);
     Route::get("/me", [MamaputController::class, "me"]);
     Route::patch("/me", [MamaputController::class, "rename"]);
+    Route::put("/me/email", [MamaputController::class, "saveEmail"])->middleware("throttle:10,1,mpemail");
+    Route::get("/support", [MamaputController::class, "support"]);
+    Route::post("/support/read", [MamaputController::class, "readTickets"]);
+    Route::middleware("throttle:6,1,mpsupport")->group(function () {
+        Route::post("/support", [MamaputController::class, "createTicket"]);
+        Route::post("/support/{id}/reply", [MamaputController::class, "replyTicket"])->whereNumber("id");
+    });
     Route::get("/save", [MamaputController::class, "showSave"]);
     Route::put("/save", [MamaputController::class, "storeSave"]);
     Route::post("/shifts", [MamaputController::class, "shift"]);

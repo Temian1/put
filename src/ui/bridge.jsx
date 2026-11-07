@@ -12,6 +12,7 @@ import {
   Grow,
   Ledger,
   Board,
+  Support,
   Market,
   Books,
 } from "./DynamicLayers.jsx";
@@ -68,6 +69,12 @@ export function createUiBridge(store, host) {
       slot("market", host.querySelector("#marketList"), <Market {...props} />),
     board: (props) =>
       slot("board", host.querySelector("#boardList"), <Board {...props} />),
+    support: (props) =>
+      slot(
+        "support",
+        host.querySelector("#supportList"),
+        <Support {...props} />,
+      ),
     ledger: (id, rows) =>
       slot(
         "ledger-" + id,

@@ -10,6 +10,7 @@ test.beforeEach(async ({ page }) => {
         name: "Test Account",
         token: "fake-test-only",
         source: "kikter",
+        email: "test@example.test",
       }),
     ),
   );
@@ -56,7 +57,12 @@ test("restoring cloud progress settles income and refreshes an open Grow panel",
     const path = new URL(req.url()).pathname.replace("/mamaput", "");
     let body = {};
     if (path === "/me")
-      body = { id: 900, name: "Test Account", source: "kikter" };
+      body = {
+        id: 900,
+        name: "Test Account",
+        source: "kikter",
+        email: "test@example.test",
+      };
     if (req.method() === "OPTIONS")
       return route.fulfill({
         status: 204,

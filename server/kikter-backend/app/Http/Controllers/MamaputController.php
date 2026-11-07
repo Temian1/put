@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\MamaputAccounts;
 use App\MamaputConfig;
+use App\Mail\PlayerNotice;
 use App\Models\GameProfile;
 use App\Models\MamaputPlayer;
+use App\Models\MamaputTicket;
 use App\Models\User;
 use App\Models\VatarPurchase;
 use App\Models\VatarSetting;
@@ -14,6 +16,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -193,6 +197,66 @@ class MamaputController extends Controller
         return response()->json($this->profile($player));
     }
 
+    /**
+     * The contact email the game asks for. No verification, so it never
+     * replaces the login email of a linked account.
+     */
+    public function saveEmail(Request $request): JsonResponse
+    {
+        $player = $this->player($request);
+        $request->merge(['email' => strtolower(trim((string) $request->input('email')))]);
+        $data = $request->validate(['email' => ['required', 'string', 'email:rfc', 'max:190']]);
+        if ($player->accountEmail() === null) {
+            $player->contact_email = $data['email'];
+            $player->save();
+        }
+
+        return response()->json($this->profile($player));
+    }
+
+    public function support(Request $request): JsonResponse
+    {
+        return response()->json($this->tickets($this->player($request)));
+    }
+
+    public function createTicket(Request $request): JsonResponse
+    {
+        $player = $this->player($request);
+        $data = $request->validate([
+            'category' => ['required', 'string', Rule::in(array_keys(MamaputTicket::CATEGORIES))],
+            'message' => ['required', 'string', 'min:5', 'max:2000'],
+        ]);
+        abort_if($player->tickets()->where('status', 'open')->count() >= MamaputTicket::MAX_OPEN, 429,
+            'You have several messages waiting already. We will answer those first.');
+        $ticket = $player->tickets()->create(['category' => $data['category']]);
+        $ticket->addPlayerMessage($data['message']);
+        // A mail problem must not lose the player's message.
+        rescue(fn () => Mail::to(config('mail.from.address'))->send(new PlayerNotice(
+            'Support', 'New Mama Put Rush support message',
+            MamaputTicket::CATEGORIES[$data['category']]." from {$player->name}:\n\n{$data['message']}", 'Mama Put Rush',
+        )));
+
+        return response()->json($this->tickets($player), 201);
+    }
+
+    public function replyTicket(Request $request, int $id): JsonResponse
+    {
+        $player = $this->player($request);
+        $ticket = $player->tickets()->findOrFail($id);
+        $data = $request->validate(['message' => ['required', 'string', 'min:2', 'max:2000']]);
+        abort_if($ticket->isClosed(), 422, 'This conversation is closed. Send a new message instead.');
+        $ticket->addPlayerMessage($data['message']);
+
+        return response()->json($this->tickets($player));
+    }
+
+    public function readTickets(Request $request): JsonResponse
+    {
+        $this->player($request)->tickets()->where('unread', true)->update(['unread' => false]);
+
+        return response()->json(['ok' => true]);
+    }
+
     public function showSave(Request $request): JsonResponse
     {
         $player = $this->player($request);
@@ -342,6 +406,22 @@ class MamaputController extends Controller
     }
 
     /** @return array<string, mixed> */
+    private function tickets(MamaputPlayer $p): array
+    {
+        return [
+            'tickets' => $p->tickets()->with('messages')->latest('updated_at')->limit(30)->get()
+                ->map(fn (MamaputTicket $t): array => [
+                    'id' => $t->id, 'category' => $t->category, 'status' => $t->status, 'unread' => $t->unread,
+                    'at' => $t->updated_at?->toIso8601String(),
+                    'messages' => $t->messages->map(fn ($m): array => [
+                        'id' => $m->id, 'body' => $m->body, 'support' => $m->from_support,
+                        'at' => $m->created_at?->toIso8601String(),
+                    ])->all(),
+                ])->all(),
+        ];
+    }
+
+    /** @return array<string, mixed> */
     private function walletState(MamaputPlayer $p): array
     {
         $signedIn = $p->source() !== 'guest';
@@ -362,6 +442,8 @@ class MamaputController extends Controller
             'id' => $p->id, 'name' => $p->name, 'version' => $p->save_version,
             'tier' => MamaputConfig::TIERS[$p->tier][0] ?? '', 'shifts' => $p->shifts_played,
             'source' => $p->source(),
+            'email' => $p->email(),
+            'supportUnread' => $p->tickets()->where('unread', true)->count(),
             'account' => $user ? ['name' => $user->name, 'email' => $user->email] : null,
             'lagoslife' => $p->vatarPlayer ? ['name' => $p->vatarPlayer->name] : null,
             'wallet' => $this->walletState($p),
