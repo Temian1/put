@@ -241,7 +241,7 @@ export const GameLayout = memo(function GameLayout({
             </svg>
           </button>
           <div className="mapTitle">
-            <h2>{"Your Food Journey"}</h2>
+            <h2>{"Food Journey"}</h2>
             <span className="mapStars">
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5-4.8-4.6 6.6-.9z" />

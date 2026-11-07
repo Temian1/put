@@ -1340,7 +1340,7 @@ svg.star.on {
   cursor: pointer;
 }
 /* Narrow phones: three header buttons, reputation and cash share 320px. */
-@media (max-width: 400px) {
+@media (max-width: 440px) {
   #scrMenu .topbar {
     gap: 6px;
   }
@@ -1503,4 +1503,29 @@ svg.star.on {
 .ticketReply {
   display: flex;
   gap: 8px;
+}
+
+/* The menu bar is full on phones, so support sits just under Settings. */
+#scrMenu .topbar {
+  position: relative;
+}
+#btnSupport {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 12px);
+}
+@media (max-width: 440px) {
+  .mapHead {
+    gap: 8px;
+  }
+  .mapHead .iconBtn {
+    width: 40px;
+    height: 40px;
+    border-radius: 14px;
+  }
+}
+@media (max-width: 380px) {
+  .mapHead h2 {
+    font-size: 15px;
+  }
 }
