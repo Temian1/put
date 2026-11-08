@@ -153,6 +153,17 @@ class MamaputPlayer extends Model
         // Support credits are issued on the server. Older clients must not
         // erase them, invent new credits, or restore a collected credit.
         $stored = $this->save ?? [];
+        if ((int) ($save['saveEpoch'] ?? 0) === (int) ($stored['saveEpoch'] ?? 0)) {
+            foreach (['stars', 'best'] as $field) {
+                $merged = (array) ($stored[$field] ?? []);
+                foreach ((array) ($save[$field] ?? []) as $key => $value) {
+                    $merged[$key] = max($merged[$key] ?? 0, $value);
+                }
+                $save[$field] = $merged;
+            }
+            $save['unlocked'] = max($stored['unlocked'] ?? 1, $save['unlocked'] ?? 1);
+        }
+        if (isset($stored['saveRepair'])) $save['saveRepair'] = $stored['saveRepair'];
         $credits = (array) ($stored['growCredits'] ?? []);
         $save['growCredits'] = $credits;
         $save['growCollected'] = array_values(array_intersect(
@@ -194,6 +205,7 @@ class MamaputPlayer extends Model
         }
         $save['updatedAt'] = (int) (microtime(true) * 1000) + 60000;
         $save['adminEdit'] = true;
+        $save['saveEpoch'] = (int) ($this->save['saveEpoch'] ?? 0) + 1;
         $this->syncFromSave($save);
         $this->save_version++;
     }

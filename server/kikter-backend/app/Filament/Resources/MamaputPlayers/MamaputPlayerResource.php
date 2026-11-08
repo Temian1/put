@@ -271,8 +271,9 @@ class MamaputPlayerResource extends Resource
                         ->requiresConfirmation()
                         ->modalDescription('Wipes the cloud save. The game starts this player again at level 1 with the starting cash on its next sync.')
                         ->action(function (MamaputPlayer $r): void {
+                            $epoch = (int) ($r->save['saveEpoch'] ?? 0) + 1;
                             $r->save = ['coins' => (int) MamaputConfig::get('start_cash'), 'unlocked' => 1, 'reputation' => 50,
-                                'reset' => true, 'updatedAt' => (int) (microtime(true) * 1000) + 60000];
+                                'reset' => true, 'saveEpoch' => $epoch, 'updatedAt' => (int) (microtime(true) * 1000) + 60000];
                             $r->syncFromSave($r->save);
                             $r->save_version++;
                             $r->save();

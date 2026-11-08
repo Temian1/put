@@ -109,8 +109,14 @@ export function createOnline({
     const r = await req("POST", path, body);
     if (!r.ok || !r.data?.token)
       return { ok: false, error: errorOf(r, "Could not sign in.") };
+    const previousId = me.id;
     remember(r.data);
-    me.version = 0;
+    if (previousId !== me.id) {
+      me.version = 0;
+      delete me.baseCash;
+      delete me.baseEpoch;
+      delete me.saveOwner;
+    }
     write(KEY, me);
     status.expired = false;
     status.banned = false;
@@ -120,13 +126,29 @@ export function createOnline({
   // An admin edit or reset on the server wins over local progress.
   function applyServer(local, remote) {
     if (!remote) return local;
-    const newer = (remote.updatedAt || 0) > (local.updatedAt || 0);
+    const localEpoch = local.saveEpoch || 0;
+    const remoteEpoch = remote.saveEpoch || 0;
+    const newer =
+      remoteEpoch > localEpoch ||
+      (remoteEpoch === localEpoch &&
+        (remote.updatedAt || 0) > (local.updatedAt || 0));
     if (newer && remote.reset) {
       const fresh = { ...remote };
       delete fresh.reset;
       return { ...fresh, playerId: local.playerId };
     }
     const merged = mergeSaves(local, remote);
+    // An account's first sync starts from its cloud cash. Thereafter only
+    // changes since this device's acknowledged balance are applied, so a
+    // freshly opened or stale browser cannot replace another device's money.
+    const hasBase =
+      me.saveOwner === me.id &&
+      Number.isFinite(me.baseCash) &&
+      me.baseEpoch === remoteEpoch &&
+      localEpoch === remoteEpoch;
+    merged.coins = hasBase
+      ? Math.max(0, (remote.coins || 0) + (local.coins || 0) - me.baseCash)
+      : remote.coins || 0;
     if (newer && remote.adminEdit)
       for (const k of ["coins", "reputation", "unlocked"])
         if (remote[k] !== undefined) merged[k] = remote[k];
@@ -235,6 +257,19 @@ export function createOnline({
       let pulled = await req("GET", "/save");
       if (!pulled.ok) return null;
       for (let attempt = 0; attempt < 2; attempt++) {
+        const remote = pulled.data.save;
+        if (
+          remote &&
+          (me.saveOwner !== me.id ||
+            (remote.saveEpoch || 0) > (local.saveEpoch || 0))
+        ) {
+          // Keep the original device snapshot recoverable before adopting a
+          // different cloud balance. Never replace a larger recovery copy.
+          const key = `${KEY}.recovery.${me.id}`;
+          const previous = read(key);
+          if (!previous || (local.coins || 0) > (previous.save?.coins || 0))
+            write(key, { at: Date.now(), playerId: me.id, save: local });
+        }
         // Settlement may mutate nested tills/crew. Keep failed uploads and
         // conflict retries from changing either input before they succeed.
         const merged = prepare(
@@ -246,6 +281,9 @@ export function createOnline({
         });
         if (pushed.ok) {
           me.version = pushed.data.version;
+          me.saveOwner = me.id;
+          me.baseCash = merged.coins || 0;
+          me.baseEpoch = merged.saveEpoch || 0;
           write(KEY, me);
           return merged;
         }

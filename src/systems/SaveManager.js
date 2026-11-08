@@ -65,6 +65,7 @@ export function createSave(storage = globalThis.localStorage) {
         achievements: [],
         playerId: "",
         updatedAt: 0,
+        saveEpoch: 0,
       };
     },
     load() {

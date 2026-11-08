@@ -14,8 +14,16 @@ const union = (a = [], b = []) => [...new Set([...a, ...b])];
 export function mergeSaves(local, remote) {
   if (!remote) return local;
   if (!local) return remote;
+  const localEpoch = local.saveEpoch || 0,
+    remoteEpoch = remote.saveEpoch || 0;
   const newer =
-    (remote.updatedAt || 0) > (local.updatedAt || 0) ? remote : local;
+    localEpoch !== remoteEpoch
+      ? remoteEpoch > localEpoch
+        ? remote
+        : local
+      : (remote.updatedAt || 0) > (local.updatedAt || 0)
+        ? remote
+        : local;
   const merged = { ...newer };
   // Credits have immutable, unique IDs; receipts prevent old backups from
   // making a collected credit available again. Preserve a server credit

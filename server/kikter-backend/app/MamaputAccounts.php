@@ -81,7 +81,8 @@ final class MamaputAccounts
             if ($target->user_id && $target->wallet > 0) {
                 // A Lagos Life wallet joins the Kikter coin balance.
                 $amount = (int) $target->wallet;
-                $target->update(['wallet' => 0]);
+                $target->wallet = 0;
+                $target->save();
                 self::credit($target, $amount, 'linked');
             }
 

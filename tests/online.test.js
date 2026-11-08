@@ -105,6 +105,85 @@ function fakeServer() {
 afterEach(() => vi.restoreAllMocks());
 
 describe("online services", () => {
+  it("restores repaired cash even when a low browser save has a newer clock", async () => {
+    const { s, fetchImpl } = fakeServer();
+    s.save = {
+      coins: 24872000,
+      unlocked: 68,
+      saveEpoch: 1,
+      stars: { 1: 3, 67: 3 },
+      updatedAt: 1,
+    };
+    const storage = memory();
+    const o = createOnline({
+      base: "https://api.test",
+      storage,
+      fetchImpl,
+    });
+    await o.login("bose@example.com", "secret-pass");
+    const restored = await o.sync({
+      coins: 272000,
+      unlocked: 2,
+      stars: { 2: 3 },
+      updatedAt: 9999999999999,
+    });
+    expect(restored).toMatchObject({
+      coins: 24872000,
+      unlocked: 68,
+      saveEpoch: 1,
+      stars: { 1: 3, 2: 3, 67: 3 },
+    });
+    expect(s.save.coins).toBe(24872000);
+    expect(
+      JSON.parse(storage.getItem("mamaPutRush3D.online.recovery.7")).save.coins,
+    ).toBe(272000);
+  });
+  it("merges only independently earned cash across two browsers and retains spending", async () => {
+    const { s, fetchImpl } = fakeServer();
+    s.save = { coins: 10000, unlocked: 4, updatedAt: 1 };
+    const a = createOnline({
+      base: "https://api.test",
+      storage: memory(),
+      fetchImpl,
+    });
+    const b = createOnline({
+      base: "https://api.test",
+      storage: memory(),
+      fetchImpl,
+    });
+    await a.login("bose@example.com", "secret-pass");
+    await b.login("bose@example.com", "secret-pass");
+    const baseA = await a.sync({ coins: 0, updatedAt: 2 });
+    const baseB = await b.sync({ coins: 0, updatedAt: 3 });
+    const earnedA = await a.sync({ ...baseA, coins: 12000, updatedAt: 4 });
+    const earnedB = await b.sync({ ...baseB, coins: 13000, updatedAt: 5 });
+    expect(earnedB.coins).toBe(15000);
+    const spent = await a.sync({ ...earnedA, coins: 11000, updatedAt: 6 });
+    expect(spent.coins).toBe(14000);
+    expect((await a.sync(spent)).coins).toBe(14000);
+  });
+  it("does not apply a cash delta twice when a version conflict retries", async () => {
+    const { s, fetchImpl } = fakeServer();
+    s.save = { coins: 10000, updatedAt: 1 };
+    let conflict = false;
+    const o = createOnline({
+      base: "https://api.test",
+      storage: memory(),
+      fetchImpl: async (url, opts) => {
+        if (conflict && url.endsWith("/save") && opts.method === "PUT") {
+          conflict = false;
+          s.save = { ...s.save, coins: s.save.coins + 3000 };
+          return json(409, { version: ++s.version, save: s.save });
+        }
+        return fetchImpl(url, opts);
+      },
+    });
+    await o.login("bose@example.com", "secret-pass");
+    const base = await o.sync({ coins: 0 });
+    conflict = true;
+    expect((await o.sync({ ...base, coins: 12000 })).coins).toBe(15000);
+    expect(s.save.coins).toBe(15000);
+  });
   it("settles restored manager earnings before uploading, without paying twice", async () => {
     const { s, fetchImpl } = fakeServer();
     let conflict = true;

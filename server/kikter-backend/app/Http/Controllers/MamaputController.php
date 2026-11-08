@@ -276,18 +276,29 @@ class MamaputController extends Controller
             'save' => ['required', 'array'],
             'save.unlocked' => ['required', 'integer', 'min:1', 'max:101'],
             'save.coins' => ['required', 'numeric', 'min:0'],
+            'save.saveEpoch' => ['sometimes', 'integer', 'min:0'],
         ]);
         if (strlen((string) $request->getContent()) > self::MAX_SAVE_BYTES) {
             return response()->json(['message' => 'Save is too large.'], 413);
         }
-        if ((int) $data['version'] !== $player->save_version) {
+        $incoming = (array) $request->input('save');
+        if ((int) $data['version'] !== $player->save_version ||
+            (int) ($incoming['saveEpoch'] ?? 0) !== (int) ($player->save['saveEpoch'] ?? 0)) {
             return response()->json(['version' => $player->save_version, 'save' => $player->save], 409);
         }
         // validate() keeps only the checked keys; store the whole save.
-        $player->syncFromSave((array) $request->input('save'));
+        $previousVersion = $player->save_version;
+        $player->syncFromSave($incoming);
         $player->save_version++;
         $player->last_seen_at = now();
-        $player->save();
+        // Compare-and-swap prevents concurrent browsers from both saving the
+        // same version after reading it before either write completed.
+        $updated = MamaputPlayer::whereKey($player->id)->where('save_version', $previousVersion)
+            ->update($player->getDirty());
+        if (! $updated) {
+            $fresh = $player->fresh();
+            return response()->json(['version' => $fresh->save_version, 'save' => $fresh->save], 409);
+        }
 
         return response()->json(['version' => $player->save_version]);
     }

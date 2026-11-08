@@ -9765,6 +9765,8 @@ export function mountGame(canvas, host, bridge) {
           Save.d.coins,
           Save.d.unlocked,
           Save.d.reputation,
+          Save.d.stars,
+          Save.d.best,
         ]);
         Save.d = migrate(merged, Save.defaults());
         Save.save();
@@ -9777,6 +9779,8 @@ export function mountGame(canvas, host, bridge) {
               Save.d.coins,
               Save.d.unlocked,
               Save.d.reputation,
+              Save.d.stars,
+              Save.d.best,
             ]) !== before
           )
             Game.state === "map" ? buildMap() : showMenuEnvRefresh();
