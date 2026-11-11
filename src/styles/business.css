@@ -411,3 +411,38 @@ img.oicon {
     opacity: 1;
   }
 }
+
+/* A small name pill on the rail buttons, so the counters explain
+   themselves without making the rail taller. */
+.boost[data-label]::after {
+  content: attr(data-label);
+  position: absolute;
+  bottom: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--ink);
+  font: 400 10px/13px var(--display);
+  color: #fff;
+  white-space: nowrap;
+  pointer-events: none;
+}
+/* The price stays readable above the cooking and stock ring. */
+.food .pr {
+  z-index: 2;
+}
+/* A customer's spoken line wraps instead of running over its neighbours. */
+.bubble .say {
+  white-space: normal;
+  width: max-content;
+  max-width: 170px;
+  text-align: center;
+}
+.bubble:has(.say.show) {
+  z-index: 5;
+}
+/* Bubbles shrink around the point above the customer's head. */
+.bubble {
+  transform-origin: 0 0;
+}

@@ -1054,11 +1054,24 @@ export function mountGame(canvas, host, bridge) {
   // Each bubble sits above its customer's head. Customers standing close
   // together would cover each other's orders, so a bubble that overlaps one
   // nearer the camera is lifted until it clears, easing so it never jumps.
-  // Sizes are measured a few times a second, not every frame.
-  let bubbleFrame = 0;
+  // When even that cannot separate them (a crowded counter on a narrow
+  // phone), every bubble shrinks a little until they fit, and grows back
+  // once there is room. Sizes are measured a few times a second.
+  let bubbleScale = 1,
+    bubbleFrame = 0,
+    bubbleTop = 0,
+    bubbleLeft = 0;
   const _bubbles = [];
   function placeBubbles(dt) {
     const measure = bubbleFrame++ % 12 === 0;
+    // Bubbles stay below the score bar at the top of the screen
+    // and clear of the tool rail down the left side.
+    if (measure) {
+      bubbleTop =
+        (parseFloat($("#scrGame").style.getPropertyValue("--hudH")) || 0) + 4;
+      const rail = $("#rail").getBoundingClientRect();
+      bubbleLeft = rail.width ? rail.right + 4 : 4;
+    }
     _bubbles.length = 0;
     for (const c of Game.customers) {
       const a = _v
@@ -1074,38 +1087,64 @@ export function mountGame(canvas, host, bridge) {
         c._bw = c.el.offsetWidth;
         c._bh = c.el.offsetHeight;
       }
+      const x = ((a.x + 1) / 2) * innerWidth;
+      const w = c._bw * bubbleScale,
+        h = c._bh * bubbleScale;
       _bubbles.push({
         c,
-        x: ((a.x + 1) / 2) * innerWidth,
+        x: Math.max(bubbleLeft + w / 2, Math.min(innerWidth - 4 - w / 2, x)),
         y: ((1 - a.y) / 2) * innerHeight,
-        w: c._bw,
-        h: c._bh,
+        w,
+        h,
       });
     }
     // Lowest on screen is nearest the camera: it keeps its place.
     _bubbles.sort((p, q) => q.y - p.y);
     const GAP = 4;
+    const clash = (b, p) =>
+      Math.abs(b.x - p.x) < (b.w + p.w) / 2 + GAP &&
+      b.bottom > p.bottom - p.h - GAP &&
+      b.bottom - b.h < p.bottom + GAP;
+    const fitX = (b, x) =>
+      Math.max(bubbleLeft + b.w / 2, Math.min(innerWidth - 4 - b.w / 2, x));
+    const k = Math.min(1, dt * 12);
+    let crowded = false;
     for (let i = 0; i < _bubbles.length; i++) {
       const b = _bubbles[i];
       b.bottom = b.y;
-      for (let tries = 0, k = 0; k < i && tries < 40; k++) {
-        const p = _bubbles[k];
-        const apart = Math.abs(b.x - p.x) >= (b.w + p.w) / 2 + GAP;
-        if (
-          apart ||
-          b.bottom <= p.bottom - p.h - GAP ||
-          b.bottom - b.h >= p.bottom + GAP
-        )
-          continue;
+      // First lift it above anything it covers.
+      for (let tries = 0, n = 0; n < i && tries < 40; n++) {
+        const p = _bubbles[n];
+        if (!clash(b, p)) continue;
         b.bottom = p.bottom - p.h - GAP;
-        k = -1;
+        n = -1;
         tries++;
       }
-      const lift = b.y - b.bottom;
-      b.c._lift =
-        (b.c._lift || 0) + (lift - (b.c._lift || 0)) * Math.min(1, dt * 12);
-      b.c.el.style.transform = `translate3d(${b.x.toFixed(1)}px,${(b.y - b.c._lift).toFixed(1)}px,0) translate(-50%,-100%)`;
+      // No room under the score bar: slide sideways instead.
+      if (b.bottom - b.h < bubbleTop) {
+        b.bottom = Math.max(b.y, bubbleTop + b.h);
+        for (let tries = 0, n = 0; n < i && tries < 40; n++) {
+          const p = _bubbles[n];
+          if (!clash(b, p)) continue;
+          const dir = b.x >= p.x ? 1 : -1,
+            step = (b.w + p.w) / 2 + GAP;
+          let x = p.x + dir * step;
+          if (fitX(b, x) !== x) x = p.x - dir * step;
+          b.x = fitX(b, x);
+          n = -1;
+          tries++;
+        }
+        for (let n = 0; n < i; n++) if (clash(b, _bubbles[n])) crowded = true;
+      }
+      const c = b.c;
+      c._lift = (c._lift ?? 0) + (b.y - b.bottom - (c._lift ?? 0)) * k;
+      c._x = c._x == null ? b.x : c._x + (b.x - c._x) * k;
+      c.el.style.transform = `translate3d(${c._x.toFixed(1)}px,${(b.y - c._lift).toFixed(1)}px,0) scale(${bubbleScale.toFixed(3)}) translate(-50%,-100%)`;
     }
+    if (measure)
+      bubbleScale = crowded
+        ? Math.max(0.65, bubbleScale - 0.08)
+        : Math.min(1, bubbleScale + 0.01);
   }
 
   /* ================= THUMBNAILS (real 3D renders for buttons and bubbles) ================= */

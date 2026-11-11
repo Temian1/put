@@ -449,8 +449,13 @@ export const GameLayout = memo(function GameLayout({
           <div className="b3"></div>
         </div>
         <div className="rail" id="rail">
-          <div className="boost hyg" id="hygiene" aria-label="Hygiene">
-            <Icon name="wash" />
+          <div
+            className="boost hyg"
+            id="hygiene"
+            aria-label="Hygiene"
+            data-label="Clean"
+          >
+            <Icon name="broom" />
             <b id="hygTxt">{"80"}</b>
           </div>
           <button className="boost zoom" id="zoomIn" aria-label="Zoom in">
@@ -485,15 +490,30 @@ export const GameLayout = memo(function GameLayout({
             <Icon name="chef" />
             <b></b>
           </button>
-          <button className="boost" id="bFreeze" aria-label="Freeze Time">
+          <button
+            className="boost"
+            id="bFreeze"
+            aria-label="Freeze Time"
+            data-label="Freeze"
+          >
             <Icon name="freeze" />
             <b>0</b>
           </button>
-          <button className="boost" id="bAuto" aria-label="Auto-Serve">
+          <button
+            className="boost"
+            id="bAuto"
+            aria-label="Auto-Serve"
+            data-label="Auto"
+          >
             <Icon name="bell" />
             <b>0</b>
           </button>
-          <button className="boost" id="bCalm" aria-label="Patience Boost">
+          <button
+            className="boost"
+            id="bCalm"
+            aria-label="Patience Boost"
+            data-label="Calm"
+          >
             <Icon name="heart" />
             <b>0</b>
           </button>
@@ -502,6 +522,7 @@ export const GameLayout = memo(function GameLayout({
             id="btnWash"
             hidden
             aria-label="Wash plates"
+            data-label="Plates"
           >
             <Icon name="wash" />
             <b id="washTxt">{"0"}</b>
