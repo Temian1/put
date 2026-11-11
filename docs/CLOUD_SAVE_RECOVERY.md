@@ -29,3 +29,13 @@ in `saveRepair`, merge verified progress, increase `saveEpoch` and the server
 save version, and verify that a stale upload is rejected before asking the
 player to reopen both browsers. Never infer current spendable cash by adding
 lifetime sales or old shift profits without accounting for purchases.
+
+Grow sync uses a separate acknowledged snapshot of crews, safes, working day,
+and away clock. First sync adopts those cloud fields regardless of the local
+save timestamp. Later syncs compare each field with the acknowledged state,
+so unchanged stale fields cannot erase new hires or restore collected safes.
+Different restaurant changes are reconciled separately; simultaneous edits to
+the same crew or safe still use save recency. This is not a transactional
+server-side collection ledger. Grow refreshes on opening and syncs before and
+after collection. Private local recovery snapshots remain available if old
+browser-only progress needs an explicit, audited restoration.

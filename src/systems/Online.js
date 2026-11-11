@@ -1,4 +1,5 @@
 import { mergeSaves } from "./CloudSave.js";
+import { growSnapshot, mergeGrow } from "./GrowSync.js";
 
 // Online services on the Kikter backend (war.kikter.com): sign-in, live game
 // settings, cloud save, shift reports, the coin wallet and the real
@@ -115,6 +116,7 @@ export function createOnline({
       me.version = 0;
       delete me.baseCash;
       delete me.baseEpoch;
+      delete me.baseGrow;
       delete me.saveOwner;
     }
     write(KEY, me);
@@ -149,6 +151,7 @@ export function createOnline({
     merged.coins = hasBase
       ? Math.max(0, (remote.coins || 0) + (local.coins || 0) - me.baseCash)
       : remote.coins || 0;
+    mergeGrow(merged, local, remote, hasBase ? me.baseGrow : null);
     if (newer && remote.adminEdit)
       for (const k of ["coins", "reputation", "unlocked"])
         if (remote[k] !== undefined) merged[k] = remote[k];
@@ -284,6 +287,7 @@ export function createOnline({
           me.saveOwner = me.id;
           me.baseCash = merged.coins || 0;
           me.baseEpoch = merged.saveEpoch || 0;
+          me.baseGrow = growSnapshot(merged);
           write(KEY, me);
           return merged;
         }

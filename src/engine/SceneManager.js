@@ -8420,7 +8420,11 @@ export function mountGame(canvas, host, bridge) {
       },
       openNow: isOpenAt(Date.now()),
       hours: `${OPEN_HOUR}am–${CLOSE_HOUR - 12}pm`,
-      collect: (pl) => {
+      collect: async (pl) => {
+        if (Online.enabled && !(await syncNow())) {
+          UI.toast("Could not sync your safe. Reconnect and try collecting again.");
+          return;
+        }
         const v = pl ? collectTill(Save.d, pl.id) : collectAll();
         if (!v) return;
         Save.save();
@@ -8429,6 +8433,7 @@ export function mountGame(canvas, host, bridge) {
         UI.toast(`Collected ${fmtNaira(v)} from your managers`);
         buildGrow();
         updateTillBadge();
+        syncNow();
       },
       staffAt: (pl) => {
         crewPlace = pl.id;
@@ -8808,6 +8813,7 @@ export function mountGame(canvas, host, bridge) {
     Sound.play("click");
     buildGrow();
     UI.open("ovGrow");
+    syncNow();
   });
   on("#growClose", () => UI.close("ovGrow"));
   on("#zoomIn", () => setZoom(cam.zoom * 0.85));

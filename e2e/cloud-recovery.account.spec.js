@@ -15,6 +15,11 @@ test("a newer low-cash browser adopts repaired cash and refreshes map stars", as
     guideSeen: true,
     lastClaim: claimedToday(),
     quality: "low",
+    branches: ["ch0", "ch1"],
+    crew: { ch1: [{ uid: "c1", job: "mgr2", name: "Manager Bose" }] },
+    crewSeq: 1,
+    till: { ch1: 4000 },
+    awayFrom: Date.now(),
   };
   await page.addInitScript(() =>
     localStorage.setItem(
@@ -90,5 +95,20 @@ test("a newer low-cash browser adopts repaired cash and refreshes map stars", as
   await page.evaluate(() => window.__mp.syncNow());
   await expect(page.locator(".node").nth(2).locator(".star.on")).toHaveCount(3);
   expect(cloud.coins).toBe(24872000);
+  await page.locator("#btnGrow").dispatchEvent("click");
+  await expect(page.locator("#ovGrow")).toHaveClass(/show/);
+  await expect(page.locator("#growList")).toContainText("Manager Bose");
+  await expect(page.locator(".collectAll")).toContainText("4,000");
+  await page.locator(".collectAll").click({ force: true });
+  await expect.poll(() => cloud.till.ch1).toBe(0);
+  expect(cloud.coins).toBe(24876000);
+  // A stale browser save with a newer timestamp must not resurrect the safe.
+  await page.evaluate(async () => {
+    const { Save, syncNow } = window.__mp;
+    Save.d.updatedAt = Date.now() + 100000;
+    await syncNow();
+  });
+  await expect(page.locator(".collectAll")).toHaveCount(0);
+  expect(cloud.till.ch1).toBe(0);
   expect(errors).toEqual([]);
 });
