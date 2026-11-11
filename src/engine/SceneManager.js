@@ -1050,6 +1050,64 @@ export function mountGame(canvas, host, bridge) {
       .catch(() => {});
   }
 
+  /* ================= ORDER BUBBLES ================= */
+  // Each bubble sits above its customer's head. Customers standing close
+  // together would cover each other's orders, so a bubble that overlaps one
+  // nearer the camera is lifted until it clears, easing so it never jumps.
+  // Sizes are measured a few times a second, not every frame.
+  let bubbleFrame = 0;
+  const _bubbles = [];
+  function placeBubbles(dt) {
+    const measure = bubbleFrame++ % 12 === 0;
+    _bubbles.length = 0;
+    for (const c of Game.customers) {
+      const a = _v
+        .set(
+          c.root.position.x,
+          c.root.position.y +
+            2.45 * (c.P.inner.scale.x || 1) +
+            c.P.inner.position.y,
+          c.root.position.z,
+        )
+        .project(camera);
+      if (measure || !c._bw) {
+        c._bw = c.el.offsetWidth;
+        c._bh = c.el.offsetHeight;
+      }
+      _bubbles.push({
+        c,
+        x: ((a.x + 1) / 2) * innerWidth,
+        y: ((1 - a.y) / 2) * innerHeight,
+        w: c._bw,
+        h: c._bh,
+      });
+    }
+    // Lowest on screen is nearest the camera: it keeps its place.
+    _bubbles.sort((p, q) => q.y - p.y);
+    const GAP = 4;
+    for (let i = 0; i < _bubbles.length; i++) {
+      const b = _bubbles[i];
+      b.bottom = b.y;
+      for (let tries = 0, k = 0; k < i && tries < 40; k++) {
+        const p = _bubbles[k];
+        const apart = Math.abs(b.x - p.x) >= (b.w + p.w) / 2 + GAP;
+        if (
+          apart ||
+          b.bottom <= p.bottom - p.h - GAP ||
+          b.bottom - b.h >= p.bottom + GAP
+        )
+          continue;
+        b.bottom = p.bottom - p.h - GAP;
+        k = -1;
+        tries++;
+      }
+      const lift = b.y - b.bottom;
+      b.c._lift =
+        (b.c._lift || 0) + (lift - (b.c._lift || 0)) * Math.min(1, dt * 12);
+      b.c.el.style.transform = `translate3d(${b.x.toFixed(1)}px,${(b.y - b.c._lift).toFixed(1)}px,0) translate(-50%,-100%)`;
+    }
+  }
+
   /* ================= THUMBNAILS (real 3D renders for buttons and bubbles) ================= */
   function makeThumbs() {
     let r;
@@ -8428,7 +8486,9 @@ export function mountGame(canvas, host, bridge) {
       hours: `${OPEN_HOUR}am–${CLOSE_HOUR - 12}pm`,
       collect: async (pl) => {
         if (Online.enabled && !(await syncNow())) {
-          UI.toast("Could not sync your safe. Reconnect and try collecting again.");
+          UI.toast(
+            "Could not sync your safe. Reconnect and try collecting again.",
+          );
           return;
         }
         const v = pl ? collectTill(Save.d, pl.id) : collectAll();
@@ -9195,19 +9255,7 @@ export function mountGame(canvas, host, bridge) {
     }
     updateCamera(dt, T);
     renderer.render(scene, camera);
-    // position customer bubbles
-    for (const c of Game.customers) {
-      const a = _v
-        .set(
-          c.root.position.x,
-          c.root.position.y +
-            2.45 * (c.P.inner.scale.x || 1) +
-            c.P.inner.position.y,
-          c.root.position.z,
-        )
-        .project(camera);
-      c.el.style.transform = `translate3d(${(((a.x + 1) / 2) * innerWidth).toFixed(1)}px,${(((1 - a.y) / 2) * innerHeight).toFixed(1)}px,0) translate(-50%,-100%)`;
-    }
+    placeBubbles(dt);
     for (const t of Game.tables) {
       if (!t.chip) continue;
       const p = _v.set(t.x, 1.25, t.z).project(camera);
