@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { boot } from "./helpers.js";
+import { boot, openFromMore } from "./helpers.js";
 
 test("a new player is shown how to play, then gets the daily reward", async ({
   page,
@@ -17,9 +17,9 @@ test("a new player is shown how to play, then gets the daily reward", async ({
   await expect(page.locator("#ovReward")).toHaveClass(/show/);
   expect(await page.evaluate(() => window.__mp.Save.d.guideSeen)).toBe(true);
 
-  // The ⓘ button in the header opens it again from the first page.
+  // How to play in the More sheet opens it again from the first page.
   await page.locator("#rewardClaim").click({ force: true });
-  await page.locator("#btnHelp").click({ force: true });
+  await openFromMore(page, "#btnHelp");
   await expect(guide).toHaveClass(/show/);
   await expect(page.locator("#ovGuide .guidePage").first()).toBeVisible();
   await page.locator("#guideSkip").click({ force: true });

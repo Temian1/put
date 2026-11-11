@@ -96,46 +96,39 @@ export const GameLayout = memo(function GameLayout({
         aria-label="Main menu"
         tag="section"
       >
-        <div className="topbar">
+        <div className="topbar homeBar">
           <button
-            className="iconBtn teal"
-            id="btnSettings"
-            aria-label="Settings"
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.5 7.5 0 0 0-1.7-1L15 3h-4l-.4 2.8a7.5 7.5 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1c.5.4 1.1.7 1.7 1L11 21h4l.4-2.8c.6-.3 1.2-.6 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"></path>
-            </svg>
-          </button>
-          <button
-            className="iconBtn gold helpBtn"
-            id="btnHelp"
-            aria-label="How to play"
-          >
-            <Icon name="info" />
-          </button>
-          <button
-            className="iconBtn supportBtn"
-            id="btnSupport"
-            aria-label="Support"
-          >
-            <Icon name="support" />
-            <span className="dot" id="supportDot" hidden></span>
-          </button>
-          <button
-            className="iconBtn plum accountBtn"
+            className="profileChip"
             id="btnAccount"
             aria-label="Account and coins"
           >
-            <Icon name="user" />
-            <span className="dot" id="accountDot" hidden></span>
+            <span className="avatar">
+              <Icon name="user" />
+              <span className="dot" id="accountDot" hidden></span>
+            </span>
+            <span className="who">
+              <b id="menuName">{"Your buka"}</b>
+              <span className="rep" id="repPill" aria-label="Reputation">
+                <svg className="repStar" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5-4.8-4.6 6.6-.9z" />
+                </svg>
+                <span id="menuRep">{"50"}</span>
+              </span>
+            </span>
           </button>
           <div className="topRight">
-            <div className="pill repPill" id="repPill" aria-label="Reputation">
-              <svg className="repStar" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5-4.8-4.6 6.6-.9z" />
-              </svg>
-              <span id="menuRep">{"50"}</span>
-            </div>
+            <button className="roundBtn" id="btnMore" aria-label="More">
+              <Icon name="menu" />
+              <span className="dot" id="moreDot" hidden></span>
+            </button>
+            <button
+              className="roundBtn bellBtn"
+              id="btnInbox"
+              aria-label="Notifications"
+            >
+              <Icon name="notify" />
+              <span className="count" id="inboxBadge" hidden></span>
+            </button>
             <div className="cashGroup">
               <CashPill id="menuCoins" pillId="menuCoinPill" />
               <button
@@ -157,49 +150,68 @@ export const GameLayout = memo(function GameLayout({
           </div>
           <div className="tag">{"From Roadside Buka to Food Empire!"}</div>
         </div>
+        <div className="homeRails">
+          <div className="homeRail">
+            <button className="railBtn daily" id="btnDaily">
+              <span className="tile">
+                <Icon name="gift" />
+              </span>
+              {"Daily"}
+            </button>
+            <button className="railBtn" id="btnMissions">
+              <span className="tile">
+                <Icon name="target" />
+                <span className="badge" id="missionBadge" hidden></span>
+              </span>
+              {"Missions"}
+            </button>
+            <button className="railBtn" id="btnStaff">
+              <span className="tile">
+                <Icon name="staff" />
+                <span className="badge cash" id="staffBadge" hidden></span>
+              </span>
+              {"Staff"}
+            </button>
+          </div>
+          <div className="homeRail">
+            <button className="railBtn ranks" id="btnBoard">
+              <span className="tile">
+                <Icon name="trophy" />
+              </span>
+              {"Ranks"}
+            </button>
+            <button className="railBtn" id="btnMarket">
+              <span className="tile">
+                <Icon name="basket" />
+              </span>
+              {"Market"}
+            </button>
+            <button className="railBtn" id="btnGrow">
+              <span className="tile">
+                <Icon name="map" />
+                <span className="badge cash" id="growBadge" hidden></span>
+              </span>
+              {"Grow"}
+            </button>
+          </div>
+        </div>
         <div className="menuBtns">
           <button className="btn big green pulse" id="btnPlay">
             <Icon name="play" />
-            <span className="buttonLabel">{"PLAY"}</span>
+            <span className="buttonLabel">
+              {"PLAY"}
+              <span className="playSub" id="playSub">
+                {"Level 1"}
+              </span>
+            </span>
           </button>
-          <div className="row">
-            <button className="btn teal" id="btnBoard">
-              <Icon name="trophy" />
-              <span className="buttonLabel">{"Leaderboard"}</span>
-            </button>
-            <button className="btn coral" id="btnDaily">
-              <Icon name="gift" />
-              <span className="buttonLabel">{"Daily"}</span>
-            </button>
-          </div>
-          <div className="row four">
-            <button className="btn plain" id="btnMarket">
-              <Icon name="basket" />
-              <span className="buttonLabel">{"Market"}</span>
-            </button>
-            <button className="btn plain" id="btnMissions">
-              <Icon name="target" />
-              <span className="buttonLabel">{"Missions"}</span>
-              <span className="badge" id="missionBadge" hidden></span>
-            </button>
-            <button className="btn plain" id="btnStaff">
-              <Icon name="staff" />
-              <span className="buttonLabel">{"Staff"}</span>
-              <span className="badge cash" id="staffBadge" hidden></span>
-            </button>
-            <button className="btn plain" id="btnGrow">
-              <Icon name="map" />
-              <span className="buttonLabel">{"Grow"}</span>
-              <span className="badge cash" id="growBadge" hidden></span>
-            </button>
-          </div>
-          <div className="row sideRow">
+          <div className="gamesRow">
             <button className="btn sideBtn match" id="btnMatch">
               <span className="sideArt" aria-hidden="true">
                 {"🌶️"}
               </span>
               <span className="buttonLabel">
-                {"Market Match"}
+                {"Match"}
                 <span className="lock" id="matchSub">
                   {"Win recipes"}
                 </span>
@@ -210,22 +222,24 @@ export const GameLayout = memo(function GameLayout({
                 {"🛵"}
               </span>
               <span className="buttonLabel">
-                {"Okada Rush"}
+                {"Okada"}
                 <span className="lock" id="runSub">
                   {"Level 10"}
                 </span>
               </span>
             </button>
-          </div>
-          <button className="btn gold" id="btnEndless">
-            <Icon name="infinity" />
-            <span className="buttonLabel">
-              {"Endless Rush"}
-              <span className="lock" id="endlessLock">
-                {"Beat Level 50 to unlock"}
+            <button className="btn endless" id="btnEndless">
+              <span className="sideArt" aria-hidden="true">
+                {"♾️"}
               </span>
-            </span>
-          </button>
+              <span className="buttonLabel">
+                {"Endless"}
+                <span className="lock" id="endlessLock">
+                  {"Level 50"}
+                </span>
+              </span>
+            </button>
+          </div>
         </div>
       </Surface>
       <Surface
@@ -1065,6 +1079,44 @@ export const GameLayout = memo(function GameLayout({
             <Icon name="close" />
             <span className="buttonLabel">{"Close"}</span>
           </button>
+        </div>
+      </Surface>
+      <Surface className="overlay scroll" id="ovMore" tag="div">
+        <div className="panel">
+          <div className="ribbon small">{"More"}</div>
+          <div className="moreList">
+            <button className="btn teal" id="btnSettings">
+              <Icon name="gear" />
+              <span className="buttonLabel">{"Settings"}</span>
+            </button>
+            <button className="btn gold" id="btnHelp">
+              <Icon name="info" />
+              <span className="buttonLabel">{"How to play"}</span>
+            </button>
+            <button className="btn plain" id="btnSupport">
+              <Icon name="support" />
+              <span className="buttonLabel">{"Support"}</span>
+              <span className="dot" id="supportDot" hidden></span>
+            </button>
+          </div>
+          <div className="btnRow" style={{ marginTop: "14px" }}>
+            <button className="btn coral" id="moreClose">
+              <Icon name="close" />
+              <span className="buttonLabel">{"Close"}</span>
+            </button>
+          </div>
+        </div>
+      </Surface>
+      <Surface className="overlay" id="ovInbox" tag="div">
+        <div className="panel">
+          <div className="ribbon small">{"Notifications"}</div>
+          <div className="shopList scroll" id="inboxList"></div>
+          <div className="btnRow" style={{ marginTop: "12px" }}>
+            <button className="btn coral" id="inboxClose">
+              <Icon name="close" />
+              <span className="buttonLabel">{"Close"}</span>
+            </button>
+          </div>
         </div>
       </Surface>
       <Surface className="overlay" id="ovSupport" tag="div">

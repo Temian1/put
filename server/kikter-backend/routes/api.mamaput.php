@@ -22,6 +22,11 @@ Route::prefix("mamaput")->middleware("throttle:120,1")->group(function () {
     Route::get("/me", [MamaputController::class, "me"]);
     Route::patch("/me", [MamaputController::class, "rename"]);
     Route::put("/me/email", [MamaputController::class, "saveEmail"])->middleware("throttle:10,1,mpemail");
+    Route::get("/inbox", [MamaputController::class, "inbox"]);
+    Route::post("/inbox/read", [MamaputController::class, "readInbox"]);
+    Route::post("/inbox/{id}/claim", [MamaputController::class, "claimNote"])->whereNumber("id");
+    Route::post("/inbox/{id}/mute", [MamaputController::class, "muteNote"])->whereNumber("id");
+    Route::post("/inbox/{id}/reply", [MamaputController::class, "replyNote"])->whereNumber("id")->middleware("throttle:10,1,mpreply");
     Route::get("/support", [MamaputController::class, "support"]);
     Route::post("/support/read", [MamaputController::class, "readTickets"]);
     Route::middleware("throttle:6,1,mpsupport")->group(function () {

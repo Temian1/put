@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\MamaputAccounts;
 use App\MamaputConfig;
+use App\MamaputInbox;
 use App\Mail\PlayerNotice;
 use App\Models\GameProfile;
 use App\Models\MamaputPlayer;
@@ -250,6 +251,45 @@ class MamaputController extends Controller
         return response()->json($this->tickets($player));
     }
 
+    public function inbox(Request $request): JsonResponse
+    {
+        return response()->json(MamaputInbox::forClient($this->player($request)));
+    }
+
+    public function readInbox(Request $request): JsonResponse
+    {
+        $this->player($request)->notifications()->whereNull('read_at')->update(['read_at' => now()]);
+
+        return response()->json(['ok' => true]);
+    }
+
+    public function claimNote(Request $request, int $id): JsonResponse
+    {
+        $player = $this->player($request);
+        $coins = MamaputInbox::claim($player->notifications()->findOrFail($id));
+
+        return response()->json(['coins' => $coins, 'wallet' => $this->walletState($player->fresh())] + MamaputInbox::forClient($player));
+    }
+
+    public function replyNote(Request $request, int $id): JsonResponse
+    {
+        $player = $this->player($request);
+        $data = $request->validate(['message' => ['required', 'string', 'max:200']]);
+        MamaputInbox::reply($player->notifications()->findOrFail($id), $data['message']);
+
+        return response()->json(MamaputInbox::forClient($player));
+    }
+
+    public function muteNote(Request $request, int $id): JsonResponse
+    {
+        $player = $this->player($request);
+        $note = $player->notifications()->findOrFail($id);
+        abort_unless($note->from_player_id, 422, 'There is nobody to mute.');
+        MamaputInbox::mute($player, $note->from_player_id);
+
+        return response()->json(MamaputInbox::forClient($player));
+    }
+
     public function readTickets(Request $request): JsonResponse
     {
         $this->player($request)->tickets()->where('unread', true)->update(['unread' => false]);
@@ -288,6 +328,7 @@ class MamaputController extends Controller
         }
         // validate() keeps only the checked keys; store the whole save.
         $previousVersion = $player->save_version;
+        $boards = MamaputInbox::snapshot($player);
         $player->syncFromSave($incoming);
         $player->save_version++;
         $player->last_seen_at = now();
@@ -299,6 +340,8 @@ class MamaputController extends Controller
             $fresh = $player->fresh();
             return response()->json(['version' => $fresh->save_version, 'save' => $fresh->save], 409);
         }
+        // An alert failing must never fail the player's save.
+        rescue(fn () => MamaputInbox::passed($player, $boards));
 
         return response()->json(['version' => $player->save_version]);
     }
@@ -455,6 +498,7 @@ class MamaputController extends Controller
             'source' => $p->source(),
             'email' => $p->email(),
             'supportUnread' => $p->tickets()->where('unread', true)->count(),
+            'inboxUnread' => $p->notifications()->whereNull('read_at')->count(),
             'account' => $user ? ['name' => $user->name, 'email' => $user->email] : null,
             'lagoslife' => $p->vatarPlayer ? ['name' => $p->vatarPlayer->name] : null,
             'wallet' => $this->walletState($p),

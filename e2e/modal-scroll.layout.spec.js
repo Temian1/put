@@ -29,10 +29,13 @@ test("tall modals scroll with a finger drag", async ({ page }) => {
   };
   for (const [open, overlay, close] of [
     ["#btnGrow", "#ovGrow", "#growClose"],
-    ["#btnSettings", "#ovSettings", "#sClose"],
+    [["#btnMore", "#btnSettings"], "#ovSettings", "#sClose"],
     ["#btnMarket", "#ovMarket", "#marketClose"],
   ]) {
-    await page.locator(open).click({ force: true });
+    for (const id of [].concat(open)) {
+      await page.locator(id).click({ force: true });
+      await page.waitForTimeout(350);
+    }
     await expect(page.locator(overlay)).toHaveClass(/show/);
     await page.waitForTimeout(500);
     await drag();

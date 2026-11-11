@@ -6,6 +6,7 @@ import "./styles/react.css";
 import "./styles/business.css";
 import "./styles/polish.css";
 import "./styles/sidegames.css";
+import "./styles/home.css";
 
 createRoot(document.getElementById("root")).render(<App />);
 

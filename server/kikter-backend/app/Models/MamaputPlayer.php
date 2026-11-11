@@ -40,6 +40,16 @@ class MamaputPlayer extends Model
         return $this->belongsTo(VatarPlayer::class);
     }
 
+    public function notifications(): HasMany
+    {
+        return $this->hasMany(MamaputNotification::class, 'player_id');
+    }
+
+    public function mutes(): HasMany
+    {
+        return $this->hasMany(MamaputMute::class, 'player_id');
+    }
+
     public function tickets(): HasMany
     {
         return $this->hasMany(MamaputTicket::class, 'player_id');

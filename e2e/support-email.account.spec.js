@@ -165,13 +165,16 @@ test("support opens from home and the map, sends a message and shows replies", a
   await signedIn(page);
   const errors = await boot(page, save(1));
 
-  // A reply waiting shows a dot on the support button.
+  // A reply waiting shows a dot on More, and on Support inside it.
+  await expect(page.locator("#moreDot")).toBeVisible();
+  await page.locator("#btnMore").click();
   await expect(page.locator("#supportDot")).toBeVisible();
   await page.locator("#btnSupport").click();
   const panel = page.locator("#ovSupport");
   await expect(panel).toHaveClass(/show/);
   await expect(panel).toContainText("They are back now.");
   await expect(page.locator("#supportDot")).toBeHidden();
+  await expect(page.locator("#moreDot")).toBeHidden();
 
   await expect(page.locator("#supportSend")).toBeDisabled();
   await page.locator("#supportTopic").selectOption("complaint");

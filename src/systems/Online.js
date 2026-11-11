@@ -94,6 +94,7 @@ export function createOnline({
       wallet: data.wallet?.coins ?? me.wallet ?? 0,
       email: data.email ?? data.account?.email ?? null,
       supportUnread: data.supportUnread ?? me.supportUnread ?? 0,
+      inboxUnread: data.inboxUnread ?? me.inboxUnread ?? 0,
     });
     if (data.token) me.token = data.token;
     write(KEY, me);
@@ -174,6 +175,7 @@ export function createOnline({
             signedIn: signedIn(),
             email: me.email || me.account?.email || null,
             supportUnread: me.supportUnread || 0,
+            inboxUnread: me.inboxUnread || 0,
             lagoslife: me.lagoslife?.name || null,
             wallet: me.wallet || 0,
           }
@@ -211,6 +213,7 @@ export function createOnline({
       if (!r.ok) return;
       me.email = r.data.email ?? r.data.account?.email ?? null;
       me.supportUnread = r.data.supportUnread ?? 0;
+      me.inboxUnread = r.data.inboxUnread ?? 0;
       write(KEY, me);
     },
     async wallet() {
@@ -350,6 +353,41 @@ export function createOnline({
       return r.ok
         ? { ok: true, tickets: r.data.tickets }
         : { ok: false, error: errorOf(r, "Could not send your message.") };
+    },
+    // Announcements, "someone passed you" alerts and rival messages.
+    async inbox() {
+      if (!base || !(await ensurePlayer()))
+        return { ok: false, error: "Notifications need you to be online." };
+      const r = await req("GET", "/inbox");
+      return r.ok
+        ? { ok: true, notes: r.data.notes }
+        : { ok: false, error: errorOf(r, "Could not load notifications.") };
+    },
+    async readInbox() {
+      const r = await req("POST", "/inbox/read", {});
+      if (r.ok) {
+        me.inboxUnread = 0;
+        write(KEY, me);
+      }
+    },
+    async claimNote(id) {
+      const r = await req("POST", `/inbox/${id}/claim`, {});
+      if (!r.ok) return { ok: false, error: errorOf(r, "Could not claim.") };
+      me.wallet = r.data.wallet?.coins ?? me.wallet;
+      write(KEY, me);
+      return { ok: true, coins: r.data.coins, notes: r.data.notes };
+    },
+    async replyNote(id, message) {
+      const r = await req("POST", `/inbox/${id}/reply`, { message });
+      return r.ok
+        ? { ok: true, notes: r.data.notes }
+        : { ok: false, error: errorOf(r, "Could not send your message.") };
+    },
+    async muteNote(id) {
+      const r = await req("POST", `/inbox/${id}/mute`, {});
+      return r.ok
+        ? { ok: true, notes: r.data.notes }
+        : { ok: false, error: errorOf(r, "Could not mute.") };
     },
     async readSupport() {
       const r = await req("POST", "/support/read", {});

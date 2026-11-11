@@ -24,6 +24,13 @@ export async function boot(page, save) {
   return errors;
 }
 
+// Settings, How to play and Support live in the home screen's More sheet.
+export async function openFromMore(page, id) {
+  await page.locator("#btnMore").click({ force: true });
+  await expect(page.locator("#ovMore")).toHaveClass(/show/);
+  await page.locator(id).click({ force: true });
+}
+
 export async function collectReward(page) {
   const reward = page.locator("#ovReward");
   await expect(reward).toHaveClass(/show/);

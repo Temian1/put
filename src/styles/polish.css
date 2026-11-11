@@ -1505,15 +1505,6 @@ svg.star.on {
   gap: 8px;
 }
 
-/* The menu bar is full on phones, so support sits just under Settings. */
-#scrMenu .topbar {
-  position: relative;
-}
-#btnSupport {
-  position: absolute;
-  left: 0;
-  top: calc(100% + 12px);
-}
 @media (max-width: 440px) {
   .mapHead {
     gap: 8px;

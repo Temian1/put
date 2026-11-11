@@ -9,6 +9,7 @@ import {
   gameState,
   playByTapping,
   SAVE_KEY,
+  openFromMore,
 } from "./helpers.js";
 
 const fresh = () => ({ schema: 2, lastClaim: claimedToday() });
@@ -229,14 +230,14 @@ test("backup code restores progress on another device", async ({
   // Boots the 3D game twice.
   test.slow();
   await boot(page, { ...fresh(), coins: 7777, unlocked: 9, stars: { 3: 2 } });
-  await page.locator("#btnSettings").click({ force: true });
+  await openFromMore(page, "#btnSettings");
   await page.locator("#sBackup").click({ force: true });
   const code = await page.locator("#backupCode").inputValue();
   expect(code).toMatch(/^MPR2\./);
 
   const other = await browser.newPage();
   await boot(other, fresh());
-  await other.locator("#btnSettings").click({ force: true });
+  await openFromMore(other, "#btnSettings");
   await other.locator("#sBackup").click({ force: true });
   await other.locator("#backupCode").fill("not a code");
   await other.locator("#backupRestore").click({ force: true });

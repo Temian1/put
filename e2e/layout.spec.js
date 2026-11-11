@@ -14,11 +14,13 @@ const OVERLAYS = [
   ["#btnStaff", "#ovShop", "#shopClose"],
   ["#btnMissions", "#ovMissions", "#missionsClose"],
   ["#btnDaily", "#ovDaily", "#dailyClose"],
-  ["#btnSettings", "#ovSettings", "#sClose"],
+  [["#btnMore", "#btnSettings"], "#ovSettings", "#sClose"],
+  ["#btnMore", "#ovMore", "#moreClose"],
+  ["#btnInbox", "#ovInbox", "#inboxClose"],
   ["#btnBoard", "#ovBoard", "#boardClose"],
   ["#btnGrow", "#ovGrow", "#growClose"],
   ["#btnAccount", "#ovAccount", "#accClose"],
-  ["#btnHelp", "#ovGuide", "#guideSkip"],
+  [["#btnMore", "#btnHelp"], "#ovGuide", "#guideSkip"],
 ];
 
 async function expectFits(page, overlay) {
@@ -60,7 +62,10 @@ for (const [width, height] of SIZES)
     test("menu overlays fit the screen", async ({ page }) => {
       await boot(page, { schema: 2, lastClaim: claimedToday(), coins: 5000 });
       for (const [open, overlay, close] of OVERLAYS) {
-        await page.locator(open).click({ force: true });
+        for (const id of [].concat(open)) {
+          await page.locator(id).click({ force: true });
+          await page.waitForTimeout(350);
+        }
         await expect(page.locator(overlay)).toHaveClass(/show/);
         await page.waitForTimeout(500);
         await expectFits(page, overlay);

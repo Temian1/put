@@ -1,0 +1,533 @@
+/* ---------- Home screen ----------
+   A short top bar (profile, more, notifications, cash), the logo over the
+   3D restaurant, two rails of round shortcuts, then Play and the side games.
+   Loaded last: it replaces the older crowded menu layout. */
+
+#scrMenu {
+  justify-content: flex-start;
+  gap: 10px;
+}
+#scrMenu .homeRails,
+#scrMenu .homeBar {
+  pointer-events: auto;
+}
+
+/* Top bar */
+#scrMenu .homeBar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 520px;
+}
+.profileChip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 0 1 auto;
+  max-width: 180px;
+  padding: 3px 10px 3px 3px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(74, 31, 12, 0.88);
+  box-shadow:
+    0 4px 0 rgba(0, 0, 0, 0.25),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.18);
+  color: #fff;
+  cursor: pointer;
+  text-align: left;
+}
+.profileChip .avatar {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #8a3d7c, var(--plum));
+  border: 2px solid #fff;
+}
+.profileChip .avatar .buttonIcon {
+  width: 22px;
+  height: 22px;
+  stroke-width: 2.4;
+}
+.profileChip .who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.1;
+}
+.profileChip .who b {
+  font: 400 15px var(--display);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.profileChip .rep {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--gold);
+}
+.profileChip .repStar {
+  width: 14px;
+  height: 14px;
+}
+#accountDot,
+#moreDot {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--coral);
+  border: 2px solid #fff;
+}
+#scrMenu .homeBar .topRight {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+#scrMenu .homeBar .roundBtn {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(74, 31, 12, 0.88);
+  box-shadow:
+    0 4px 0 rgba(0, 0, 0, 0.25),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.18);
+  cursor: pointer;
+}
+#scrMenu .homeBar .roundBtn .buttonIcon {
+  width: 22px;
+  height: 22px;
+  stroke-width: 2.4;
+}
+#scrMenu .homeBar .bellBtn .count {
+  position: absolute;
+  top: -5px;
+  right: -6px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  box-sizing: border-box;
+  border-radius: 999px;
+  background: var(--coral);
+  border: 2px solid #fff;
+  color: #fff;
+  font: 800 11px/16px var(--body);
+  text-align: center;
+}
+#scrMenu .homeBar .bellBtn.ring .buttonIcon {
+  animation: bellRing 1.6s ease-in-out infinite;
+  transform-origin: 50% 10%;
+}
+@keyframes bellRing {
+  0%,
+  60%,
+  100% {
+    transform: rotate(0);
+  }
+  10%,
+  30% {
+    transform: rotate(14deg);
+  }
+  20%,
+  40% {
+    transform: rotate(-12deg);
+  }
+}
+#scrMenu .homeBar .cashGroup .pill {
+  font-size: 16px;
+  gap: 4px;
+  padding-left: 8px;
+  padding-right: 32px;
+}
+#scrMenu .homeBar .cashGroup .pill .note {
+  width: 28px;
+  height: 18px;
+}
+
+/* Logo: smaller than before so the restaurant shows through. */
+#scrMenu .logo {
+  margin-top: 0;
+}
+#scrMenu .logo .l1 {
+  font-size: clamp(44px, 13vw, 76px);
+  -webkit-text-stroke-width: 8px;
+}
+#scrMenu .logo .l2 {
+  font-size: clamp(32px, 9.5vw, 54px);
+  -webkit-text-stroke-width: 7px;
+}
+#scrMenu .logo .tag {
+  margin-top: 8px;
+  font-size: 13px;
+  padding: 4px 12px;
+}
+
+/* Rails of round shortcuts down both sides. */
+.homeRails {
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: 520px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 0;
+}
+.homeRails .homeRail {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.railBtn {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  width: 64px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  color: #fff;
+  font: 400 13px/1 var(--display);
+  text-shadow:
+    0 2px 0 var(--ink),
+    0 0 3px var(--ink),
+    0 0 6px rgba(74, 31, 12, 0.6);
+}
+.railBtn .tile {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 18px;
+  color: var(--ink);
+  background: linear-gradient(180deg, #fffaf0, #f6e3c3);
+  box-shadow:
+    0 5px 0 #d8b98b,
+    0 8px 14px rgba(0, 0, 0, 0.22),
+    inset 0 2px 0 rgba(255, 255, 255, 0.9);
+  transition: transform 0.08s;
+}
+.railBtn:active .tile {
+  transform: translateY(4px);
+}
+.railBtn .tile .buttonIcon {
+  width: 26px;
+  height: 26px;
+  stroke-width: 2.3;
+}
+.railBtn.daily .tile {
+  color: #fff;
+  background: linear-gradient(180deg, #ff8a8d, var(--coral));
+  box-shadow:
+    0 5px 0 var(--coral-d),
+    0 8px 14px rgba(0, 0, 0, 0.22),
+    inset 0 2px 0 rgba(255, 255, 255, 0.5);
+}
+.railBtn.ranks .tile {
+  color: #fff;
+  background: linear-gradient(180deg, #3fd0c5, var(--teal));
+  box-shadow:
+    0 5px 0 var(--teal-d),
+    0 8px 14px rgba(0, 0, 0, 0.22),
+    inset 0 2px 0 rgba(255, 255, 255, 0.5);
+}
+.railBtn .badge {
+  top: -6px;
+  right: -8px;
+  z-index: 1;
+}
+
+/* Play and the side games */
+#scrMenu .menuBtns {
+  max-width: 400px;
+  gap: 12px;
+}
+#scrMenu #btnPlay .buttonLabel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1;
+}
+#scrMenu #btnPlay .playSub {
+  font: 800 13px var(--body);
+  opacity: 0.92;
+  margin-top: 2px;
+  text-shadow: none;
+}
+.gamesRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+#scrMenu .gamesRow .btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  padding: 8px 4px 7px;
+  font-size: 14px;
+  border-radius: 18px;
+  color: #fff;
+}
+#scrMenu .gamesRow .sideArt {
+  font-size: 24px;
+  line-height: 1;
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.18));
+}
+#scrMenu .gamesRow .buttonLabel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 100%;
+  line-height: 1.05;
+  white-space: nowrap;
+}
+#scrMenu .gamesRow .lock {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 10.5px;
+  margin-top: 1px;
+}
+#scrMenu .gamesRow .btn.endless {
+  background: linear-gradient(180deg, #ffd45a, #f2a516);
+  box-shadow:
+    0 5px 0 #b06f00,
+    0 8px 14px rgba(0, 0, 0, 0.2);
+  color: var(--ink);
+}
+#scrMenu .gamesRow .btn.locked {
+  filter: grayscale(0.55) brightness(0.95);
+}
+
+/* Short screens: drop the tagline, then the logo, before anything else. */
+@media (max-height: 760px) {
+  #scrMenu .logo .tag {
+    display: none;
+  }
+  .homeRails .homeRail {
+    gap: 8px;
+  }
+}
+@media (max-height: 640px) {
+  #scrMenu .logo {
+    display: none;
+  }
+  .railBtn .tile {
+    width: 48px;
+    height: 48px;
+  }
+}
+@media (max-width: 370px) {
+  .profileChip {
+    max-width: 140px;
+  }
+  .profileChip .avatar {
+    width: 34px;
+    height: 34px;
+  }
+  #scrMenu .homeBar .roundBtn {
+    width: 38px;
+    height: 38px;
+  }
+  #scrMenu .homeBar,
+  #scrMenu .homeBar .topRight {
+    gap: 6px;
+  }
+}
+
+/* Landscape phones: the shortcut columns pin to the screen edges and Play
+   with the side games sits between them, so everything fits one screen. */
+@media (max-height: 500px) and (orientation: landscape) {
+  #scrMenu {
+    justify-content: space-between;
+  }
+  #scrMenu .homeRails {
+    position: absolute;
+    top: calc(env(safe-area-inset-top, 0px) + 62px);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+    left: max(12px, env(safe-area-inset-left, 0px));
+    right: max(12px, env(safe-area-inset-right, 0px));
+    width: auto;
+    max-width: none;
+    pointer-events: none;
+  }
+  .homeRails .homeRail {
+    pointer-events: auto;
+    gap: 6px;
+  }
+  .railBtn {
+    width: 58px;
+    font-size: 12px;
+  }
+  .railBtn .tile {
+    width: 44px;
+    height: 44px;
+    border-radius: 15px;
+  }
+  .railBtn .tile .buttonIcon {
+    width: 22px;
+    height: 22px;
+  }
+  #scrMenu .menuBtns {
+    max-width: 340px;
+    margin: auto auto 0;
+    gap: 8px;
+  }
+  #scrMenu #btnPlay {
+    font-size: 26px;
+    padding: 8px 18px;
+  }
+}
+
+/* ---------- More sheet ---------- */
+.moreList {
+  display: grid;
+  gap: 10px;
+  margin-top: 6px;
+}
+.moreList .btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  width: 100%;
+  font-size: 19px;
+}
+.moreList .btn .dot {
+  position: static;
+  margin-left: auto;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--coral);
+  border: 2px solid #fff;
+}
+
+/* ---------- Notifications ---------- */
+#ovInbox .panel {
+  width: min(100%, 460px);
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 16px;
+}
+.inboxNote {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 4px 10px;
+  background: #fff;
+  border-radius: 16px;
+  padding: 10px 12px;
+  box-shadow: 0 4px 0 #ebd5b2;
+  color: var(--ink);
+}
+.inboxNote.unread {
+  outline: 2px solid var(--teal);
+}
+.inboxNote .noteIcon {
+  grid-row: span 2;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: #fff4de;
+  font-size: 21px;
+}
+.inboxNote.passed .noteIcon {
+  background: #ffe0e1;
+}
+.inboxNote.message .noteIcon {
+  background: #c9f2ee;
+}
+.inboxNote .noteHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: baseline;
+}
+.inboxNote .noteHead b {
+  font-size: 15px;
+}
+.inboxNote .noteHead small {
+  flex: none;
+  opacity: 0.6;
+  font-weight: 700;
+}
+.inboxNote p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.inboxNote .noteActions {
+  grid-column: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-top: 4px;
+}
+.inboxNote .noteActions .linkBtn {
+  margin: 0;
+  font-size: 13px;
+}
+.inboxNote .emojiRow {
+  display: flex;
+  gap: 4px;
+}
+.inboxNote .emojiRow button {
+  border: 0;
+  background: #fff4de;
+  border-radius: 10px;
+  font-size: 18px;
+  width: 34px;
+  height: 32px;
+  cursor: pointer;
+}
+.inboxNote .replyRow {
+  grid-column: 2;
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+.inboxNote .replyRow .nameInput {
+  min-width: 0;
+}
+.inboxNote .sent {
+  font-weight: 800;
+  font-size: 13px;
+  color: #1e7a3a;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #scrMenu .homeBar .bellBtn.ring .buttonIcon {
+    animation: none;
+  }
+}

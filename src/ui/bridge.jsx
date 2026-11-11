@@ -13,6 +13,7 @@ import {
   Ledger,
   Board,
   Support,
+  Inbox,
   Market,
   Books,
 } from "./DynamicLayers.jsx";
@@ -69,6 +70,8 @@ export function createUiBridge(store, host) {
       slot("market", host.querySelector("#marketList"), <Market {...props} />),
     board: (props) =>
       slot("board", host.querySelector("#boardList"), <Board {...props} />),
+    inbox: (props) =>
+      slot("inbox", host.querySelector("#inboxList"), <Inbox {...props} />),
     support: (props) =>
       slot(
         "support",

@@ -1334,6 +1334,142 @@ function SupportTicket({ ticket, reply }) {
   );
 }
 
+const NOTE_ICONS = {
+  announcement: "📣",
+  passed: "🏁",
+  message: "💬",
+  support: "🎧",
+};
+const QUICK_EMOJI = ["😤", "😂", "🔥", "👏", "😎", "🏆"];
+const ago = (iso) => {
+  const m = Math.max(0, Math.round((Date.now() - new Date(iso)) / 60000));
+  if (m < 1) return "now";
+  if (m < 60) return m + "m";
+  if (m < 1440) return Math.round(m / 60) + "h";
+  return Math.round(m / 1440) + "d";
+};
+
+function InboxNote({ note, claim, reply, mute, openBoard, openSupport }) {
+  const [text, setText] = useState(""),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState("");
+  const run = async (fn) => {
+    setBusy(true);
+    setError("");
+    const r = await fn();
+    setBusy(false);
+    if (!r.ok) setError(r.error);
+    return r;
+  };
+  const send = async () => {
+    const r = await run(() => reply(note.id, text.trim()));
+    if (r.ok) setText("");
+  };
+  return (
+    <div
+      className={"inboxNote " + note.type + (note.read ? "" : " unread")}
+      data-note={note.id}
+    >
+      <span className="noteIcon" aria-hidden="true">
+        {NOTE_ICONS[note.type] || "🔔"}
+      </span>
+      <div className="noteHead">
+        <b>{note.title}</b>
+        <small>{ago(note.at)}</small>
+      </div>
+      <p>{note.body}</p>
+      <div className="noteActions">
+        {note.reward > 0 ? (
+          <button
+            className="btn gold small"
+            disabled={busy || note.claimed}
+            onClick={() => run(() => claim(note.id))}
+          >
+            {note.claimed ? "Claimed ✓" : `Claim ${note.reward} coins`}
+          </button>
+        ) : null}
+        {note.type === "passed" && note.board ? (
+          <button
+            className="btn teal small"
+            onClick={() => openBoard(note.board)}
+          >
+            {"See ranks"}
+          </button>
+        ) : null}
+        {note.type === "support" ? (
+          <button className="btn teal small" onClick={openSupport}>
+            {"Open support"}
+          </button>
+        ) : null}
+        {note.from && (note.type === "passed" || note.type === "message") ? (
+          <button
+            className="linkBtn"
+            disabled={busy}
+            onClick={() => run(() => mute(note.id))}
+          >
+            {`Mute ${note.from.name}`}
+          </button>
+        ) : null}
+        {!note.canReply && note.from && note.type !== "announcement" ? (
+          <span className="sent">{"Replied ✓"}</span>
+        ) : null}
+      </div>
+      {note.canReply ? (
+        <>
+          <div className="noteActions emojiRow">
+            {QUICK_EMOJI.map((e) => (
+              <button
+                key={e}
+                aria-label={"Add " + e}
+                onClick={() => setText((t) => (t + e).slice(0, 80))}
+              >
+                {e}
+              </button>
+            ))}
+          </div>
+          <div className="replyRow">
+            <input
+              className="nameInput"
+              value={text}
+              maxLength={80}
+              placeholder={`Reply to ${note.from.name}`}
+              aria-label={`Reply to ${note.from.name}`}
+              onChange={(e) => setText(e.target.value)}
+            />
+            <button
+              className="btn teal small"
+              disabled={busy || !text.trim()}
+              onClick={send}
+            >
+              {"Send"}
+            </button>
+          </div>
+        </>
+      ) : null}
+      {error ? <p className="accError">{error}</p> : null}
+    </div>
+  );
+}
+
+// Announcements, "someone passed you" alerts and short rival messages.
+export function Inbox({ notes, loading, error, ...actions }) {
+  return (
+    <>
+      {loading ? <p className="hintText">Loading…</p> : null}
+      {error ? <p className="accError">{error}</p> : null}
+      {!loading && !error && !notes?.length ? (
+        <p className="hintText">
+          Nothing yet. News from us, and players who pass you on the
+          leaderboards, show up here.
+        </p>
+      ) : null}
+      {(notes || []).map((n) => (
+        <InboxNote key={n.id} note={n} {...actions} />
+      ))}
+    </>
+  );
+}
+
 // Send a request or complaint and read the answers.
 export function Support({ tickets, loading, error, send, reply }) {
   const [topic, setTopic] = useState("request"),

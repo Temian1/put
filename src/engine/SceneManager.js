@@ -7979,6 +7979,12 @@ export function mountGame(canvas, host, bridge) {
     camMode("menu");
     const el = Save.d.unlocked > 50;
     $("#endlessLock").hidden = el;
+    $("#btnEndless").classList.toggle("locked", !el);
+    $("#playSub").textContent =
+      Save.d.unlocked > MAX_LEVEL
+        ? "All levels done"
+        : `Level ${Save.d.unlocked}`;
+    $("#menuName").textContent = Online.player?.name || "Your buka";
     const tier = tierFor(Save.d.unlocked - 1);
     $("#runSub").textContent = tier ? tier.name : `Level ${RUN_UNLOCK}`;
     $("#btnRun").classList.toggle("locked", !tier);
@@ -9384,6 +9390,11 @@ export function mountGame(canvas, host, bridge) {
     const none = !Online.account?.supportUnread;
     $("#supportDot").hidden = none;
     $("#mapSupportDot").hidden = none;
+    $("#moreDot").hidden = none;
+    const n = Online.account?.inboxUnread || 0;
+    $("#inboxBadge").hidden = !n;
+    $("#inboxBadge").textContent = n > 9 ? "9+" : String(n);
+    $("#btnInbox").classList.toggle("ring", n > 0);
   }
   // Looks for new replies when the player returns to the menu or map.
   function refreshSupportDot() {
@@ -9425,6 +9436,73 @@ export function mountGame(canvas, host, bridge) {
     }
   }
   on("#btnSupport", openSupport);
+  on("#btnMore", () => {
+    Sound.play("click");
+    UI.open("ovMore");
+  });
+  on("#moreClose", () => UI.close("ovMore"));
+  // Settings, How to play and Support open their own screens from here.
+  listen($("#ovMore"), "click", (e) => {
+    if (e.target.closest(".moreList button")) UI.close("ovMore");
+  });
+
+  /* ================= NOTIFICATIONS ================= */
+  const renderInbox = (state) =>
+    bridge.inbox({
+      ...state,
+      claim: async (id) => {
+        const r = await Online.claimNote(id);
+        if (r.ok) {
+          Sound.play("coin");
+          UI.toast(`${r.coins} coins added to your wallet`);
+          renderInbox({ notes: r.notes });
+        }
+        return r;
+      },
+      reply: async (id, message) => {
+        const r = await Online.replyNote(id, message);
+        if (r.ok) {
+          UI.toast("Message sent");
+          renderInbox({ notes: r.notes });
+        }
+        return r;
+      },
+      mute: async (id) => {
+        const r = await Online.muteNote(id);
+        if (r.ok) {
+          UI.toast("Muted. You won't get their messages.");
+          renderInbox({ notes: r.notes });
+        }
+        return r;
+      },
+      openBoard: (board) => {
+        UI.close("ovInbox");
+        openBoard(board);
+        UI.open("ovBoard");
+      },
+      openSupport: () => {
+        UI.close("ovInbox");
+        openSupport();
+      },
+    });
+  async function openInbox() {
+    if (needsSignIn()) {
+      UI.toast("Sign in to see notifications");
+      openAccount();
+      return;
+    }
+    Sound.play("click");
+    renderInbox({ notes: [], loading: true });
+    UI.open("ovInbox");
+    const r = await Online.inbox();
+    renderInbox(r.ok ? { notes: r.notes } : { error: r.error });
+    if (r.ok && r.notes.some((n) => !n.read)) {
+      await Online.readInbox();
+      showSupportDot();
+    }
+  }
+  on("#btnInbox", openInbox);
+  on("#inboxClose", () => UI.close("ovInbox"));
   on("#mapSupport", openSupport);
   on("#supportClose", () => UI.close("ovSupport"));
 

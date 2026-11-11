@@ -57,6 +57,10 @@ class MamaputTicket extends Model
     {
         $this->messages()->create(['body' => $body, 'from_support' => true, 'user_id' => $admin?->id]);
         $this->update(['status' => 'answered', 'unread' => true]);
+        $this->player?->notifications()->create([
+            'type' => 'support', 'title' => 'Support replied to you',
+            'body' => (string) str($body)->squish()->limit(140),
+        ]);
     }
 
     public function close(): void
