@@ -20,3 +20,11 @@ Existing staff totals were corrected without changing game saves. Player and
 shift tables and the statistics widget refresh every 10 seconds. Visible game
 sessions check presence every 30 seconds; "Online now" means seen within two
 minutes. Today's shift statistics use the Lagos calendar day.
+
+A further report exposed a separate serialization defect: PHP returns empty
+maps as `[]`, and JavaScript permits adding `crew.ch0` to that array while
+JSON.stringify silently omits it. The hire count and money deduction survived
+but the worker did not. Staff, equipment and safe maps now become plain
+objects on load and before mutation; the API explicitly encodes them as JSON
+objects in normal and conflict responses. Regression tests use actual empty
+arrays, rather than assuming the server sends empty objects.

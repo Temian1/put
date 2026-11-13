@@ -153,11 +153,23 @@ class MamaputPlayer extends Model
         return $id ? static::find($id) : static::query()->where('token_hash', $hash)->first();
     }
 
-    /**
-     * Copies the leaderboard numbers out of a save the game uploaded.
-     *
-     * @param  array<string, mixed>  $save
-     */
+    /** Preserve string-keyed save maps when PHP has decoded empty objects as arrays. */
+    public function saveForClient(): ?array
+    {
+        $save = $this->save;
+        if ($save === null) return null;
+        foreach (['crew', 'till', 'equipBy', 'equip', 'pantry', 'unpaid', 'stars', 'best', 'growCredits', 'up', 'boosters'] as $key) {
+            $save[$key] = (object) ($save[$key] ?? []);
+        }
+        foreach ($save['equipBy'] as $place => $levels) {
+            $save['equipBy']->{$place} = (object) $levels;
+        }
+        if (isset($save['stats'])) $save['stats']['food'] = (object) ($save['stats']['food'] ?? []);
+
+        return $save;
+    }
+
+    /** Copies leaderboard numbers out of a save the game uploaded. */
     public function syncFromSave(array $save): void
     {
         // Support credits are issued on the server. Older clients must not

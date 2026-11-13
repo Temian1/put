@@ -1,5 +1,6 @@
 import { STAFF, NAMES, PLACES } from "./data.js";
 import { equipTotal, upkeep } from "./equipment.js";
+import { saveMap } from "../systems/SaveMap.js";
 
 // Each restaurant has its own crew. Staff are hired for one restaurant and
 // work only there; you can hire several people for the same job. A manager
@@ -126,7 +127,7 @@ export function canHire(d, place, jobId) {
 export function hire(d, place, jobId, rng = Math.random) {
   if (!canHire(d, place, jobId).ok) return null;
   const job = jobOf(jobId);
-  d.crew = d.crew || {};
+  d.crew = saveMap(d.crew);
   const list = (d.crew[place] = d.crew[place] || []);
   const taken = new Set(list.map((m) => m.name));
   let name = job.role === "manager" ? "" : job.name;
@@ -199,7 +200,7 @@ export function payCrew(d, place, cash, limit) {
  * no manager it stays shut. Returns what each restaurant made.
  */
 export function runBranches(d, current, repFactor, limit) {
-  d.till = d.till || {};
+  d.till = saveMap(d.till);
   const made = [];
   for (const p of PLACES) {
     if (p.id === current || !d.branches.includes(p.id) || !p.income) continue;
@@ -252,7 +253,7 @@ export const tillTotal = (d) =>
 export function collect(d, place) {
   const v = tillAt(d, place);
   if (!v) return 0;
-  d.till = d.till || {};
+  d.till = saveMap(d.till);
   d.till[place] = 0;
   d.growCollected = [
     ...(d.growCollected || []),

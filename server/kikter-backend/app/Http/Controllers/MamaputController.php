@@ -305,7 +305,7 @@ class MamaputController extends Controller
     {
         $player = $this->player($request);
 
-        return response()->json(['version' => $player->save_version, 'save' => $player->save]);
+        return response()->json(['version' => $player->save_version, 'save' => $player->saveForClient()]);
     }
 
     /**
@@ -328,7 +328,7 @@ class MamaputController extends Controller
         $incoming = (array) $request->input('save');
         if ((int) $data['version'] !== $player->save_version ||
             (int) ($incoming['saveEpoch'] ?? 0) !== (int) ($player->save['saveEpoch'] ?? 0)) {
-            return response()->json(['version' => $player->save_version, 'save' => $player->save], 409);
+            return response()->json(['version' => $player->save_version, 'save' => $player->saveForClient()], 409);
         }
         // validate() keeps only the checked keys; store the whole save.
         $previousVersion = $player->save_version;
@@ -342,7 +342,7 @@ class MamaputController extends Controller
             ->update($player->getDirty());
         if (! $updated) {
             $fresh = $player->fresh();
-            return response()->json(['version' => $fresh->save_version, 'save' => $fresh->save], 409);
+            return response()->json(['version' => $fresh->save_version, 'save' => $fresh->saveForClient()], 409);
         }
         // An alert failing must never fail the player's save.
         rescue(fn () => MamaputInbox::passed($player, $boards));

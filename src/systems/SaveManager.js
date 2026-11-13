@@ -3,6 +3,7 @@ import { emptyStats } from "../game/missions.js";
 import { LEGACY_PLACES, PLACES } from "../game/data.js";
 import { migrateCrew } from "../game/crew.js";
 import { migrateEquip } from "../game/equipment.js";
+import { saveMap } from "./SaveMap.js";
 
 export const SAVE_SCHEMA = 3;
 
@@ -117,6 +118,20 @@ export function migrate(d, defaults) {
   }
   if (!out.till || typeof out.till !== "object") out.till = {};
   if (d && (!d.equipBy || typeof d.equipBy !== "object")) migrateEquip(out);
+  for (const key of [
+    "crew",
+    "till",
+    "equipBy",
+    "equip",
+    "pantry",
+    "unpaid",
+    "stars",
+    "best",
+    "growCredits",
+  ])
+    out[key] = saveMap(out[key]);
+  for (const place of Object.keys(out.equipBy))
+    out.equipBy[place] = saveMap(out.equipBy[place]);
   out.schema = SAVE_SCHEMA;
   const fresh = createDefaultsShape();
   out.up = Object.assign(fresh.up, out.up || {});

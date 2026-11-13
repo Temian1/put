@@ -1,3 +1,5 @@
+import { saveMap } from "../systems/SaveMap.js";
+
 // Buka equipment bought with naira. Every item shows up in the 3D buka and
 // most carry upkeep (gas, light, repairs) charged after each shift.
 export const EQUIPMENT = [
@@ -153,6 +155,7 @@ export function buyEquipment(d, item, place = placeOf(d)) {
   if (cost === undefined || d.coins < cost) return false;
   d.coins -= cost;
   if (!d.equipBy) migrateEquip(d);
+  d.equipBy = saveMap(d.equipBy);
   d.equipBy[place] = {
     ...equipAt(d, place),
     [item.id]: level(d, item.id, place) + 1,
