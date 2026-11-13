@@ -184,6 +184,10 @@ class MamaputController extends Controller
     public function me(Request $request): JsonResponse
     {
         $player = $this->player($request);
+        // Presence is independent of completed shifts and save uploads.
+        if (! $player->last_seen_at || $player->last_seen_at->lt(now()->subSeconds(30))) {
+            MamaputPlayer::whereKey($player->id)->update(['last_seen_at' => now()]);
+        }
 
         return response()->json($this->profile($player));
     }

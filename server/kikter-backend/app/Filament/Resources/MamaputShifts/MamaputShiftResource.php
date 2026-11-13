@@ -46,6 +46,7 @@ class MamaputShiftResource extends Resource
         $naira = fn ($state): string => '₦'.number_format((int) $state);
 
         return $table
+            ->poll('10s')
             ->modifyQueryUsing(fn ($query) => $query->with('player:id,name'))
             ->defaultSort('created_at', 'desc')
             ->columns([

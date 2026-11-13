@@ -8,4 +8,9 @@ use Filament\Resources\Pages\ManageRecords;
 class ManageMamaputPlayers extends ManageRecords
 {
     protected static string $resource = MamaputPlayerResource::class;
+
+    protected function getHeaderWidgets(): array
+    {
+        return [\App\Filament\Widgets\MamaputStatsOverview::class];
+    }
 }

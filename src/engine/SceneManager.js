@@ -1,4 +1,5 @@
 import * as T3 from "three";
+import { rebasePendingSave } from "../systems/PendingSave.js";
 import { serviceLoad } from "../game/serviceLoad.js";
 import { rnd, ri, pick, clamp, lerp, today, fmtTime } from "../game/utils.js";
 import {
@@ -8191,29 +8192,48 @@ export function mountGame(canvas, host, bridge) {
           e,
         );
       },
-      hireStaff: (job, card, e) => {
-        const c = canHire(Save.d, crewPlace, job.id);
-        if (!c.ok) {
-          Sound.play("wrong");
-          UI.toast(c.why);
-          return;
+      hireStaff: async (job, card, e) => {
+        if (hiringStaff) return;
+        hiringStaff = true;
+        const place = crewPlace;
+        try {
+          if (Online.enabled && !(await syncNow())) {
+            UI.toast(
+              "Reconnect and sign in before hiring. No money was charged.",
+            );
+            return;
+          }
+          if (crewPlace !== place) return;
+          const c = canHire(Save.d, crewPlace, job.id);
+          if (!c.ok) {
+            Sound.play("wrong");
+            UI.toast(c.why);
+            return;
+          }
+          buy(
+            job.cost,
+            () => {
+              const m = hireCrew(Save.d, crewPlace, job.id);
+              Game.track("hire");
+              UI.toast(`${m.name} don join ${placeName(crewPlace)}!`);
+              buildShop();
+            },
+            card,
+            e,
+          );
+          if (Online.enabled && !(await syncNow()))
+            UI.toast(
+              "Your worker is saved on this device. Reconnect to finish syncing.",
+            );
+        } finally {
+          hiringStaff = false;
         }
-        buy(
-          job.cost,
-          () => {
-            const m = hireCrew(Save.d, crewPlace, job.id);
-            Game.track("hire");
-            UI.toast(`${m.name} don join ${placeName(crewPlace)}!`);
-            buildShop();
-          },
-          card,
-          e,
-        );
       },
       art: ART,
       sackStaff: (m) => {
         sackCrew(Save.d, crewPlace, m.uid);
         Save.save();
+        scheduleSync();
         Sound.play("wrong");
         UI.toast(`${m.name} has been sacked. No more salary.`);
         buildShop();
@@ -8221,6 +8241,7 @@ export function mountGame(canvas, host, bridge) {
       toggleStaff: (m) => {
         toggleDuty(Save.d, crewPlace, m.uid);
         Save.save();
+        scheduleSync();
         Sound.play("click");
         buildShop();
       },
@@ -8290,6 +8311,7 @@ export function mountGame(canvas, host, bridge) {
       buildEnv(ch.theme ?? CHAPTERS.indexOf(ch), ch.sign);
     }
   }
+  let hiringStaff = false;
   function buy(cost, fn, card, e) {
     if (Save.d.coins < cost) {
       Sound.play("wrong");
@@ -8305,6 +8327,7 @@ export function mountGame(canvas, host, bridge) {
     Save.d.coins -= cost;
     fn();
     Save.save();
+    scheduleSync();
     Sound.play("buy");
     const r = (e.currentTarget || card).getBoundingClientRect();
     for (let k = 0; k < 18; k++)
@@ -9869,7 +9892,12 @@ export function mountGame(canvas, host, bridge) {
     }
     delete b.dataset.arm;
     b.querySelector(".buttonLabel").textContent = "Log out";
-    await syncNow();
+    if (!(await syncNow())) {
+      UI.toast(
+        "Your progress has not reached the server. Reconnect before logging out.",
+      );
+      return;
+    }
     await Online.logout();
     // The account keeps its progress; this phone returns to required sign-in.
     Save.d = Save.defaults();
@@ -9923,7 +9951,8 @@ export function mountGame(canvas, host, bridge) {
     if (!Online.enabled) return Promise.resolve(false);
     if (syncing) return syncing;
     let away;
-    syncing = Online.sync(Save.d, (merged) => {
+    const snapshot = structuredClone(Save.d);
+    syncing = Online.sync(snapshot, (merged) => {
       const restored = migrate(merged, Save.defaults());
       // A cloud save can contain a different, older away clock. Settle it
       // before uploading or marking the restored account as present.
@@ -9932,6 +9961,10 @@ export function mountGame(canvas, host, bridge) {
     })
       .then((merged) => {
         if (!merged) return false;
+        const pending =
+          (merged.saveEpoch || 0) === (snapshot.saveEpoch || 0) &&
+          JSON.stringify(Save.d) !== JSON.stringify(snapshot);
+        merged = rebasePendingSave(snapshot, Save.d, merged);
         const before = JSON.stringify([
           Save.d.coins,
           Save.d.unlocked,
@@ -9941,6 +9974,8 @@ export function mountGame(canvas, host, bridge) {
         ]);
         Save.d = migrate(merged, Save.defaults());
         Save.save();
+        if (pending) scheduleSync();
+        if ($("#ovShop").classList.contains("show")) buildShop();
         if (away) reportAway(away);
         if ($("#ovGrow").classList.contains("show")) buildGrow();
         if (Game.state === "menu" || Game.state === "map") {
@@ -10005,6 +10040,22 @@ export function mountGame(canvas, host, bridge) {
     if (Online.account?.signedIn) Online.wallet();
   }
   listen(window, "online", () => syncNow());
+  function presenceTick() {
+    setTimeout(async () => {
+      try {
+        if (
+          document.visibilityState === "visible" &&
+          Online.account?.signedIn
+        ) {
+          await Online.checkInbox();
+          showSupportDot();
+        }
+      } finally {
+        if (!lifetime.disposed) presenceTick();
+      }
+    }, 30000);
+  }
+  if (Online.enabled) presenceTick();
 
   const fontsReady =
     document.fonts && document.fonts.load

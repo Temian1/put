@@ -124,6 +124,7 @@ class MamaputPlayerResource extends Resource
         $naira = fn ($state): string => '₦'.number_format((int) $state);
 
         return $table
+            ->poll('10s')
             ->defaultSort('lifetime_sales', 'desc')
             ->columns([
                 TextColumn::make('name')->searchable()->weight('bold'),

@@ -259,6 +259,7 @@ export function createOnline({
     },
     // Pull, merge, push. Retries once if another device saved in between.
     async sync(local, prepare = (save) => save) {
+      local = structuredClone(local);
       if (!base || status.banned || !(await ensurePlayer())) return null;
       let pulled = await req("GET", "/save");
       if (!pulled.ok) return null;

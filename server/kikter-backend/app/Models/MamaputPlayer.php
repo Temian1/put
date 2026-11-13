@@ -174,6 +174,7 @@ class MamaputPlayer extends Model
             $save['unlocked'] = max($stored['unlocked'] ?? 1, $save['unlocked'] ?? 1);
         }
         if (isset($stored['saveRepair'])) $save['saveRepair'] = $stored['saveRepair'];
+        if (isset($stored['growRecovery'])) $save['growRecovery'] = $stored['growRecovery'];
         $credits = (array) ($stored['growCredits'] ?? []);
         $save['growCredits'] = $credits;
         $save['growCollected'] = array_values(array_intersect(
@@ -192,7 +193,9 @@ class MamaputPlayer extends Model
         $this->endless_best = max(0, (int) ($save['endlessBest'] ?? 0));
         $this->tier = MamaputConfig::tierOf($this->lifetime_sales, $this->reputation);
         $this->restaurants = count((array) ($save['branches'] ?? ['ch0']));
-        $this->staff_count = count((array) ($save['staff'] ?? []));
+        $this->staff_count = isset($save['crew']) && is_array($save['crew'])
+            ? array_sum(array_map(fn ($members): int => is_array($members) ? count($members) : 0, $save['crew']))
+            : count((array) ($save['staff'] ?? []));
         // Side games: best Okada Rush endless run and Market Match progress.
         $side = (array) ($save['side'] ?? []);
         $this->okada_best = max(0, min(100000, (int) ($side['run']['best'] ?? 0)));

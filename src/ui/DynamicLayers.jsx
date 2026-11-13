@@ -596,6 +596,11 @@ export function Shop({
     return (
       <>
         <div className="sectionLabel">Staff for each restaurant</div>
+        <p className="hintText">
+          Pay the hiring fee once for each worker at this restaurant. Your crew
+          stays between levels and logins. Salaries are separate; pay what is
+          owed below to keep your workers.
+        </p>
         <PlacePicker crew={crew} />
         <div className={"payday" + (crew.payday.left <= 2 ? " soon" : "")}>
           <div>

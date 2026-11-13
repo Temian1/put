@@ -13,13 +13,15 @@ class MamaputStatsOverview extends StatsOverviewWidget
 {
     protected static ?int $sort = 2;
 
-    protected ?string $pollingInterval = '60s';
+    protected ?string $pollingInterval = '10s';
 
     protected ?string $heading = 'Mama Put Rush';
 
     protected function getStats(): array
     {
-        $today = MamaputShift::whereDate('created_at', today());
+        $start = now('Africa/Lagos')->startOfDay()->utc();
+        $end = $start->copy()->addDay();
+        $today = MamaputShift::where('created_at', '>=', $start)->where('created_at', '<', $end);
         $maintenance = (bool) MamaputConfig::get('maintenance');
 
         return [
@@ -36,6 +38,12 @@ class MamaputStatsOverview extends StatsOverviewWidget
             Stat::make('Game status', $maintenance ? 'Maintenance' : 'Live')
                 ->description(MamaputPlayer::whereNotNull('banned_at')->count().' banned players')
                 ->color($maintenance ? 'danger' : 'success'),
+            Stat::make('Online now', number_format(MamaputPlayer::whereNull('banned_at')->where('last_seen_at', '>=', now()->subMinutes(2))->count()))
+                ->description('Seen in the last 2 minutes · refreshes every 10s')
+                ->color('success'),
+            Stat::make('Hired workers', number_format((int) MamaputPlayer::sum('staff_count')))
+                ->description('Current crews across all restaurants')
+                ->color('info'),
         ];
     }
 }
