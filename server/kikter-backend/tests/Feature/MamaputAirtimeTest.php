@@ -29,6 +29,7 @@ class MamaputAirtimeTest extends TestCase
         [$p] = MamaputPlayer::issue($name);
         $p->vatar_player_id = VatarPlayer::create(['mode' => 'test', 'game_id' => 'g', 'player_id' => 'a'.$this->n, 'name' => $name])->id;
         $p->unlocked = $unlocked;
+        $p->contact_email = 'player'.$this->n.'@example.test';
         $p->save();
 
         return [$p, ['Authorization' => 'Bearer '.$p->newToken()]];
@@ -58,6 +59,29 @@ class MamaputAirtimeTest extends TestCase
         $this->assertSame('glo', MamaputAirtime::detect('08051234567'));
         $this->assertSame('9mobile', MamaputAirtime::detect('08091234567'));
         $this->assertNull(MamaputAirtime::detect('07021234567'));
+    }
+
+    public function test_email_is_required_before_a_phone_can_be_saved(): void
+    {
+        [$p, $auth] = $this->player(1);
+        $p->contact_email = null; $p->save();
+        $entry = ['phone' => '08031234567', 'network' => 'mtn'];
+        $this->postJson('/api/mamaput/airtime', $entry, $auth)->assertUnprocessable()->assertJsonValidationErrors('email');
+        $this->assertSame(0, $p->airtime()->count());
+        $p->contact_email = 'not-an-email'; $p->save();
+        $this->postJson('/api/mamaput/airtime', $entry, $auth)->assertUnprocessable()->assertJsonValidationErrors('email');
+        $this->putJson('/api/mamaput/me/email', ['email' => 'ada@example.test'], $auth)->assertOk();
+        $this->postJson('/api/mamaput/airtime', $entry, $auth)->assertOk();
+        $this->assertSame(1, $p->airtime()->count());
+    }
+
+    public function test_a_linked_account_email_already_satisfies_the_requirement(): void
+    {
+        [$p, $auth] = $this->player(1);
+        $p->contact_email = null;
+        $p->user_id = User::factory()->create(['email' => 'ada@example.test'])->id;
+        $p->save();
+        $this->postJson('/api/mamaput/airtime', ['phone' => '08031234567', 'network' => 'mtn'], $auth)->assertOk();
     }
 
     public function test_a_player_saves_a_number_once_and_the_profile_shows_it(): void

@@ -17,7 +17,7 @@ async function mockServer(page, state) {
       id: 1,
       name: "Ola",
       source: "lagoslife",
-      email: "ola@example.test",
+      email: state.email === undefined ? "ola@example.test" : state.email,
       inboxUnread: 0,
       supportUnread: 0,
       airtime: state.saved,
@@ -26,6 +26,10 @@ async function mockServer(page, state) {
     const send = (json, status = 200) =>
       route.fulfill({ status, headers: CORS, json });
     if (path === "/me") return send(profile());
+    if (path === "/me/email") {
+      state.email = req.postDataJSON().email;
+      return send(profile());
+    }
     if (path === "/airtime") {
       state.posted = req.postDataJSON();
       state.saved = { phone: "0912****567", network: "glo", status: "pending" };
@@ -35,19 +39,44 @@ async function mockServer(page, state) {
   });
 }
 
-const signedIn = (page) =>
-  page.addInitScript(() =>
-    localStorage.setItem(
-      "mamaPutRush3D.online",
-      JSON.stringify({
-        id: 1,
-        name: "Ola",
-        token: "fake-test-only",
-        source: "lagoslife",
-        email: "ola@example.test",
-      }),
-    ),
+const signedIn = (page, email = "ola@example.test") =>
+  page.addInitScript(
+    (email) =>
+      localStorage.setItem(
+        "mamaPutRush3D.online",
+        JSON.stringify({
+          id: 1,
+          name: "Ola",
+          token: "fake-test-only",
+          source: "lagoslife",
+          email,
+        }),
+      ),
+    email,
   );
+
+test("email must be saved before even a level-one player can enter their phone", async ({
+  page,
+}) => {
+  const state = { saved: null, email: null };
+  await mockServer(page, state);
+  await signedIn(page, null);
+  await boot(page, {
+    schema: 3,
+    unlocked: 1,
+    lastClaim: claimedToday(),
+    quality: "low",
+  });
+  await expect(page.locator("#ovEmail")).toHaveClass(/show/);
+  await expect(page.locator("#ovAirtime")).not.toHaveClass(/show/);
+  await expect(page.locator("#airtimePhone")).toBeDisabled();
+  expect(state.posted).toBeUndefined();
+  await page.locator("#emailInput").fill("ola@example.test");
+  await page.locator("#emailSubmit").click();
+  await expect(page.locator("#ovAirtime")).toHaveClass(/show/);
+  await expect(page.locator("#airtimePhone")).toBeEnabled();
+  expect(state.email).toBe("ola@example.test");
+});
 
 test("the airtime invite detects the network, saves once and never returns", async ({
   page,

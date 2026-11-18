@@ -1431,6 +1431,7 @@ export const GameLayout = memo(function GameLayout({
           <form className="accForm" id="airtimeForm" noValidate>
             <input
               id="airtimePhone"
+              disabled
               className="nameInput"
               type="tel"
               inputMode="tel"

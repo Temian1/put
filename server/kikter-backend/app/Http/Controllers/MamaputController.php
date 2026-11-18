@@ -227,6 +227,9 @@ class MamaputController extends Controller
     public function saveAirtime(Request $request): JsonResponse
     {
         $player = $this->player($request);
+        if (! filter_var($player->email(), FILTER_VALIDATE_EMAIL)) {
+            throw ValidationException::withMessages(['email' => 'Save a valid email address before entering the airtime draw.']);
+        }
         abort_if($player->airtime()->exists(), 409, 'Your number is already saved for the draw.');
         $data = $request->validate([
             'phone' => ['required', 'string', 'max:20'],

@@ -9449,11 +9449,13 @@ export function mountGame(canvas, host, bridge) {
   const EMAIL_AFTER_LEVELS = 2;
   let emailDeferred = false,
     afterEmail = null;
+  const hasContactEmail = () =>
+    /^\S+@\S+\.\S+$/.test(Online.account?.email || "");
   const needsEmail = () =>
     Online.enabled &&
     !needsSignIn() &&
     !emailDeferred &&
-    !Online.account?.email &&
+    !hasContactEmail() &&
     Save.d.unlocked > EMAIL_AFTER_LEVELS;
   function emailError(msg) {
     const el = $("#emailError");
@@ -9461,14 +9463,16 @@ export function mountGame(canvas, host, bridge) {
     el.textContent = msg || "";
   }
   function promptEmail(force = false) {
-    if (!needsEmail()) return;
+    if (force === true) {
+      if (!Online.enabled || needsSignIn() || hasContactEmail()) return;
+    } else if (!needsEmail()) return;
     if (force !== true && $(".overlay.show")) return;
     emailError("");
     $("#emailLater").hidden = true;
     UI.open("ovEmail");
     // Another device may have saved it already.
     Online.checkInbox().then(() => {
-      if (Online.account?.email) emailDone();
+      if (hasContactEmail()) emailDone();
     });
   }
   function emailDone() {
@@ -9510,11 +9514,11 @@ export function mountGame(canvas, host, bridge) {
   // a number is saved the invitation never comes back, on any device.
   let airtimeNet = null,
     airtimeChosen = false;
-  const needsAirtime = () =>
+  const needsAirtime = (force = false) =>
     Online.enabled &&
     !needsSignIn() &&
     !Online.account?.airtime &&
-    Save.d.airtimeAsked !== today();
+    (force || Save.d.airtimeAsked !== today());
   function airtimeError(msg) {
     const el = $("#airtimeError");
     el.hidden = !msg;
@@ -9535,11 +9539,19 @@ export function mountGame(canvas, host, bridge) {
         ? `Network: ${NETWORKS[net]}.`
         : `We think this is ${NETWORKS[net]}. Tap another if you moved your number.`;
   }
-  async function promptAirtime() {
-    if (!needsAirtime()) return;
+  async function promptAirtime(force = false) {
+    if (!needsAirtime(force)) return;
     // Another device may have saved a number already.
     await Online.checkInbox();
-    if (!needsAirtime() || Game.state !== "menu" || $(".overlay.show")) return;
+    if (!needsAirtime(force) || Game.state !== "menu" || $(".overlay.show"))
+      return;
+    if (!hasContactEmail()) {
+      afterEmail = () => {
+        if (hasContactEmail()) promptAirtime(true);
+      };
+      promptEmail(true);
+      return;
+    }
     Save.d.airtimeAsked = today();
     Save.save();
     const level = Math.min(MAX_LEVEL, Save.d.unlocked);
@@ -9548,6 +9560,7 @@ export function mountGame(canvas, host, bridge) {
         ? `You've reached level ${AIRTIME_LEVEL}: you're in the draw!`
         : `You're on level ${level}. ${AIRTIME_LEVEL - level} more to reach the draw.`;
     $("#airtimePhone").value = "";
+    $("#airtimePhone").disabled = false;
     airtimeChosen = false;
     setAirtimeNet(null);
     airtimeError("");
@@ -9565,6 +9578,15 @@ export function mountGame(canvas, host, bridge) {
   });
   listen($("#airtimeForm"), "submit", async (e) => {
     e.preventDefault();
+    if (!hasContactEmail()) {
+      $("#airtimePhone").disabled = true;
+      UI.close("ovAirtime");
+      afterEmail = () => {
+        if (hasContactEmail()) promptAirtime(true);
+      };
+      promptEmail(true);
+      return;
+    }
     const phone = normalizePhone($("#airtimePhone").value);
     if (!phone)
       return airtimeError(
