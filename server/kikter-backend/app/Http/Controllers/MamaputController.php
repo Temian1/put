@@ -346,6 +346,7 @@ class MamaputController extends Controller
         }
         // An alert failing must never fail the player's save.
         rescue(fn () => MamaputInbox::passed($player, $boards));
+        rescue(fn () => \App\MamaputPlayerEmails::passed($player, $boards));
 
         return response()->json(['version' => $player->save_version]);
     }

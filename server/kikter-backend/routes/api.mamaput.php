@@ -5,6 +5,8 @@
 // Mama Put Rush (frontend on Vercel). Players use a bearer token from POST /players
 // (guest) or from signing in with a Kikter account or Lagos Life.
 Route::prefix("mamaput")->middleware("throttle:120,1")->group(function () {
+    Route::get('/email-preferences/{player}', [\App\Http\Controllers\MamaputEmailPreferencesController::class, 'show'])->whereNumber('player')->middleware('signed')->name('mamaput.email-preferences');
+    Route::post('/email-unsubscribe/{player}', [\App\Http\Controllers\MamaputEmailPreferencesController::class, 'stop'])->whereNumber('player')->middleware('signed')->name('mamaput.email-unsubscribe');
     Route::get("/config", [MamaputController::class, "config"]);
     Route::post("/players", [MamaputController::class, "register"])->middleware("throttle:10,1,mpnew");
     Route::middleware("throttle:10,1,mpauth")->group(function () {
