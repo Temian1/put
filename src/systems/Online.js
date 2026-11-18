@@ -95,6 +95,7 @@ export function createOnline({
       email: data.email ?? data.account?.email ?? null,
       supportUnread: data.supportUnread ?? me.supportUnread ?? 0,
       inboxUnread: data.inboxUnread ?? me.inboxUnread ?? 0,
+      airtime: data.airtime !== undefined ? data.airtime : (me.airtime ?? null),
     });
     if (data.token) me.token = data.token;
     write(KEY, me);
@@ -176,6 +177,7 @@ export function createOnline({
             email: me.email || me.account?.email || null,
             supportUnread: me.supportUnread || 0,
             inboxUnread: me.inboxUnread || 0,
+            airtime: me.airtime || null,
             lagoslife: me.lagoslife?.name || null,
             wallet: me.wallet || 0,
           }
@@ -214,6 +216,7 @@ export function createOnline({
       me.email = r.data.email ?? r.data.account?.email ?? null;
       me.supportUnread = r.data.supportUnread ?? 0;
       me.inboxUnread = r.data.inboxUnread ?? 0;
+      if (r.data.airtime !== undefined) me.airtime = r.data.airtime;
       write(KEY, me);
     },
     async wallet() {
@@ -354,6 +357,22 @@ export function createOnline({
       return r.ok
         ? { ok: true, tickets: r.data.tickets }
         : { ok: false, error: errorOf(r, "Could not send your message.") };
+    },
+    // A phone number for the airtime draw, saved once.
+    async saveAirtime(phone, network) {
+      if (!base || !(await ensurePlayer()))
+        return { ok: false, error: "Sign in first." };
+      const r = await req("POST", "/airtime", { phone, network });
+      // Already saved, perhaps on another device: nothing more to ask.
+      if (r.status === 409) {
+        me.airtime = me.airtime || { network, status: "pending" };
+        write(KEY, me);
+        return { ok: true };
+      }
+      if (!r.ok)
+        return { ok: false, error: errorOf(r, "Could not save your number.") };
+      remember(r.data);
+      return { ok: true };
     },
     // Announcements, "someone passed you" alerts and rival messages.
     async inbox() {

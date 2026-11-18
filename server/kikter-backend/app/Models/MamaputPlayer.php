@@ -6,6 +6,7 @@ use App\MamaputConfig;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -38,6 +39,11 @@ class MamaputPlayer extends Model
     public function vatarPlayer(): BelongsTo
     {
         return $this->belongsTo(VatarPlayer::class);
+    }
+
+    public function airtime(): HasOne
+    {
+        return $this->hasOne(MamaputAirtimeEntry::class, 'player_id');
     }
 
     public function notifications(): HasMany

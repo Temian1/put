@@ -24,6 +24,7 @@ Route::prefix("mamaput")->middleware("throttle:120,1")->group(function () {
     Route::get("/me", [MamaputController::class, "me"]);
     Route::patch("/me", [MamaputController::class, "rename"]);
     Route::put("/me/email", [MamaputController::class, "saveEmail"])->middleware("throttle:10,1,mpemail");
+    Route::post("/airtime", [MamaputController::class, "saveAirtime"])->middleware("throttle:10,1,mpairtime");
     Route::get("/inbox", [MamaputController::class, "inbox"]);
     Route::post("/inbox/read", [MamaputController::class, "readInbox"]);
     Route::post("/inbox/{id}/claim", [MamaputController::class, "claimNote"])->whereNumber("id");

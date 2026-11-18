@@ -1340,6 +1340,7 @@ function SupportTicket({ ticket, reply }) {
 }
 
 const NOTE_ICONS = {
+  airtime: "📱",
   announcement: "📣",
   passed: "🏁",
   message: "💬",

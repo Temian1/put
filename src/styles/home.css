@@ -531,3 +531,50 @@
     animation: none;
   }
 }
+
+/* ---------- Airtime draw ---------- */
+.airtimePanel {
+  text-align: center;
+}
+.airtimeArt {
+  font-size: 54px;
+  line-height: 1;
+  margin: 4px 0 2px;
+  animation: bob 2.4s ease-in-out infinite;
+}
+.airtimeLevel {
+  margin: 6px 0 10px;
+  font-weight: 800;
+  color: var(--teal-d);
+}
+.netPick {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+.netPick button {
+  border: 2px solid #e2c9a0;
+  background: #fff;
+  border-radius: 12px;
+  padding: 8px 2px;
+  font: 400 14px var(--display);
+  color: var(--ink);
+  cursor: pointer;
+}
+.netPick button.on {
+  border-color: var(--green);
+  background: #d9f7df;
+  color: #1e7a3a;
+  box-shadow: 0 0 0 2px var(--green);
+}
+.airtimeHint {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  opacity: 0.75;
+}
+@media (prefers-reduced-motion: reduce) {
+  .airtimeArt {
+    animation: none;
+  }
+}

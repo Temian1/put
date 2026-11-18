@@ -139,6 +139,10 @@ final class MamaputAccounts
         $from->walletLogs()->update(['player_id' => $into->id]);
         $from->tickets()->update(['player_id' => $into->id]);
         $from->notifications()->update(['player_id' => $into->id]);
+        // One airtime entry per player: keep the account's own if it has one.
+        if (! $into->airtime()->exists()) {
+            $from->airtime()->update(['player_id' => $into->id]);
+        }
         $into->contact_email ??= $from->contact_email;
         $into->shifts_played += $from->shifts_played;
         $into->wallet += $from->wallet;

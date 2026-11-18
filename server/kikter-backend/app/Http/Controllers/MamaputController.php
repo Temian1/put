@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\MamaputAccounts;
+use App\MamaputAirtime;
 use App\MamaputConfig;
 use App\MamaputInbox;
 use App\Mail\PlayerNotice;
@@ -217,6 +218,30 @@ class MamaputController extends Controller
         }
 
         return response()->json($this->profile($player));
+    }
+
+    /**
+     * The phone number for the airtime draw: saved once, with the network
+     * the player confirmed. Players see the popup until they save one.
+     */
+    public function saveAirtime(Request $request): JsonResponse
+    {
+        $player = $this->player($request);
+        abort_if($player->airtime()->exists(), 409, 'Your number is already saved for the draw.');
+        $data = $request->validate([
+            'phone' => ['required', 'string', 'max:20'],
+            'network' => ['required', 'string', Rule::in(array_keys(MamaputAirtime::NETWORKS))],
+        ]);
+        $phone = MamaputAirtime::normalize($data['phone']);
+        if (! $phone) {
+            throw ValidationException::withMessages(['phone' => 'Enter a Nigerian mobile number, like 0803 123 4567.']);
+        }
+        $player->airtime()->create([
+            'phone' => $phone, 'network' => $data['network'], 'detected' => MamaputAirtime::detect($phone),
+            'level_at_entry' => $player->unlocked,
+        ]);
+
+        return response()->json($this->profile($player->fresh()));
     }
 
     public function support(Request $request): JsonResponse
@@ -504,6 +529,7 @@ class MamaputController extends Controller
             'email' => $p->email(),
             'supportUnread' => $p->tickets()->where('unread', true)->count(),
             'inboxUnread' => $p->notifications()->whereNull('read_at')->count(),
+            'airtime' => $p->airtime ? ['phone' => $p->airtime->maskedPhone(), 'network' => $p->airtime->network, 'status' => $p->airtime->status] : null,
             'account' => $user ? ['name' => $user->name, 'email' => $user->email] : null,
             'lagoslife' => $p->vatarPlayer ? ['name' => $p->vatarPlayer->name] : null,
             'wallet' => $this->walletState($p),

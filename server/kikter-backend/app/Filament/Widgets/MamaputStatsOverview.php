@@ -2,12 +2,15 @@
 
 namespace App\Filament\Widgets;
 
+use App\MamaputAirtime;
 use App\MamaputConfig;
+use App\Models\MamaputAirtimeEntry;
 use App\Models\MamaputPlayer;
 use App\Models\MamaputShift;
 use Filament\Support\Icons\Heroicon;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
+use Illuminate\Database\Eloquent\Builder;
 
 class MamaputStatsOverview extends StatsOverviewWidget
 {
@@ -23,6 +26,12 @@ class MamaputStatsOverview extends StatsOverviewWidget
         $end = $start->copy()->addDay();
         $today = MamaputShift::where('created_at', '>=', $start)->where('created_at', '<', $end);
         $maintenance = (bool) MamaputConfig::get('maintenance');
+        $airtime = fn (?string $status = null) => MamaputAirtimeEntry::query()->when($status, fn (Builder $q) => $q->where('status', $status));
+        // An email from a linked account, or one the player typed in the game.
+        $accountEmail = fn (Builder $q) => $q->whereHas('user', fn (Builder $u) => $u->whereNotNull('email'))
+            ->orWhereHas('vatarPlayer.user', fn (Builder $u) => $u->whereNotNull('email'));
+        $withAccountEmail = MamaputPlayer::where($accountEmail)->count();
+        $typedOnly = MamaputPlayer::whereNotNull('contact_email')->whereNot($accountEmail)->count();
 
         return [
             Stat::make('Mama Put players', number_format(MamaputPlayer::count()))
@@ -43,6 +52,19 @@ class MamaputStatsOverview extends StatsOverviewWidget
                 ->color('success'),
             Stat::make('Hired workers', number_format((int) MamaputPlayer::sum('staff_count')))
                 ->description('Current crews across all restaurants')
+                ->color('info'),
+            Stat::make('Airtime numbers', number_format($airtime()->count()))
+                ->description(number_format($airtime()->whereHas('player', fn (Builder $p) => $p->where('unlocked', '>=', MamaputAirtime::LEVEL))->count())
+                    .' reached level '.MamaputAirtime::LEVEL.' · '.number_format($airtime('picked')->count()).' picked, not sent')
+                ->descriptionIcon(Heroicon::DevicePhoneMobile)
+                ->color('warning'),
+            Stat::make('Airtime rewarded', number_format($airtime('sent')->count()))
+                ->description(number_format($airtime('rejected')->count()).' rejected')
+                ->descriptionIcon(Heroicon::CheckBadge)
+                ->color('success'),
+            Stat::make('Players with email', number_format($withAccountEmail + $typedOnly))
+                ->description(number_format($withAccountEmail).' from accounts · '.number_format($typedOnly).' typed in the game')
+                ->descriptionIcon(Heroicon::Envelope)
                 ->color('info'),
         ];
     }

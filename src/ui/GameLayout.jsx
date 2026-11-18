@@ -1,6 +1,7 @@
 import React, { memo } from "react";
 import { Surface } from "./Surface.jsx";
 import { Icon } from "./Icon.jsx";
+import { AIRTIME_LEVEL } from "../game/airtime.js";
 
 function Toggle({ id, label }) {
   return (
@@ -1412,6 +1413,62 @@ export const GameLayout = memo(function GameLayout({
           >
             <Icon name="gift" />
             <span className="buttonLabel">{"Collect"}</span>
+          </button>
+        </div>
+      </Surface>
+      <Surface className="overlay scroll" id="ovAirtime" tag="div">
+        <div className="panel airtimePanel">
+          <div className="ribbon">{"Free Airtime!"}</div>
+          <div className="airtimeArt" aria-hidden="true">
+            {"📱"}
+          </div>
+          <p className="sub">
+            {"Reach "}
+            <b>{`level ${AIRTIME_LEVEL}`}</b>
+            {` and you could win airtime. Winners are picked at random from players who reach level ${AIRTIME_LEVEL}.`}
+          </p>
+          <p className="airtimeLevel" id="airtimeLevel"></p>
+          <form className="accForm" id="airtimeForm" noValidate>
+            <input
+              id="airtimePhone"
+              className="nameInput"
+              type="tel"
+              inputMode="tel"
+              placeholder="Phone number, e.g. 0803 123 4567"
+              autoComplete="tel"
+              maxLength={18}
+              aria-label="Phone number"
+            />
+            <div
+              className="netPick"
+              id="airtimeNets"
+              role="radiogroup"
+              aria-label="Network"
+            >
+              <button type="button" data-net="mtn" role="radio">
+                {"MTN"}
+              </button>
+              <button type="button" data-net="airtel" role="radio">
+                {"Airtel"}
+              </button>
+              <button type="button" data-net="glo" role="radio">
+                {"Glo"}
+              </button>
+              <button type="button" data-net="9mobile" role="radio">
+                {"9mobile"}
+              </button>
+            </div>
+            <p className="airtimeHint" id="airtimeHint">
+              {"Type your number and we will find your network."}
+            </p>
+            <p className="accError" id="airtimeError" role="alert" hidden></p>
+            <button className="btn green big" id="airtimeSubmit" type="submit">
+              <Icon name="check" />
+              <span className="buttonLabel">{"Save my number"}</span>
+            </button>
+          </form>
+          <button className="linkBtn" id="airtimeLater">
+            {"Not now"}
           </button>
         </div>
       </Surface>

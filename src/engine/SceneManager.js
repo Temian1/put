@@ -132,6 +132,12 @@ import {
 } from "../game/missions.js";
 import { fmtNaira, fmtNairaShort, roundNaira } from "../game/currency.js";
 import { createOnline } from "../systems/Online.js";
+import {
+  AIRTIME_LEVEL,
+  NETWORKS,
+  normalizePhone,
+  detectNetwork,
+} from "../game/airtime.js";
 import { createLagosLife, lagosLifeHinted } from "../systems/LagosLife.js";
 import { applyGrants, grantLabel } from "../game/grants.js";
 import { tablesAt, canPlace, saveLayout, snap } from "../game/layout.js";
@@ -8094,6 +8100,7 @@ export function mountGame(canvas, host, bridge) {
     if (firstLaunch()) setTimeout(openGuide, 700);
     else if (needsEmail()) setTimeout(promptEmail, 700);
     else if (Save.d.lastClaim !== today()) setTimeout(openReward, 700);
+    else if (needsAirtime()) setTimeout(promptAirtime, 700);
   }
   let shopTab = "up",
     crewPlace = "";
@@ -8407,6 +8414,8 @@ export function mountGame(canvas, host, bridge) {
       Sound.play("buy");
       const r = e.currentTarget.getBoundingClientRect();
       UI.close("ovReward");
+      // The airtime invitation follows once the cash has landed.
+      setTimeout(promptAirtime, 1600);
       setTimeout(
         () =>
           cashBurst(r.left + r.width / 2, r.top, 10, "#menuCoins", () => {
@@ -9469,6 +9478,7 @@ export function mountGame(canvas, host, bridge) {
     if (next) next();
     else if (Game.state === "menu" && Save.d.lastClaim !== today())
       setTimeout(openReward, 400);
+    else if (Game.state === "menu") setTimeout(promptAirtime, 400);
   }
   listen($("#emailForm"), "submit", async (e) => {
     e.preventDefault();
@@ -9493,6 +9503,83 @@ export function mountGame(canvas, host, bridge) {
     emailDeferred = true;
     emailDone();
   });
+
+  /* ================= AIRTIME DRAW ================= */
+  // Everyone is invited, at most once a day, to leave a phone number for the
+  // airtime draw (winners are picked from players who reach AIRTIME_LEVEL). Once
+  // a number is saved the invitation never comes back, on any device.
+  let airtimeNet = null,
+    airtimeChosen = false;
+  const needsAirtime = () =>
+    Online.enabled &&
+    !needsSignIn() &&
+    !Online.account?.airtime &&
+    Save.d.airtimeAsked !== today();
+  function airtimeError(msg) {
+    const el = $("#airtimeError");
+    el.hidden = !msg;
+    el.textContent = msg || "";
+  }
+  function setAirtimeNet(net) {
+    airtimeNet = net;
+    $("#airtimeNets")
+      .querySelectorAll("[data-net]")
+      .forEach((b) => {
+        const on = b.dataset.net === net;
+        b.classList.toggle("on", on);
+        b.setAttribute("aria-checked", on ? "true" : "false");
+      });
+    $("#airtimeHint").textContent = !net
+      ? "Type your number and we will find your network."
+      : airtimeChosen
+        ? `Network: ${NETWORKS[net]}.`
+        : `We think this is ${NETWORKS[net]}. Tap another if you moved your number.`;
+  }
+  async function promptAirtime() {
+    if (!needsAirtime()) return;
+    // Another device may have saved a number already.
+    await Online.checkInbox();
+    if (!needsAirtime() || Game.state !== "menu" || $(".overlay.show")) return;
+    Save.d.airtimeAsked = today();
+    Save.save();
+    const level = Math.min(MAX_LEVEL, Save.d.unlocked);
+    $("#airtimeLevel").textContent =
+      level >= AIRTIME_LEVEL
+        ? `You've reached level ${AIRTIME_LEVEL}: you're in the draw!`
+        : `You're on level ${level}. ${AIRTIME_LEVEL - level} more to reach the draw.`;
+    $("#airtimePhone").value = "";
+    airtimeChosen = false;
+    setAirtimeNet(null);
+    airtimeError("");
+    UI.open("ovAirtime");
+  }
+  listen($("#airtimePhone"), "input", () => {
+    airtimeError("");
+    if (!airtimeChosen) setAirtimeNet(detectNetwork($("#airtimePhone").value));
+  });
+  listen($("#airtimeNets"), "click", (e) => {
+    const b = e.target.closest("[data-net]");
+    if (!b) return;
+    airtimeChosen = true;
+    setAirtimeNet(b.dataset.net);
+  });
+  listen($("#airtimeForm"), "submit", async (e) => {
+    e.preventDefault();
+    const phone = normalizePhone($("#airtimePhone").value);
+    if (!phone)
+      return airtimeError(
+        "Enter a Nigerian mobile number, like 0803 123 4567.",
+      );
+    if (!airtimeNet) return airtimeError("Choose your network.");
+    $("#airtimeSubmit").disabled = true;
+    const r = await Online.saveAirtime(phone, airtimeNet);
+    $("#airtimeSubmit").disabled = false;
+    if (!r.ok) return airtimeError(r.error);
+    Sound.play("coin");
+    UI.toast("Number saved. Good luck in the draw!");
+    UI.close("ovAirtime");
+  });
+  on("#airtimeLater", () => UI.close("ovAirtime"));
 
   /* ================= SUPPORT ================= */
   let supportCheckedAt = 0;
