@@ -1385,6 +1385,17 @@ function InboxNote({ note, claim, reply, mute, openBoard, openSupport }) {
       </div>
       <p>{note.body}</p>
       <div className="noteActions">
+        {note.type === "announcement" ? (
+          <a
+            className="btn teal"
+            href="https://mamaput-phi.vercel.app/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Icon name="play" />
+            Play Mama Put Rush
+          </a>
+        ) : null}
         {note.reward > 0 ? (
           <button
             className="btn gold small"

@@ -123,7 +123,7 @@ class MamaputPlayerEmailsTest extends TestCase
         $this->assertStringContainsString('&lt;script&gt;', $html);
         $this->assertStringNotContainsString('<script>', $html);
         $this->assertStringNotContainsString('<link', $html);
-        $this->assertStringContainsString('Play now: https://lagoslife.app/', view('mail.player-notice-text', $m->buildViewData())->render());
+        $this->assertStringContainsString('Play Mama Put Rush: https://mamaput-phi.vercel.app/', view('mail.player-notice-text', $m->buildViewData())->render());
         $this->assertArrayHasKey('List-Unsubscribe', $m->headers()->text);
     }
 
@@ -159,5 +159,18 @@ class MamaputPlayerEmailsTest extends TestCase
         $this->assertSame('rejected', DB::table('mamaput_player_emails')->value('status'));
         $this->travel(16)->minutes();
         $this->assertSame(0, MamaputPlayerEmails::deliver()['failed']);
+    }
+
+    public function test_lagos_life_players_and_announcement_emails_link_directly_to_the_game(): void
+    {
+        $p = $this->player('ada@example.test', true);
+        $p->vatar_player_id = \App\Models\VatarPlayer::create(['mode' => 'test', 'game_id' => 'g', 'player_id' => 'direct-game-link', 'name' => 'Ada'])->id;
+        $p->save();
+        MamaputPlayerEmails::inactivity();
+        MamaputPlayerEmails::deliver();
+        Mail::assertSent(PlayerNotice::class, fn ($m) => $m->actionUrl === 'https://mamaput-phi.vercel.app/' && $m->actionLabel === 'Play Mama Put Rush');
+        $announcement = new PlayerNotice('Ada', 'New airtime feature', 'Come and play', 'Mama Put Rush');
+        $this->assertStringContainsString('href="https://mamaput-phi.vercel.app/"', $announcement->render());
+        $this->assertStringNotContainsString('href="https://lagoslife.app/', $announcement->render());
     }
 }

@@ -29,8 +29,9 @@ The console schedule fragment runs the command every minute with overlap
 protection. Production also has a dedicated per-minute cron entry because the
 previous scheduler cron belonged to another application. Existing cron entries
 were preserved. SQL row claims and unique dedupe keys protect overlapping runs.
-Lagos Life players are directed to Lagos Life; account-only players are directed
-to the game's public URL. No game-save balances are changed by this feature.
+All player email buttons and announcement play links open
+https://mamaput-phi.vercel.app/ directly, regardless of sign-in source.
+No game-save balances are changed by this feature.
 
 Production deployment backs up the SQLite database, current source and crontab
 privately, runs only the email migration, and patches controller/routes without

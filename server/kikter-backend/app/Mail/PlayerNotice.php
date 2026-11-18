@@ -12,6 +12,8 @@ use Illuminate\Mail\Mailables\Headers;
  */
 class PlayerNotice extends Mailable
 {
+    public const GAME_URL = 'https://mamaput-phi.vercel.app/';
+
     public function __construct(
         public string $playerName,
         public string $title,
@@ -21,7 +23,12 @@ class PlayerNotice extends Mailable
         public string $actionLabel = 'Play Mama Put Rush',
         public ?string $preferencesUrl = null,
         public ?string $unsubscribeUrl = null,
-    ) {}
+    ) {
+        if ($this->team === 'Mama Put Rush') {
+            $this->actionUrl = self::GAME_URL;
+            $this->actionLabel = 'Play Mama Put Rush';
+        }
+    }
 
     public function envelope(): Envelope
     {

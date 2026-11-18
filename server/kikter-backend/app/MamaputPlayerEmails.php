@@ -102,11 +102,9 @@ class MamaputPlayerEmails
             }
             try {
                 $payload = json_decode($row->payload, true);
-                $lagos = $p->vatar_player_id !== null;
                 Mail::to($row->recipient)->send(new PlayerNotice(
                     $p->name, $payload['title'], $payload['body'], 'Mama Put Rush',
-                    $lagos ? 'https://lagoslife.app/' : 'https://mamaput-phi.vercel.app/',
-                    $lagos ? 'Open Lagos Life and play' : 'Play Mama Put Rush',
+                    PlayerNotice::GAME_URL, 'Play Mama Put Rush',
                     URL::signedRoute('mamaput.email-preferences', ['player' => $p->id]),
                     URL::signedRoute('mamaput.email-unsubscribe', ['player' => $p->id]),
                 ));
